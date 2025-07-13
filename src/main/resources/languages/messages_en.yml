@@ -1,0 +1,213 @@
+# EcoXpert Pro - English Messages
+# Premium Minecraft Economy Plugin
+
+# General
+prefix: "&8[&6EcoXpert&8] &f"
+no-permission: "&cYou don't have permission to execute this command."
+player-only: "&cThis command can only be executed by players."
+console-only: "&cThis command can only be executed from console."
+player-not-found: "&cPlayer '{0}' not found or never played on this server."
+invalid-amount: "&cInvalid amount. Please enter a valid number."
+insufficient-funds: "&cInsufficient funds. You need {0} but only have {1}."
+
+# Plugin Management
+plugin:
+  enabled: "&aEcoXpert Pro v{0} enabled successfully!"
+  disabled: "&cEcoXpert Pro disabled."
+  reloaded: "&aConfiguration reloaded successfully!"
+  platform-detected: "&7Detected platform: &e{0} &7(MC {1})"
+  database-connected: "&aDatabase connected successfully ({0})"
+  vault-registered: "&aRegistered as Vault economy provider"
+  
+# Economy System
+economy:
+  balance: "&7Your balance: &a{0}"
+  balance-other: "&7{0}'s balance: &a{1}"
+  payment-sent: "&aYou sent &e{0} &ato &e{1}"
+  payment-received: "&aYou received &e{0} &afrom &e{1}"
+  account-created: "&aEconomy account created successfully"
+  
+# Market System
+market:
+  prices-header: "&6=== Market Prices ==="
+  price-format: "&7{0}: &aBuy {1} &7| &cSell {2}"
+  item-bought: "&aYou bought &e{0}x {1} &afor &e{2}"
+  item-sold: "&aYou sold &e{0}x {1} &afor &e{2}"
+  price-changed: "&7Market price for &e{0} &7changed to &a{1}"
+  not-enough-items: "&cYou don't have enough {0} to sell"
+  market-closed: "&cThe market is currently closed"
+  
+  # Command messages
+  unknown-command: "&cUnknown market command: &e{0}&c. Use &a/market help &cfor available commands."
+  buy-usage: "&cUsage: &e/market buy <item> [amount]"
+  sell-usage: "&cUsage: &e/market sell <item> [amount]"
+  invalid-item: "&cInvalid item: &e{0}&c. Please check the spelling."
+  invalid-quantity: "&cInvalid quantity. Please enter a positive number."
+  no-items-to-sell: "&cYou don't have any &e{0} &cto sell."
+  system-error: "&cA system error occurred. Please try again later."
+  item-not-found: "&cItem &e{0} &cis not available in the market."
+  gui-coming-soon: "&eMarket GUI is coming soon! Use &a/market help &efor available commands."
+  prices-more: "&7... and &e{0} &7more items. Use &a/market prices <item> &7for specific prices."
+  
+  # Item prices display
+  item-prices:
+    header: "&6=== Prices for {0} ==="
+    buy: "&aBuy Price: &e{0}"
+    sell: "&cSell Price: &e{0}"
+    volume: "&7Total Volume: &e{0}"
+    trend: "&7Trend: &e{0} &7(&a{1}&7)"
+  
+  # Market statistics
+  stats:
+    header: "&6=== Market Statistics ==="
+    items: "&7Active Items: &e{0}&7/&e{1}"
+    transactions: "&7Total Transactions: &e{0}"
+    volume: "&7Total Volume: &e{0}"
+    activity: "&7Market Activity: &e{0}"
+    daily: "&7Daily: &e{0} &7transactions, &e{1} &7volume"
+  
+  # Help messages
+  help:
+    header: "&6=== Market Help ==="
+    buy: "&e/market buy <item> [amount] &7- Buy items from the market"
+    sell: "&e/market sell <item> [amount] &7- Sell items to the market"
+    prices: "&e/market prices [item] &7- View market prices"
+    stats: "&e/market stats &7- View market statistics"
+    gui: "&e/market &7- Open market GUI (coming soon)"
+    footer: "&7Tip: Use tab completion for item names!"
+  
+  # Error messages
+  error:
+    insufficient-funds: "&cInsufficient funds! You need &e{0} &cbut only have &e{1}&c."
+    insufficient-items: "&cYou don't have enough &e{0} &cto sell."
+    market-closed: "&cThe market is currently closed."
+    item-not-available: "&cThis item is not available in the market."
+    item-not-buyable: "&cThis item cannot be bought from the market."
+    item-not-sellable: "&cThis item cannot be sold to the market."
+    inventory-full: "&cYour inventory is full! Clear some space and try again."
+    invalid-quantity: "&cInvalid quantity specified."
+    price-changed: "&cThe price has changed since you started this transaction."
+    system-error: "&cA system error occurred. Please contact an administrator."
+  
+  # GUI messages
+  gui:
+    title: "Market"
+    prev-page: "Previous Page"
+    next-page: "Next Page"
+    current-page: "Page {0} of {1}"
+    close: "Close Market"
+    
+    info:
+      title: "Market Information"
+      items: "Total Items: {0}"
+      page: "Page: {0}/{1}"
+      help1: "Click to buy 1 item"
+      help2: "Shift-click to sell all"
+    
+    item:
+      header: "Market Item"
+      buy-price: "Buy: {0}"
+      sell-price: "Sell: {0}"
+      not-buyable: "Cannot buy this item"
+      not-sellable: "Cannot sell this item"
+      volume: "Volume: {0}"
+      trend: "Trend: {0}"
+      click-buy: "Click to buy 1"
+      shift-click-sell: "Shift-click to sell all"
+  
+# Banking System
+bank:
+  account-info: "&6=== Bank Account ==="
+  balance: "&7Account Balance: &a{0}"
+  interest-rate: "&7Interest Rate: &e{0}%"
+  deposited: "&aDeposited &e{0} &ato your bank account"
+  withdrawn: "&aWithdrawn &e{0} &afrom your bank account"
+  insufficient-bank-funds: "&cInsufficient funds in your bank account"
+  interest-earned: "&aYou earned &e{0} &ain interest"
+  daily-limit-reached: "&cYou have reached your daily transaction limit"
+  
+# Loan System
+loans:
+  request-sent: "&aLoan request for &e{0} &ahas been submitted"
+  loan-approved: "&aYour loan of &e{0} &ahas been approved"
+  loan-denied: "&cYour loan request has been denied: {0}"
+  payment-made: "&aLoan payment of &e{0} &amade successfully"
+  loan-paid-off: "&aCongratulations! You have paid off your loan"
+  payment-overdue: "&cYour loan payment is overdue. Please pay immediately"
+  credit-score: "&7Your credit score: &e{0}/1000"
+  no-active-loans: "&7You have no active loans"
+  
+# Economic Events
+events:
+  started: "&6Economic Event: &e{0} &6has started!"
+  ended: "&6Economic Event: &e{0} &6has ended"
+  inflation-warning: "&cWarning: High inflation detected in the economy"
+  deflation-warning: "&eNotice: Deflation detected in the economy"
+  market-crash: "&cMarket crash! All prices reduced by {0}%"
+  economic-boom: "&aEconomic boom! All prices increased by {0}%"
+  
+# Professions System
+professions:
+  selected: "&aYou are now a &e{0}"
+  changed: "&aYou changed from &e{0} &ato &e{1}"
+  cooldown: "&cYou must wait &e{0} &cbefore changing professions again"
+  bonus-earned: "&aYou earned a profession bonus of &e{0}"
+  level-up: "&aYour &e{0} &alevel increased to &e{1}"
+  max-level: "&eYou have reached the maximum level for &e{0}"
+  
+# Admin Commands
+admin:
+  player-balance-set: "&aSet {0}'s balance to &e{1}"
+  player-balance-added: "&aAdded &e{0} &ato {1}'s balance"
+  player-balance-removed: "&aRemoved &e{0} &afrom {1}'s balance"
+  market-price-set: "&aSet {0} price to &e{1}"
+  event-triggered: "&aTriggered economic event: &e{0}"
+  database-backup: "&aDatabase backup created successfully"
+  migration-started: "&aDatabase migration started"
+  migration-completed: "&aDatabase migration completed successfully"
+  
+# Error Messages
+errors:
+  command-error: "&cAn error occurred while executing this command"
+  database-error: "&cDatabase error occurred. Please contact an administrator"
+  config-error: "&cConfiguration error. Please check the config file"
+  api-error: "&cAPI error occurred. Please try again later"
+  unknown-error: "&cAn unknown error occurred. Please contact support"
+  
+# Help Messages
+help:
+  header: "&6=== EcoXpert Pro Help ==="
+  footer: "&7Use &e/ecoxpert help <topic> &7for detailed information"
+  economy: "&e/eco balance &7- Check your balance"
+  market: "&e/market &7- Access the market system"
+  bank: "&e/bank &7- Access your bank account"
+  loans: "&e/loans &7- Manage your loans"
+  professions: "&e/profession &7- Manage your economic profession"
+  
+# Update System
+updates:
+  available: "&aNew update available: &ev{0}"
+  download: "&7Download: &e{0}"
+  check-failed: "&cFailed to check for updates"
+  up-to-date: "&aYou are running the latest version"
+  
+# Confirmation Messages
+confirm:
+  loan-request: "&7Confirm loan request of &e{0} &7? Type &a/loans confirm"
+  profession-change: "&7Change profession to &e{0} &7? Type &a/profession confirm"
+  dangerous-action: "&cThis action cannot be undone. Type &a/confirm &cto proceed"
+  
+# Time Formats
+time:
+  seconds: "{0} seconds"
+  minutes: "{0} minutes"
+  hours: "{0} hours"
+  days: "{0} days"
+  weeks: "{0} weeks"
+  
+# Number Formats
+numbers:
+  thousand: "K"
+  million: "M"
+  billion: "B"
+  trillion: "T"

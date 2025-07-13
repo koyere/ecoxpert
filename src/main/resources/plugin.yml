@@ -1,0 +1,199 @@
+name: EcoXpert
+version: '${project.version}'
+main: me.koyere.ecoxpert.EcoXpertPlugin
+api-version: 1.19
+authors: [ Koyere ]
+description: Premium Minecraft Economy Plugin for SpigotMC
+website: https://github.com/koyere/ecoxpert
+
+# Server compatibility
+folia-supported: true
+
+# Plugin dependencies
+depend: [ Vault ]
+softdepend: [ PlaceholderAPI, WorldGuard, Lands, GeyserMC ]
+
+# Load order
+load: POSTWORLD
+loadbefore: [ Essentials, CMI ]
+
+# Permissions
+permissions:
+  ecoxpert.*:
+    description: Full access to all EcoXpert features
+    default: op
+    children:
+      ecoxpert.admin: true
+      ecoxpert.user: true
+      
+  ecoxpert.admin:
+    description: Administrative access to EcoXpert
+    default: op
+    children:
+      ecoxpert.admin.reload: true
+      ecoxpert.admin.debug: true
+      ecoxpert.admin.database: true
+      ecoxpert.admin.economy: true
+      ecoxpert.admin.market: true
+      ecoxpert.admin.bank: true
+      ecoxpert.admin.loans: true
+      ecoxpert.admin.events: true
+      ecoxpert.admin.professions: true
+      ecoxpert.admin.inflation: true
+      
+  ecoxpert.user:
+    description: Basic user access to EcoXpert
+    default: true
+    children:
+      ecoxpert.economy.balance: true
+      ecoxpert.economy.pay: true
+      ecoxpert.market.buy: true
+      ecoxpert.market.sell: true
+      ecoxpert.market.prices: true
+      ecoxpert.bank.account: true
+      ecoxpert.bank.deposit: true
+      ecoxpert.bank.withdraw: true
+      ecoxpert.loans.request: true
+      ecoxpert.loans.pay: true
+      ecoxpert.professions.select: true
+      ecoxpert.professions.info: true
+
+# Individual permission nodes
+  ecoxpert.admin.reload:
+    description: Reload plugin configuration
+    default: op
+    
+  ecoxpert.admin.debug:
+    description: Access debug commands and information
+    default: op
+    
+  ecoxpert.admin.database:
+    description: Manage database operations
+    default: op
+    
+  ecoxpert.admin.economy:
+    description: Manage player economies
+    default: op
+    
+  ecoxpert.admin.market:
+    description: Manage market system
+    default: op
+    
+  ecoxpert.admin.bank:
+    description: Manage banking system
+    default: op
+    
+  ecoxpert.admin.loans:
+    description: Manage loan system
+    default: op
+    
+  ecoxpert.admin.events:
+    description: Manage economic events
+    default: op
+    
+  ecoxpert.admin.professions:
+    description: Manage profession system
+    default: op
+    
+  ecoxpert.admin.inflation:
+    description: Manage inflation control
+    default: op
+
+# User permissions
+  ecoxpert.economy.balance:
+    description: Check balance
+    default: true
+    
+  ecoxpert.economy.pay:
+    description: Pay other players
+    default: true
+    
+  ecoxpert.market.buy:
+    description: Buy items from market
+    default: true
+    
+  ecoxpert.market.sell:
+    description: Sell items to market
+    default: true
+    
+  ecoxpert.market.prices:
+    description: View market prices
+    default: true
+    
+  ecoxpert.bank.account:
+    description: Access bank account
+    default: true
+    
+  ecoxpert.bank.deposit:
+    description: Deposit money to bank
+    default: true
+    
+  ecoxpert.bank.withdraw:
+    description: Withdraw money from bank
+    default: true
+    
+  ecoxpert.loans.request:
+    description: Request loans
+    default: true
+    
+  ecoxpert.loans.pay:
+    description: Pay loan installments
+    default: true
+    
+  ecoxpert.professions.select:
+    description: Select economic profession
+    default: true
+    
+  ecoxpert.professions.info:
+    description: View profession information
+    default: true
+
+# Commands (will be implemented in future phases)
+commands:
+  ecoxpert:
+    description: Main EcoXpert command
+    aliases: [ eco, ex ]
+    usage: /<command> [subcommand]
+    permission: ecoxpert.user
+    
+  ecobalance:
+    description: Check balance
+    aliases: [ bal, balance, money ]
+    usage: /<command> [player]
+    permission: ecoxpert.economy.balance
+    
+  ecopay:
+    description: Pay another player
+    aliases: [ pay ]
+    usage: /<command> <player> <amount>
+    permission: ecoxpert.economy.pay
+    
+  market:
+    description: Access market system
+    aliases: [ shop, store ]
+    usage: /<command> [buy|sell|prices|stats]
+    permission: ecoxpert.market.buy
+    
+  ecomarket:
+    description: Access market system
+    aliases: [ market, shop ]
+    usage: /<command> [buy|sell|prices]
+    permission: ecoxpert.market.buy
+    
+  ecobank:
+    description: Access banking system
+    aliases: [ bank ]
+    usage: /<command> [deposit|withdraw|balance]
+    permission: ecoxpert.bank.account
+    
+  ecoloans:
+    description: Access loan system
+    aliases: [ loans, loan ]
+    usage: /<command> [request|pay|info]
+    permission: ecoxpert.loans.request
+    
+  ecoprofession:
+    description: Manage economic profession
+    aliases: [ profession, prof, job ]
+    usage: /<command> [select|info|list]
+    permission: ecoxpert.professions.select

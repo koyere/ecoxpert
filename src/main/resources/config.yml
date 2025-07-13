@@ -1,0 +1,194 @@
+# EcoXpert Pro - Main Configuration
+# Premium Minecraft Economy Plugin
+# https://github.com/koyere/ecoxpert
+
+# Plugin Settings
+plugin:
+  # Debug mode for development
+  debug: false
+  
+  # Language for messages (ISO 639-1 codes)
+  language: "en"
+  
+  # Metrics collection (bStats)
+  metrics:
+    enabled: true
+  
+  # Update checking
+  updates:
+    check-enabled: true
+    notify-admins: true
+    check-interval: 21600 # 6 hours in seconds
+
+# Database Configuration
+database:
+  # Database type: "sqlite" or "mysql"
+  type: "sqlite"
+  
+  # SQLite settings
+  sqlite:
+    file: "ecoxpert.db"
+    
+  # MySQL settings (used when type is "mysql")
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "ecoxpert"
+    username: "username"
+    password: "password"
+    
+    # Connection pool settings
+    pool:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+# Economy Settings
+economy:
+  # Default currency settings
+  currency:
+    name-singular: "dollar"
+    name-plural: "dollars"
+    symbol: "$"
+    decimal-places: 2
+    
+  # Starting balance for new players
+  starting-balance: 1000.0
+  
+  # Maximum balance limit (0 = unlimited)
+  maximum-balance: 0
+  
+  # Transaction limits
+  transaction-limits:
+    # Minimum transaction amount
+    minimum: 0.01
+    # Maximum single transaction (0 = unlimited)
+    maximum: 0
+    # Daily transaction limit per player (0 = unlimited)
+    daily-limit: 0
+
+# Cross-Platform Settings
+cross-platform:
+  # Bedrock Edition support
+  bedrock:
+    # Enable special handling for Bedrock players
+    enabled: true
+    # Use simplified interfaces for Bedrock
+    simplified-gui: true
+    # Alternative currency symbol for Bedrock compatibility
+    currency-symbol: "$"
+    
+  # Server platform optimizations
+  platform:
+    # Enable Paper-specific optimizations
+    paper-optimizations: true
+    # Enable Folia regional threading support
+    folia-support: true
+    # Use async scheduler when available
+    async-scheduler: true
+
+# Module Configuration
+modules:
+  # Market module
+  market:
+    enabled: true
+    config-file: "modules/market.yml"
+    
+  # Banking module
+  bank:
+    enabled: true
+    config-file: "modules/bank.yml"
+    
+  # Loans module
+  loans:
+    enabled: true
+    config-file: "modules/loans.yml"
+    
+  # Economic events module
+  events:
+    enabled: true
+    config-file: "modules/events.yml"
+    
+  # Professions module
+  professions:
+    enabled: true
+    config-file: "modules/professions.yml"
+    
+  # Inflation control module
+  inflation:
+    enabled: true
+    config-file: "modules/inflation.yml"
+    
+  # Integrations module
+  integrations:
+    enabled: true
+    config-file: "modules/integrations.yml"
+
+# Performance Settings
+performance:
+  # Cache settings
+  cache:
+    # Player data cache duration (seconds)
+    player-data: 300
+    # Market data cache duration (seconds)
+    market-data: 60
+    # Balance cache duration (seconds)
+    balance-cache: 30
+    
+  # Database optimization
+  database-optimization:
+    # Batch size for bulk operations
+    batch-size: 100
+    # Connection pool timeout (milliseconds)
+    connection-timeout: 5000
+    # Query timeout (milliseconds)
+    query-timeout: 10000
+    
+  # Threading
+  threading:
+    # Core thread pool size
+    core-threads: 2
+    # Maximum thread pool size
+    max-threads: 4
+    # Thread keep-alive time (seconds)
+    keep-alive: 60
+
+# Logging Settings
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR
+  level: "INFO"
+  
+  # Log specific events
+  log-transactions: true
+  log-market-changes: true
+  log-admin-actions: true
+  log-database-queries: false
+  
+  # Log file settings
+  file-logging:
+    enabled: false
+    file: "logs/ecoxpert.log"
+    max-size: "10MB"
+    max-files: 5
+
+# Security Settings
+security:
+  # Anti-exploit measures
+  anti-exploit:
+    enabled: true
+    # Maximum transactions per minute per player
+    transaction-rate-limit: 60
+    # Suspicious activity detection
+    activity-monitoring: true
+    
+  # Admin security
+  admin-security:
+    # Require confirmation for dangerous commands
+    require-confirmation: true
+    # Log all admin actions
+    log-admin-actions: true
+
+# DO NOT MODIFY - Configuration version for auto-updates
+config-version: 1
