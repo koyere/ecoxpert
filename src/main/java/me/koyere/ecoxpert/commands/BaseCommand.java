@@ -13,6 +13,9 @@ import org.bukkit.entity.Player;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Base command class with common functionality
@@ -24,10 +27,12 @@ public abstract class BaseCommand implements CommandExecutor, TabCompleter {
     
     protected final EconomyManager economyManager;
     protected final TranslationManager translationManager;
+    protected final Logger logger;
     
     protected BaseCommand(EconomyManager economyManager, TranslationManager translationManager) {
         this.economyManager = economyManager;
         this.translationManager = translationManager;
+        this.logger = Bukkit.getLogger();
     }
     
     /**
@@ -97,12 +102,31 @@ public abstract class BaseCommand implements CommandExecutor, TabCompleter {
     
     /**
      * Ensure player has an economy account
+     * Uses database constraints to prevent race conditions
      */
-    protected void ensureAccount(UUID playerUuid) {
-        economyManager.hasAccount(playerUuid).thenAccept(hasAccount -> {
+    protected CompletableFuture<Void> ensureAccount(UUID playerUuid) {
+        // Use INSERT OR IGNORE to prevent race conditions
+        return economyManager.hasAccount(playerUuid).thenCompose(hasAccount -> {
             if (!hasAccount) {
-                economyManager.createAccount(playerUuid, economyManager.getStartingBalance());
+                return economyManager.createAccount(playerUuid, economyManager.getStartingBalance());
             }
+            return CompletableFuture.completedFuture(null);
+        }).exceptionally(throwable -> {
+            logger.log(Level.SEVERE, "ECOXPERT ERROR - ensureAccount failed for UUID: " + playerUuid, throwable);
+            return null;
         });
+    }
+    
+    /**
+     * Handle command execution with comprehensive error logging
+     */
+    protected void handleCommandSafely(CommandSender sender, String commandName, Runnable command) {
+        try {
+            logger.info("ECOXPERT DEBUG - Executing command: " + commandName + " for sender: " + sender.getName());
+            command.run();
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "ECOXPERT ERROR - Command execution failed: " + commandName, e);
+            sendMessage(sender, "error.database_error");
+        }
     }
 }

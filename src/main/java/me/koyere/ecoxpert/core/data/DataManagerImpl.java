@@ -133,9 +133,9 @@ public class DataManagerImpl implements DataManager {
             try {
                 Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql);
-                setParameters(stmt, params);
                 
-                return new QueryResultImpl(stmt.executeQuery());
+                setParameters(stmt, params);
+                return new QueryResultImpl(stmt.executeQuery(), conn, stmt);
                 
             } catch (SQLException e) {
                 throw new RuntimeException("Failed to execute query: " + sql, e);
@@ -383,6 +383,70 @@ public class DataManagerImpl implements DataManager {
                 transaction_count INTEGER DEFAULT 0,
                 volume DECIMAL(20,2) DEFAULT 0.00,
                 snapshot_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """,
+            
+            // Bank accounts
+            """
+            CREATE TABLE IF NOT EXISTS ecoxpert_bank_accounts (
+                player_uuid VARCHAR(36) PRIMARY KEY,
+                account_number VARCHAR(20) UNIQUE NOT NULL,
+                balance DECIMAL(20,2) NOT NULL DEFAULT 0.00,
+                tier VARCHAR(20) NOT NULL DEFAULT 'BASIC',
+                total_interest_earned DECIMAL(20,2) DEFAULT 0.00,
+                frozen BOOLEAN DEFAULT FALSE,
+                frozen_reason TEXT,
+                daily_deposit_used DECIMAL(20,2) DEFAULT 0.00,
+                daily_withdraw_used DECIMAL(20,2) DEFAULT 0.00,
+                daily_transfer_used DECIMAL(20,2) DEFAULT 0.00,
+                last_reset_date DATE DEFAULT CURRENT_DATE,
+                last_interest_calculation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                failed_transaction_count INTEGER DEFAULT 0,
+                last_failed_transaction TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """,
+            
+            // Bank transaction history
+            """
+            CREATE TABLE IF NOT EXISTS ecoxpert_bank_transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_uuid VARCHAR(36) NOT NULL,
+                transaction_type VARCHAR(30) NOT NULL,
+                amount DECIMAL(20,2) NOT NULL,
+                balance_before DECIMAL(20,2) NOT NULL,
+                balance_after DECIMAL(20,2) NOT NULL,
+                description TEXT,
+                reference VARCHAR(100),
+                related_account_uuid VARCHAR(36),
+                admin_id VARCHAR(100),
+                ip_address VARCHAR(45),
+                reason TEXT,
+                transaction_hash VARCHAR(100) NOT NULL,
+                verified BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """,
+            
+            // Bank monthly statements
+            """
+            CREATE TABLE IF NOT EXISTS ecoxpert_bank_statements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_uuid VARCHAR(36) NOT NULL,
+                statement_year INTEGER NOT NULL,
+                statement_month INTEGER NOT NULL,
+                opening_balance DECIMAL(20,2) NOT NULL,
+                closing_balance DECIMAL(20,2) NOT NULL,
+                total_deposits DECIMAL(20,2) DEFAULT 0.00,
+                total_withdrawals DECIMAL(20,2) DEFAULT 0.00,
+                total_transfers_in DECIMAL(20,2) DEFAULT 0.00,
+                total_transfers_out DECIMAL(20,2) DEFAULT 0.00,
+                total_interest DECIMAL(20,2) DEFAULT 0.00,
+                total_fees DECIMAL(20,2) DEFAULT 0.00,
+                transaction_count INTEGER DEFAULT 0,
+                generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(account_uuid, statement_year, statement_month)
             )
             """
         };

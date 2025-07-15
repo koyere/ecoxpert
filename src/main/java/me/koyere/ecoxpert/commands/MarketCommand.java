@@ -5,6 +5,7 @@ import me.koyere.ecoxpert.modules.market.MarketManager;
 import me.koyere.ecoxpert.modules.market.MarketItem;
 import me.koyere.ecoxpert.modules.market.MarketStatistics;
 import me.koyere.ecoxpert.modules.market.MarketTransactionResult;
+import me.koyere.ecoxpert.modules.market.MarketGUI;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;

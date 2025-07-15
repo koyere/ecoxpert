@@ -5,6 +5,8 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Implementation of database transaction management
@@ -16,6 +18,7 @@ public class DatabaseTransactionImpl implements DatabaseTransaction {
     
     private final Connection connection;
     private final Executor executor;
+    private final Logger logger = Logger.getLogger("EcoXpert");
     private boolean active = true;
     private boolean committed = false;
     
@@ -30,12 +33,16 @@ public class DatabaseTransactionImpl implements DatabaseTransaction {
     @Override
     public CompletableFuture<Integer> executeUpdate(String sql, Object... params) {
         return CompletableFuture.supplyAsync(() -> {
+            logger.info("ECOXPERT DEBUG - DatabaseTransaction.executeUpdate: " + sql);
             checkActive();
             
             try (PreparedStatement stmt = connection.prepareStatement(sql)) {
                 setParameters(stmt, params);
-                return stmt.executeUpdate();
+                int result = stmt.executeUpdate();
+                logger.info("ECOXPERT DEBUG - executeUpdate result: " + result + " rows affected");
+                return result;
             } catch (SQLException e) {
+                logger.log(Level.SEVERE, "ECOXPERT ERROR - executeUpdate failed for SQL: " + sql, e);
                 throw new RuntimeException("Failed to execute update: " + sql, e);
             }
         }, executor);
@@ -44,13 +51,16 @@ public class DatabaseTransactionImpl implements DatabaseTransaction {
     @Override
     public CompletableFuture<QueryResult> executeQuery(String sql, Object... params) {
         return CompletableFuture.supplyAsync(() -> {
+            logger.info("ECOXPERT DEBUG - DatabaseTransaction.executeQuery: " + sql);
             checkActive();
             
-            try {
-                PreparedStatement stmt = connection.prepareStatement(sql);
+            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
                 setParameters(stmt, params);
-                return new QueryResultImpl(stmt.executeQuery());
+                QueryResult result = new QueryResultImpl(stmt.executeQuery());
+                logger.info("ECOXPERT DEBUG - executeQuery completed successfully");
+                return result;
             } catch (SQLException e) {
+                logger.log(Level.SEVERE, "ECOXPERT ERROR - executeQuery failed for SQL: " + sql, e);
                 throw new RuntimeException("Failed to execute query: " + sql, e);
             }
         }, executor);

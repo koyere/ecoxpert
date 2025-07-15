@@ -13,9 +13,10 @@ folia-supported: true
 depend: [ Vault ]
 softdepend: [ PlaceholderAPI, WorldGuard, Lands, GeyserMC ]
 
-# Load order
+# Load order - Load after Vault but before economy plugins
 load: POSTWORLD
-loadbefore: [ Essentials, CMI ]
+loadafter: [ Vault ]
+loadbefore: [ Essentials, CMI, EssentialsX ]
 
 # Permissions
 permissions:
@@ -174,26 +175,10 @@ commands:
     usage: /<command> [buy|sell|prices|stats]
     permission: ecoxpert.market.buy
     
-  ecomarket:
-    description: Access market system
-    aliases: [ market, shop ]
-    usage: /<command> [buy|sell|prices]
-    permission: ecoxpert.market.buy
     
-  ecobank:
-    description: Access banking system
-    aliases: [ bank ]
-    usage: /<command> [deposit|withdraw|balance]
-    permission: ecoxpert.bank.account
-    
-  ecoloans:
-    description: Access loan system
-    aliases: [ loans, loan ]
-    usage: /<command> [request|pay|info]
-    permission: ecoxpert.loans.request
-    
-  ecoprofession:
-    description: Manage economic profession
-    aliases: [ profession, prof, job ]
-    usage: /<command> [select|info|list]
-    permission: ecoxpert.professions.select
+  # Banking system commands (Phase 4 - not yet implemented)
+  # ecobank:
+  #   description: Access banking system
+  #   aliases: [ bank ]
+  #   usage: /<command> [deposit|withdraw|balance]
+  #   permission: ecoxpert.bank.account

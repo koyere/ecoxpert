@@ -1,0 +1,256 @@
+# EcoXpert Pro - Mensajes en Español
+# Plugin Premium de Economía para Minecraft
+
+# General
+prefix: "&8[&6EcoXpert&8] &f"
+no-permission: "&cNo tienes permisos para ejecutar este comando."
+player-only: "&cEste comando solo puede ser ejecutado por jugadores."
+console-only: "&cEste comando solo puede ser ejecutado desde la consola."
+player-not-found: "&cJugador '{0}' no encontrado o nunca jugó en este servidor."
+invalid-amount: "&cCantidad inválida. Por favor ingresa un número válido."
+insufficient-funds: "&cFondos insuficientes. Necesitas {0} pero solo tienes {1}."
+
+# Plugin Management
+plugin:
+  enabled: "&a¡EcoXpert Pro v{0} habilitado exitosamente!"
+  disabled: "&cEcoXpert Pro deshabilitado."
+  reloaded: "&a¡Configuración recargada exitosamente!"
+  platform-detected: "&7Plataforma detectada: &e{0} &7(MC {1})"
+  database-connected: "&aBase de datos conectada exitosamente ({0})"
+  vault-registered: "&aRegistrado como proveedor de economía Vault"
+  
+# Economy System
+economy:
+  balance: "&7Tu saldo: &a{0}"
+  balance-other: "&7Saldo de {0}: &a{1}"
+  payment-sent: "&aEnviaste &e{0} &aa &e{1}"
+  payment-received: "&aRecibiste &e{0} &ade &e{1}"
+  account-created: "&aCuenta de economía creada exitosamente"
+
+# Commands
+commands:
+  balance:
+    own: "&7Tu saldo: &a{0}"
+    other: "&7Saldo de {0}: &a{1}"
+  pay:
+    usage: "&cUso: &e/pay <jugador> <cantidad>"
+    success: "&aEnviaste &e{0} &aa &e{1}"
+    received: "&aRecibiste &e{0} &ade &e{1}"
+  set:
+    usage: "&cUso: &e/eco set <jugador> <cantidad>"
+    success: "&aEstablecido saldo de {0} a &e{1}"
+  add:
+    usage: "&cUso: &e/eco add <jugador> <cantidad>"
+    success: "&aAgregado &e{0} &aal saldo de {1}"
+  remove:
+    usage: "&cUso: &e/eco remove <jugador> <cantidad>"
+    success: "&aRemovido &e{0} &adel saldo de {1}"
+  help:
+    header: "&6=== Comandos EcoXpert ==="
+    balance: "&e/eco balance [jugador] &7- Verificar saldo"
+    pay: "&e/eco pay <jugador> <cantidad> &7- Pagar a otro jugador"
+    admin_header: "&6=== Comandos de Administrador ==="
+    set: "&e/eco set <jugador> <cantidad> &7- Establecer saldo del jugador"
+    add: "&e/eco add <jugador> <cantidad> &7- Agregar al saldo del jugador"
+    remove: "&e/eco remove <jugador> <cantidad> &7- Remover del saldo del jugador"
+  
+# Market System
+market:
+  prices-header: "&6=== Precios del Mercado ==="
+  price-format: "&7{0}: &aCompra {1} &7| &cVenta {2}"
+  item-bought: "&aCompraste &e{0}x {1} &apor &e{2}"
+  item-sold: "&aVendiste &e{0}x {1} &apor &e{2}"
+  price-changed: "&7Precio del mercado para &e{0} &7cambió a &a{1}"
+  not-enough-items: "&cNo tienes suficientes {0} para vender"
+  market-closed: "&cEl mercado está actualmente cerrado"
+  insufficient-funds: "&c¡Fondos insuficientes! Necesitas {0} pero solo tienes {1}."
+  inventory-full: "&c¡Tu inventario está lleno! Libera espacio e intenta de nuevo."
+  item-not-buyable: "&cEste ítem no puede ser comprado en el mercado."
+  item-not-sellable: "&cEste ítem no puede ser vendido al mercado."
+  
+  # Command messages
+  unknown-command: "&cComando de mercado desconocido: &e{0}&c. Usa &a/market help &cpara comandos disponibles."
+  buy-usage: "&cUso: &e/market buy <ítem> [cantidad]"
+  sell-usage: "&cUso: &e/market sell <ítem> [cantidad]"
+  invalid-item: "&cÍtem inválido: &e{0}&c. Por favor verifica la ortografía."
+  invalid-quantity: "&cCantidad inválida. Por favor ingresa un número positivo."
+  no-items-to-sell: "&cNo tienes &e{0} &cpara vender."
+  system-error: "&cOcurrió un error del sistema. Por favor intenta más tarde."
+  item-not-found: "&cÍtem &e{0} &cno está disponible en el mercado."
+  gui-coming-soon: "&e¡La GUI del mercado estará pronto disponible! Usa &a/market help &epara comandos disponibles."
+  prices-more: "&7... y &e{0} &7ítems más. Usa &a/market prices <ítem> &7para precios específicos."
+  
+  # Item prices display
+  item-prices:
+    header: "&6=== Precios para {0} ==="
+    buy: "&aPrecio de Compra: &e{0}"
+    sell: "&cPrecio de Venta: &e{0}"
+    volume: "&7Volumen Total: &e{0}"
+    trend: "&7Tendencia: &e{0} &7(&a{1}&7)"
+  
+  # Market statistics
+  stats:
+    header: "&6=== Estadísticas del Mercado ==="
+    items: "&7Ítems Activos: &e{0}&7/&e{1}"
+    transactions: "&7Transacciones Totales: &e{0}"
+    volume: "&7Volumen Total: &e{0}"
+    activity: "&7Actividad del Mercado: &e{0}"
+    daily: "&7Diarias: &e{0} &7transacciones, &e{1} &7volumen"
+  
+  # Help messages
+  help:
+    header: "&6=== Ayuda del Mercado ==="
+    buy: "&e/market buy <ítem> [cantidad] &7- Comprar ítems del mercado"
+    sell: "&e/market sell <ítem> [cantidad] &7- Vender ítems al mercado"
+    prices: "&e/market prices [ítem] &7- Ver precios del mercado"
+    stats: "&e/market stats &7- Ver estadísticas del mercado"
+    gui: "&e/market &7- Abrir GUI del mercado (próximamente)"
+    footer: "&7Consejo: ¡Usa autocompletar con Tab para nombres de ítems!"
+  
+  # Error messages
+  error:
+    insufficient-funds: "&c¡Fondos insuficientes! Necesitas &e{0} &cpero solo tienes &e{1}&c."
+    insufficient-items: "&cNo tienes suficientes &e{0} &cpara vender."
+    market-closed: "&cEl mercado está actualmente cerrado."
+    item-not-available: "&cEste ítem no está disponible en el mercado."
+    item-not-buyable: "&cEste ítem no puede ser comprado del mercado."
+    item-not-sellable: "&cEste ítem no puede ser vendido al mercado."
+    inventory-full: "&c¡Tu inventario está lleno! Libera espacio e intenta de nuevo."
+    invalid-quantity: "&cCantidad inválida especificada."
+    price-changed: "&cEl precio ha cambiado desde que iniciaste esta transacción."
+    system-error: "&cOcurrió un error del sistema. Por favor contacta un administrador."
+  
+  # GUI messages
+  gui:
+    title: "Mercado"
+    prev-page: "Página Anterior"
+    next-page: "Página Siguiente"
+    current-page: "Página {0} de {1}"
+    close: "Cerrar Mercado"
+    
+    info:
+      title: "Información del Mercado"
+      items: "Total de Ítems: {0}"
+      page: "Página: {0}/{1}"
+      help1: "Click para comprar 1 ítem"
+      help2: "Shift-click para vender todo"
+    
+    item:
+      header: "Ítem del Mercado"
+      buy-price: "Compra: {0}"
+      sell-price: "Venta: {0}"
+      not-buyable: "No se puede comprar este ítem"
+      not-sellable: "No se puede vender este ítem"
+      volume: "Volumen: {0}"
+      trend: "Tendencia: {0}"
+      click-buy: "Click para comprar 1"
+      shift-click-sell: "Shift-click para vender todo"
+  
+# Banking System
+bank:
+  account-info: "&6=== Cuenta Bancaria ==="
+  balance: "&7Saldo de la Cuenta: &a{0}"
+  interest-rate: "&7Tasa de Interés: &e{0}%"
+  deposited: "&aDepositaste &e{0} &aen tu cuenta bancaria"
+  withdrawn: "&aRetiraste &e{0} &ade tu cuenta bancaria"
+  insufficient-bank-funds: "&cFondos insuficientes en tu cuenta bancaria"
+  interest-earned: "&aGanaste &e{0} &aen intereses"
+  daily-limit-reached: "&cHas alcanzado tu límite diario de transacciones"
+  
+# Loan System
+loans:
+  request-sent: "&aSolicitud de préstamo por &e{0} &aha sido enviada"
+  loan-approved: "&aTu préstamo de &e{0} &aha sido aprobado"
+  loan-denied: "&cTu solicitud de préstamo ha sido denegada: {0}"
+  payment-made: "&aPago de préstamo de &e{0} &arealizado exitosamente"
+  loan-paid-off: "&a¡Felicitaciones! Has pagado completamente tu préstamo"
+  payment-overdue: "&cTu pago de préstamo está vencido. Por favor paga inmediatamente"
+  credit-score: "&7Tu puntuación crediticia: &e{0}/1000"
+  no-active-loans: "&7No tienes préstamos activos"
+  
+# Economic Events
+events:
+  started: "&6Evento Económico: &e{0} &6¡ha comenzado!"
+  ended: "&6Evento Económico: &e{0} &6ha terminado"
+  inflation-warning: "&cAdvertencia: Alta inflación detectada en la economía"
+  deflation-warning: "&eAviso: Deflación detectada en la economía"
+  market-crash: "&c¡Colapso del mercado! Todos los precios reducidos en {0}%"
+  economic-boom: "&a¡Auge económico! Todos los precios aumentaron en {0}%"
+  
+# Professions System
+professions:
+  selected: "&aAhora eres un &e{0}"
+  changed: "&aCambiaste de &e{0} &aa &e{1}"
+  cooldown: "&cDebes esperar &e{0} &cantes de cambiar profesiones nuevamente"
+  bonus-earned: "&aGanaste un bono de profesión de &e{0}"
+  level-up: "&aTu nivel de &e{0} &aaumenta a &e{1}"
+  max-level: "&eHas alcanzado el nivel máximo para &e{0}"
+  
+# Admin Commands
+admin:
+  player-balance-set: "&aEstablecido saldo de {0} a &e{1}"
+  player-balance-added: "&aAgregado &e{0} &aal saldo de {1}"
+  player-balance-removed: "&aRemovido &e{0} &adel saldo de {1}"
+  market-price-set: "&aEstablecido precio de {0} a &e{1}"
+  event-triggered: "&aEvento económico activado: &e{0}"
+  database-backup: "&aRespaldo de base de datos creado exitosamente"
+  migration-started: "&aMigración de base de datos iniciada"
+  migration-completed: "&aMigración de base de datos completada exitosamente"
+  
+# Error Messages
+errors:
+  command-error: "&cOcurrió un error al ejecutar este comando"
+  database-error: "&cOcurrió un error de base de datos. Por favor contacta un administrador"
+  config-error: "&cError de configuración. Por favor verifica el archivo de configuración"
+  api-error: "&cOcurrió un error de API. Por favor intenta más tarde"
+  unknown-error: "&cOcurrió un error desconocido. Por favor contacta soporte"
+
+# Error Keys (alternative format)
+error:
+  database_error: "&cOcurrió un error de base de datos. Por favor contacta un administrador"
+  player_only: "&cEste comando solo puede ser ejecutado por jugadores"
+  no_permission: "&cNo tienes permisos para ejecutar este comando"
+  invalid_amount: "&cCantidad inválida. Por favor ingresa un número válido"
+  invalid_number: "&cNúmero inválido: {0}"
+  player_not_found: "&cJugador '{0}' no encontrado o nunca jugó en este servidor"
+  cannot_pay_self: "&c¡No puedes pagarte a ti mismo!"
+  insufficient_funds: "&c¡Fondos insuficientes! Necesitas {0} pero solo tienes {1}."
+
+  
+# Help Messages
+help:
+  header: "&6=== Ayuda de EcoXpert Pro ==="
+  footer: "&7Usa &e/ecoxpert help <tema> &7para información detallada"
+  economy: "&e/eco balance &7- Verificar tu saldo"
+  market: "&e/market &7- Acceder al sistema de mercado"
+  bank: "&e/bank &7- Acceder a tu cuenta bancaria"
+  loans: "&e/loans &7- Administrar tus préstamos"
+  professions: "&e/profession &7- Administrar tu profesión económica"
+  
+# Update System
+updates:
+  available: "&aActualización disponible: &ev{0}"
+  download: "&7Descarga: &e{0}"
+  check-failed: "&cFalló la verificación de actualizaciones"
+  up-to-date: "&aEstás ejecutando la versión más reciente"
+  
+# Confirmation Messages
+confirm:
+  loan-request: "&7¿Confirmar solicitud de préstamo de &e{0}&7? Escribe &a/loans confirm"
+  profession-change: "&7¿Cambiar profesión a &e{0}&7? Escribe &a/profession confirm"
+  dangerous-action: "&cEsta acción no se puede deshacer. Escribe &a/confirm &cpara continuar"
+  
+# Time Formats
+time:
+  seconds: "{0} segundos"
+  minutes: "{0} minutos"
+  hours: "{0} horas"
+  days: "{0} días"
+  weeks: "{0} semanas"
+  
+# Number Formats
+numbers:
+  thousand: "K"
+  million: "M"
+  billion: "B"
+  trillion: "T"

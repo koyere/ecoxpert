@@ -26,38 +26,62 @@ public class BalanceCommand extends BaseCommand {
     
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!hasPermission(sender, "ecoxpert.economy.balance")) {
-            return true;
-        }
-        
-        OfflinePlayer target;
-        
-        if (args.length == 0) {
-            // Check own balance
-            Player player = requirePlayer(sender);
-            if (player == null) return true;
-            target = player;
-        } else {
-            // Check another player's balance
-            if (!hasPermission(sender, "ecoxpert.admin.economy")) {
-                return true;
+        handleCommandSafely(sender, "balance", () -> {
+            logger.info("ECOXPERT DEBUG - BalanceCommand started for: " + sender.getName());
+            
+            if (!hasPermission(sender, "ecoxpert.economy.balance")) {
+                logger.warning("ECOXPERT DEBUG - Permission denied for: " + sender.getName());
+                return;
             }
-            target = findPlayer(sender, args[0]);
-            if (target == null) return true;
-        }
-        
-        ensureAccount(target.getUniqueId());
-        
-        economyManager.getBalance(target.getUniqueId()).thenAccept(balance -> {
-            String formattedBalance = economyManager.formatMoney(balance);
-            if (target.equals(sender)) {
-                sendMessage(sender, "commands.balance.own", formattedBalance);
+            
+            OfflinePlayer target;
+            
+            if (args.length == 0) {
+                // Check own balance
+                Player player = requirePlayer(sender);
+                if (player == null) {
+                    logger.warning("ECOXPERT DEBUG - requirePlayer returned null");
+                    return;
+                }
+                target = player;
+                logger.info("ECOXPERT DEBUG - Checking own balance for: " + player.getName());
             } else {
-                sendMessage(sender, "commands.balance.other", target.getName(), formattedBalance);
+                // Check another player's balance
+                if (!hasPermission(sender, "ecoxpert.admin.economy")) {
+                    logger.warning("ECOXPERT DEBUG - Admin permission denied for: " + sender.getName());
+                    return;
+                }
+                target = findPlayer(sender, args[0]);
+                if (target == null) {
+                    logger.warning("ECOXPERT DEBUG - findPlayer returned null for: " + args[0]);
+                    return;
+                }
+                logger.info("ECOXPERT DEBUG - Checking balance for other player: " + target.getName());
             }
-        }).exceptionally(throwable -> {
-            sendMessage(sender, "error.database_error");
-            return null;
+            
+            logger.info("ECOXPERT DEBUG - About to ensureAccount for UUID: " + target.getUniqueId());
+            ensureAccount(target.getUniqueId()).thenRun(() -> {
+                logger.info("ECOXPERT DEBUG - ensureAccount completed, getting balance for: " + target.getUniqueId());
+                
+                economyManager.getBalance(target.getUniqueId()).thenAccept(balance -> {
+                    logger.info("ECOXPERT DEBUG - getBalance returned: " + balance + " for: " + target.getName());
+                    String formattedBalance = economyManager.formatMoney(balance);
+                    if (target.equals(sender)) {
+                        sendMessage(sender, "commands.balance.own", formattedBalance);
+                    } else {
+                        sendMessage(sender, "commands.balance.other", target.getName(), formattedBalance);
+                    }
+                    logger.info("ECOXPERT DEBUG - Balance command completed successfully");
+                }).exceptionally(throwable -> {
+                    logger.log(java.util.logging.Level.SEVERE, "ECOXPERT ERROR - getBalance failed for: " + target.getName(), throwable);
+                    sendMessage(sender, "error.database_error");
+                    return null;
+                });
+            }).exceptionally(throwable -> {
+                logger.log(java.util.logging.Level.SEVERE, "ECOXPERT ERROR - ensureAccount failed in command for: " + target.getName(), throwable);
+                sendMessage(sender, "error.database_error");
+                return null;
+            });
         });
         
         return true;

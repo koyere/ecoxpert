@@ -26,6 +26,33 @@ economy:
   payment-sent: "&aYou sent &e{0} &ato &e{1}"
   payment-received: "&aYou received &e{0} &afrom &e{1}"
   account-created: "&aEconomy account created successfully"
+
+# Commands
+commands:
+  balance:
+    own: "&7Your balance: &a{0}"
+    other: "&7{0}'s balance: &a{1}"
+  pay:
+    usage: "&cUsage: &e/pay <player> <amount>"
+    success: "&aYou sent &e{0} &ato &e{1}"
+    received: "&aYou received &e{0} &afrom &e{1}"
+  set:
+    usage: "&cUsage: &e/eco set <player> <amount>"
+    success: "&aSet {0}'s balance to &e{1}"
+  add:
+    usage: "&cUsage: &e/eco add <player> <amount>"
+    success: "&aAdded &e{0} &ato {1}'s balance"
+  remove:
+    usage: "&cUsage: &e/eco remove <player> <amount>"
+    success: "&aRemoved &e{0} &afrom {1}'s balance"
+  help:
+    header: "&6=== EcoXpert Commands ==="
+    balance: "&e/eco balance [player] &7- Check balance"
+    pay: "&e/eco pay <player> <amount> &7- Pay another player"
+    admin_header: "&6=== Admin Commands ==="
+    set: "&e/eco set <player> <amount> &7- Set player balance"
+    add: "&e/eco add <player> <amount> &7- Add to player balance"
+    remove: "&e/eco remove <player> <amount> &7- Remove from player balance"
   
 # Market System
 market:
@@ -36,6 +63,10 @@ market:
   price-changed: "&7Market price for &e{0} &7changed to &a{1}"
   not-enough-items: "&cYou don't have enough {0} to sell"
   market-closed: "&cThe market is currently closed"
+  insufficient-funds: "&cInsufficient funds! You need {0} but only have {1}."
+  inventory-full: "&cYour inventory is full! Clear some space and try again."
+  item-not-buyable: "&cThis item cannot be bought from the market."
+  item-not-sellable: "&cThis item cannot be sold to the market."
   
   # Command messages
   unknown-command: "&cUnknown market command: &e{0}&c. Use &a/market help &cfor available commands."
@@ -173,6 +204,18 @@ errors:
   config-error: "&cConfiguration error. Please check the config file"
   api-error: "&cAPI error occurred. Please try again later"
   unknown-error: "&cAn unknown error occurred. Please contact support"
+
+# Error Keys (alternative format)
+error:
+  database_error: "&cDatabase error occurred. Please contact an administrator"
+  player_only: "&cThis command can only be executed by players"
+  no_permission: "&cYou don't have permission to execute this command"
+  invalid_amount: "&cInvalid amount. Please enter a valid number"
+  invalid_number: "&cInvalid number: {0}"
+  player_not_found: "&cPlayer '{0}' not found or never played on this server"
+  cannot_pay_self: "&cYou cannot pay yourself!"
+  insufficient_funds: "&cInsufficient funds! You need {0} but only have {1}."
+
   
 # Help Messages
 help:

@@ -12,6 +12,7 @@ import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
 /**
  * Implementation of core economy management
@@ -59,46 +60,64 @@ public class EconomyManagerImpl implements EconomyManager {
     
     @Override
     public CompletableFuture<Boolean> hasAccount(UUID playerUuid) {
+        plugin.getLogger().info("ECOXPERT DEBUG - hasAccount called for: " + playerUuid);
         return dataManager.executeQuery(
-            "SELECT 1 FROM ecoxpert_accounts WHERE player_uuid = ?",
+            "SELECT player_uuid FROM ecoxpert_accounts WHERE player_uuid = ? LIMIT 1",
             playerUuid.toString()
         ).thenApply(result -> {
             try (result) {
-                return result.next();
+                boolean exists = result.next();
+                plugin.getLogger().info("ECOXPERT DEBUG - hasAccount result: " + exists + " for: " + playerUuid);
+                return exists;
             }
+        }).exceptionally(throwable -> {
+            plugin.getLogger().log(Level.SEVERE, "ECOXPERT ERROR - hasAccount failed for: " + playerUuid, throwable);
+            return false;
         });
     }
     
     @Override
     public CompletableFuture<Void> createAccount(UUID playerUuid, BigDecimal startingBalance) {
+        plugin.getLogger().info("ECOXPERT DEBUG - createAccount called for: " + playerUuid + " with balance: " + startingBalance);
         return dataManager.executeUpdate(
-            "INSERT INTO ecoxpert_accounts (player_uuid, balance) VALUES (?, ?)",
+            "INSERT OR IGNORE INTO ecoxpert_accounts (player_uuid, balance) VALUES (?, ?)",
             playerUuid.toString(), startingBalance
         ).thenCompose(rows -> {
+            plugin.getLogger().info("ECOXPERT DEBUG - createAccount affected " + rows + " rows for: " + playerUuid);
             if (rows > 0) {
-                // Log account creation
                 return logTransaction(null, playerUuid, startingBalance, "ACCOUNT_CREATION", 
                                     "Initial account creation");
             }
             return CompletableFuture.completedFuture(null);
-        }).thenApply(v -> null);
+        }).exceptionally(throwable -> {
+            plugin.getLogger().log(Level.SEVERE, "ECOXPERT ERROR - createAccount failed for: " + playerUuid, throwable);
+            return (Void) null;
+        });
     }
     
     @Override
     public CompletableFuture<BigDecimal> getBalance(UUID playerUuid) {
-        return ensureAccountExists(playerUuid).thenCompose(v ->
-            dataManager.executeQuery(
+        plugin.getLogger().info("ECOXPERT DEBUG - getBalance called for: " + playerUuid);
+        return ensureAccountExists(playerUuid).thenCompose(v -> {
+            plugin.getLogger().info("ECOXPERT DEBUG - ensureAccountExists completed, executing balance query");
+            return dataManager.executeQuery(
                 "SELECT balance FROM ecoxpert_accounts WHERE player_uuid = ?",
                 playerUuid.toString()
             ).thenApply(result -> {
                 try (result) {
                     if (result.next()) {
-                        return result.getBigDecimal("balance");
+                        BigDecimal balance = result.getBigDecimal("balance");
+                        plugin.getLogger().info("ECOXPERT DEBUG - getBalance found balance: " + balance + " for: " + playerUuid);
+                        return balance;
                     }
+                    plugin.getLogger().info("ECOXPERT DEBUG - getBalance found no rows for: " + playerUuid);
                     return BigDecimal.ZERO;
                 }
-            })
-        );
+            });
+        }).exceptionally(throwable -> {
+            plugin.getLogger().log(Level.SEVERE, "ECOXPERT ERROR - getBalance failed for: " + playerUuid, throwable);
+            return BigDecimal.ZERO;
+        });
     }
     
     @Override
@@ -121,18 +140,27 @@ public class EconomyManagerImpl implements EconomyManager {
     @Override
     public CompletableFuture<Void> addMoney(UUID playerUuid, BigDecimal amount, String reason) {
         validateAmount(amount);
+        plugin.getLogger().info("ECOXPERT DEBUG - addMoney called for: " + playerUuid + " amount: " + amount);
         
         return ensureAccountExists(playerUuid).thenCompose(v -> {
+            plugin.getLogger().info("ECOXPERT DEBUG - ensureAccountExists completed, executing addMoney update");
             return dataManager.executeUpdate(
                 "UPDATE ecoxpert_accounts SET balance = balance + ?, updated_at = CURRENT_TIMESTAMP WHERE player_uuid = ?",
                 amount, playerUuid.toString()
             ).thenCompose(rows -> {
+                plugin.getLogger().info("ECOXPERT DEBUG - addMoney update affected " + rows + " rows");
                 if (rows > 0) {
                     return logTransaction(null, playerUuid, amount, "DEPOSIT", reason);
                 }
                 return CompletableFuture.completedFuture(null);
             });
-        }).thenApply(v -> null);
+        }).thenApply(v -> {
+            plugin.getLogger().info("ECOXPERT DEBUG - addMoney completed for: " + playerUuid);
+            return (Void) null;
+        }).exceptionally(throwable -> {
+            plugin.getLogger().log(Level.SEVERE, "ECOXPERT ERROR - addMoney failed for: " + playerUuid, throwable);
+            return (Void) null;
+        });
     }
     
     @Override
@@ -170,17 +198,28 @@ public class EconomyManagerImpl implements EconomyManager {
         return ensureAccountExists(fromUuid).thenCompose(v -> ensureAccountExists(toUuid))
         .thenCompose(v -> {
             return dataManager.beginTransaction().thenCompose(transaction -> {
-                return hasSufficientFunds(fromUuid, amount).thenCompose(hasFunds -> {
-                    if (!hasFunds) {
-                        transaction.rollback();
-                        return CompletableFuture.completedFuture(false);
-                    }
-                    
-                    // Remove from source
-                    return transaction.executeUpdate(
-                        "UPDATE ecoxpert_accounts SET balance = balance - ?, updated_at = CURRENT_TIMESTAMP WHERE player_uuid = ?",
-                        amount, fromUuid.toString()
-                    ).thenCompose(rows1 -> {
+                // Check funds WITHIN transaction for atomicity
+                return transaction.executeQuery(
+                    "SELECT balance FROM ecoxpert_accounts WHERE player_uuid = ?",
+                    fromUuid.toString()
+                ).thenCompose(result -> {
+                    try {
+                        if (!result.next()) {
+                            transaction.rollback();
+                            return CompletableFuture.completedFuture(false);
+                        }
+                        
+                        BigDecimal currentBalance = result.getBigDecimal("balance");
+                        if (currentBalance.compareTo(amount) < 0) {
+                            transaction.rollback();
+                            return CompletableFuture.completedFuture(false);
+                        }
+                        
+                        // Remove from source
+                        return transaction.executeUpdate(
+                            "UPDATE ecoxpert_accounts SET balance = balance - ?, updated_at = CURRENT_TIMESTAMP WHERE player_uuid = ?",
+                            amount, fromUuid.toString()
+                        ).thenCompose(rows1 -> {
                         if (rows1 == 0) {
                             transaction.rollback();
                             return CompletableFuture.completedFuture(false);
@@ -201,10 +240,16 @@ public class EconomyManagerImpl implements EconomyManager {
                                 "INSERT INTO ecoxpert_transactions (from_uuid, to_uuid, amount, type, description) VALUES (?, ?, ?, ?, ?)",
                                 fromUuid.toString(), toUuid.toString(), amount, "TRANSFER", reason
                             ).thenCompose(rows3 -> {
-                                return transaction.commit().thenApply(result -> true);
+                                return transaction.commit().thenApply(commitResult -> true);
                             });
                         });
                     });
+                    } catch (Exception e) {
+                        transaction.rollback();
+                        throw new RuntimeException(e);
+                    } finally {
+                        result.close();
+                    }
                 }).exceptionally(throwable -> {
                     transaction.rollback();
                     return false;
@@ -285,10 +330,14 @@ public class EconomyManagerImpl implements EconomyManager {
      * Ensure a player account exists, create if not
      */
     private CompletableFuture<Void> ensureAccountExists(UUID playerUuid) {
+        plugin.getLogger().info("ECOXPERT DEBUG - ensureAccountExists called for: " + playerUuid);
         return hasAccount(playerUuid).thenCompose(exists -> {
+            plugin.getLogger().info("ECOXPERT DEBUG - hasAccount returned: " + exists + " for: " + playerUuid);
             if (!exists) {
+                plugin.getLogger().info("ECOXPERT DEBUG - Creating account with starting balance: " + startingBalance);
                 return createAccount(playerUuid, startingBalance);
             }
+            plugin.getLogger().info("ECOXPERT DEBUG - Account exists, no need to create");
             return CompletableFuture.completedFuture(null);
         });
     }

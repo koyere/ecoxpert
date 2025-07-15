@@ -1,6 +1,8 @@
 package me.koyere.ecoxpert.core.data;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -23,10 +25,23 @@ public class QueryResultImpl implements QueryResult {
     private boolean closed = false;
     private int rowCount = -1;
     
+    private final Connection connection;
+    private final PreparedStatement statement;
+    
     public QueryResultImpl(ResultSet resultSet) throws SQLException {
         this.resultSet = resultSet;
         this.metaData = resultSet.getMetaData();
         this.columnNames = buildColumnNames();
+        this.connection = null;
+        this.statement = null;
+    }
+    
+    public QueryResultImpl(ResultSet resultSet, Connection connection, PreparedStatement statement) throws SQLException {
+        this.resultSet = resultSet;
+        this.metaData = resultSet.getMetaData();
+        this.columnNames = buildColumnNames();
+        this.connection = connection;
+        this.statement = statement;
     }
     
     @Override
@@ -168,9 +183,25 @@ public class QueryResultImpl implements QueryResult {
             } catch (SQLException e) {
                 // Log warning but don't throw
                 System.err.println("Warning: Failed to close ResultSet: " + e.getMessage());
-            } finally {
-                closed = true;
             }
+            
+            if (statement != null) {
+                try {
+                    statement.close();
+                } catch (SQLException e) {
+                    System.err.println("Warning: Failed to close PreparedStatement: " + e.getMessage());
+                }
+            }
+            
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+                    System.err.println("Warning: Failed to close Connection: " + e.getMessage());
+                }
+            }
+            
+            closed = true;
         }
     }
     

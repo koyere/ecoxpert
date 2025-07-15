@@ -223,8 +223,15 @@ public final class EcoXpertPlugin extends JavaPlugin {
      */
     private void registerVaultProvider() {
         if (getServer().getPluginManager().getPlugin("Vault") != null) {
+            // Check for EssentialsX compatibility
+            if (getServer().getPluginManager().getPlugin("Essentials") != null || 
+                getServer().getPluginManager().getPlugin("EssentialsX") != null) {
+                getLogger().warning("EssentialsX detected - EcoXpert will override economy provider");
+                getLogger().warning("To use EssentialsX economy instead, disable EcoXpert or configure Vault priority");
+            }
+            
             vaultProvider.register();
-            getLogger().info("Vault economy provider registered");
+            getLogger().info("Vault economy provider registered successfully");
         } else {
             getLogger().warning("Vault not found - economy features limited");
         }
