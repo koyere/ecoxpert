@@ -29,7 +29,6 @@
           <source>17</source>
           <target>17</target>
           <encoding>UTF-8</encoding>
-          <release>17</release>
           <compilerArgs>
             <arg>-proc:none</arg>
             <arg>-Xlint:-options</arg>

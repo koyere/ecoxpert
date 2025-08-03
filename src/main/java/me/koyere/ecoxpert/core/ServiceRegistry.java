@@ -24,6 +24,10 @@ import me.koyere.ecoxpert.economy.VaultEconomyProvider;
 import me.koyere.ecoxpert.economy.VaultEconomyProviderImpl;
 import me.koyere.ecoxpert.modules.market.MarketManager;
 import me.koyere.ecoxpert.modules.market.MarketManagerImpl;
+import me.koyere.ecoxpert.modules.bank.BankManager;
+import me.koyere.ecoxpert.modules.bank.BankManagerImpl;
+import me.koyere.ecoxpert.modules.inflation.InflationManager;
+import me.koyere.ecoxpert.modules.inflation.InflationManagerImpl;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -112,6 +116,12 @@ public class ServiceRegistry {
         // Market services
         factoryMethods.put(MarketManager.class, this::createMarketManager);
         
+        // Bank services
+        factoryMethods.put(BankManager.class, this::createBankManager);
+        
+        // Inflation Intelligence System
+        factoryMethods.put(InflationManager.class, this::createInflationManager);
+        
         // Command system
         factoryMethods.put(CommandManager.class, this::createCommandManager);
         
@@ -181,6 +191,7 @@ public class ServiceRegistry {
             plugin,
             getInstance(EconomyManager.class),
             getInstance(MarketManager.class),
+            getInstance(BankManager.class),
             getInstance(TranslationManager.class)
         );
     }
@@ -192,6 +203,23 @@ public class ServiceRegistry {
             getInstance(EconomyManager.class),
             getInstance(TranslationManager.class),
             getInstance(ConfigManager.class)
+        );
+    }
+    
+    private BankManager createBankManager() {
+        return new BankManagerImpl(
+            plugin,
+            getInstance(DataManager.class),
+            getInstance(EconomyManager.class),
+            getInstance(InflationManager.class)
+        );
+    }
+    
+    private InflationManager createInflationManager() {
+        return new InflationManagerImpl(
+            plugin,
+            getInstance(EconomyManager.class),
+            getInstance(MarketManager.class)
         );
     }
     

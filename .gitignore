@@ -40,3 +40,4 @@ build/
 ### Claude AI Assistant ###
 CLAUDE.md
 .claude/
+.gemini/

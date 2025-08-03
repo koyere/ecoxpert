@@ -174,7 +174,12 @@ commands:
     aliases: [ shop, store ]
     usage: /<command> [buy|sell|prices|stats]
     permission: ecoxpert.market.buy
-    
+
+  bank:
+    description: Access banking system
+    aliases: [ ecobank ]
+    usage: /<command> [balance|deposit|withdraw|transfer|help]
+    permission: ecoxpert.bank.account
     
   # Banking system commands (Phase 4 - not yet implemented)
   # ecobank:

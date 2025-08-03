@@ -1,35 +1,27 @@
 package me.koyere.ecoxpert.commands;
 
 import me.koyere.ecoxpert.EcoXpertPlugin;
-import me.koyere.ecoxpert.economy.EconomyManager;
 import me.koyere.ecoxpert.core.translation.TranslationManager;
+import me.koyere.ecoxpert.economy.EconomyManager;
 import me.koyere.ecoxpert.modules.market.MarketManager;
+import me.koyere.ecoxpert.modules.bank.BankManager;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import java.util.Arrays;
 
-/**
- * Command management system
- * 
- * Handles registration and coordination of all plugin commands
- * with professional validation and permission checking.
- */
-@Singleton
 public class CommandManager {
-    
+
     private final EcoXpertPlugin plugin;
     private final EconomyManager economyManager;
     private final MarketManager marketManager;
+    private final BankManager bankManager;
     private final TranslationManager translationManager;
-    
     private MarketCommand marketCommand;
-    
-    @Inject
-    public CommandManager(EcoXpertPlugin plugin, EconomyManager economyManager, 
-                         MarketManager marketManager, TranslationManager translationManager) {
+
+    public CommandManager(EcoXpertPlugin plugin, EconomyManager economyManager, MarketManager marketManager, BankManager bankManager, TranslationManager translationManager) {
         this.plugin = plugin;
         this.economyManager = economyManager;
         this.marketManager = marketManager;
+        this.bankManager = bankManager;
         this.translationManager = translationManager;
     }
     
@@ -58,6 +50,11 @@ public class CommandManager {
         
         // Register MarketGUI events
         plugin.getServer().getPluginManager().registerEvents(marketCommand.getMarketGUI(), plugin);
+        
+        // Bank commands
+        BankCommand bankCommand = new BankCommand(bankManager, economyManager, translationManager);
+        plugin.getCommand("bank").setExecutor(bankCommand);
+        plugin.getCommand("bank").setTabCompleter(bankCommand);
         
         plugin.getLogger().info("Registered economy and market commands");
     }
