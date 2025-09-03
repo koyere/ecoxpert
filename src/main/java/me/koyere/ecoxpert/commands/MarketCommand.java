@@ -176,19 +176,43 @@ public class MarketCommand implements TabExecutor {
             player.sendMessage(translationManager.getMessage("market.sell-usage"));
             return true;
         }
-        
-        // Parse material
-        Material material;
+
+        // Support UX: /market sell <amount> uses item in hand and sells max quantity to reach ~amount
+        Material material = null;
+        BigDecimal targetAmount = null;
         try {
-            material = Material.valueOf(args[1].toUpperCase());
-        } catch (IllegalArgumentException e) {
-            player.sendMessage(translationManager.getMessage("market.invalid-item", args[1]));
-            return true;
+            // If args[1] is numeric, treat as target money amount
+            targetAmount = new BigDecimal(args[1]);
+        } catch (NumberFormatException ignored) {
+            // Not a number: treat as material name
+        }
+        if (targetAmount != null) {
+            material = player.getInventory().getItemInMainHand() != null ? player.getInventory().getItemInMainHand().getType() : null;
+            if (material == null || material == Material.AIR) {
+                player.sendMessage(translationManager.getMessage("market.invalid-item", "hand"));
+                return true;
+            }
+        } else {
+            try {
+                material = Material.valueOf(args[1].toUpperCase());
+            } catch (IllegalArgumentException e) {
+                player.sendMessage(translationManager.getMessage("market.invalid-item", args[1]));
+                return true;
+            }
         }
         
         // Parse quantity (default: all available)
         int quantity;
-        if (args.length >= 3) {
+        if (targetAmount != null) {
+            // Compute quantity to approximate targetAmount at current sell price
+            BigDecimal price = marketManager.getSellPrice(material).join();
+            if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
+                player.sendMessage(translationManager.getMessage("market.system-error"));
+                return true;
+            }
+            quantity = targetAmount.divide(price, 0, BigDecimal.ROUND_DOWN).intValue();
+            if (quantity <= 0) quantity = 1;
+        } else if (args.length >= 3) {
             try {
                 quantity = Integer.parseInt(args[2]);
                 if (quantity <= 0) {

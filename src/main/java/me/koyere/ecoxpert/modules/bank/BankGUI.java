@@ -30,21 +30,28 @@ public class BankGUI extends BaseGUI {
     protected Inventory create(Player player) {
         String title = tm.getMessage("bank.gui.title");
         Inventory inv = Bukkit.createInventory(null, 27, title);
-        inv.setItem(11, button(Material.LIME_WOOL, tm.getMessage("bank.gui.deposit") + " +100"));
-        inv.setItem(12, button(Material.LIME_WOOL, tm.getMessage("bank.gui.deposit") + " +1000"));
-        inv.setItem(13, button(Material.PAPER, tm.getMessage("bank.gui.balance")));
-        inv.setItem(14, button(Material.RED_WOOL, tm.getMessage("bank.gui.withdraw") + " -100"));
-        inv.setItem(15, button(Material.RED_WOOL, tm.getMessage("bank.gui.withdraw") + " -1000"));
+        inv.setItem(11, button(Material.LIME_WOOL, tm.getMessage("bank.gui.deposit") + " +100",
+            new String[]{"§7Depósita una cantidad fija en tu cuenta bancaria.", "§7Seguro, con límites diarios."}));
+        inv.setItem(12, button(Material.LIME_WOOL, tm.getMessage("bank.gui.deposit") + " +1000",
+            new String[]{"§7Atajo para depósitos mayores.", "§7Afecta tus límites diarios."}));
+        inv.setItem(13, button(Material.PAPER, tm.getMessage("bank.gui.balance"),
+            new String[]{"§7Muestra el saldo actual de tu cuenta bancaria."}));
+        inv.setItem(14, button(Material.RED_WOOL, tm.getMessage("bank.gui.withdraw") + " -100",
+            new String[]{"§7Retira una cantidad fija desde tu cuenta bancaria.", "§7Se transfiere a tu saldo general."}));
+        inv.setItem(15, button(Material.RED_WOOL, tm.getMessage("bank.gui.withdraw") + " -1000",
+            new String[]{"§7Atajo para retiros mayores.", "§7Respeta límites y seguridad."}));
         return inv;
     }
 
-    private ItemStack button(Material mat, String name) {
+    private ItemStack button(Material mat, String name, String[] lore) {
         ItemStack it = new ItemStack(mat);
         ItemMeta meta = it.getItemMeta();
         meta.setDisplayName("§e" + name);
+        if (lore != null) meta.setLore(java.util.Arrays.asList(lore));
         it.setItemMeta(meta);
         return it;
     }
+    private ItemStack button(Material mat, String name) { return button(mat, name, null); }
 
     @Override
     protected void onClick(InventoryClickEvent e) {
@@ -65,4 +72,3 @@ public class BankGUI extends BaseGUI {
         }
     }
 }
-

@@ -235,6 +235,13 @@ Key parameters (quick reference)
 /loans offer <amount>           - View a personalized loan offer (smart rate/term)
 /loans schedule                 - View your repayment schedule
 ```
+### GUI Commands
+```
+/bankgui                        - Open Bank GUI
+/loansgui                      - Open Loans GUI
+/ecoevents                     - Open Events Admin GUI
+/ecoadmin                      - Open EcoXpert Admin dashboard
+```
 
 ### Admin Commands
 ```
@@ -513,6 +520,12 @@ Premium SpigotMC plugin. All rights reserved.
 ---
 
 ## 📋 **Version History**
+
+### v1.0.2 - GUIs + UX + Stats
+- Added first-iteration GUIs: `/bankgui`, `/loansgui`, `/ecoevents`, `/ecoadmin` with informative lore.
+- Market UX: `/market sell <amount>` sells the item in your hand; improved `/market prices <ITEM>` outputs.
+- Events admin: new commands for stats/statsdetail/recent/anti-stagnation/pause|resume; metrics persisted in DB.
+- Loans: smart scoring/offers/schedule; delinquency scheduler with penalty and notifications.
 
 ### v1.0.1 - Phase 7 Enhancements
 - Dynamic Events: implemented handlers and i18n for Investment Opportunity, Market Correction, Technological Breakthrough.

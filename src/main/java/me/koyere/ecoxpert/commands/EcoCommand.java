@@ -229,7 +229,16 @@ public class EcoCommand extends BaseCommand {
             if (ok) {
                 sendMessage(sender, "events.admin.triggered", type.name());
             } else {
-                sendMessage(sender, "events.admin.trigger.failed", type.name());
+                // Provide hints on common failure reasons
+                if (!eventEngine.getActiveEvents().isEmpty()) {
+                    sendMessage(sender, "events.admin.active.header");
+                    for (var ev : eventEngine.getActiveEvents().values()) {
+                        sendMessage(sender, "events.admin.active.item", ev.getId(), ev.getName(), ev.getType().name(), ev.getDuration());
+                    }
+                    sender.sendMessage("§7Hint: end the active event or wait for cooldown.");
+                } else {
+                    sendMessage(sender, "events.admin.trigger.failed", type.name());
+                }
             }
         } catch (IllegalArgumentException e) {
             sendMessage(sender, "events.admin.unknown_type", args[1]);

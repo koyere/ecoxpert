@@ -84,21 +84,28 @@ public class TranslationManagerImpl implements TranslationManager {
     @Override
     public String getMessage(String language, String key, Object... args) {
         FileConfiguration config = languageConfigs.get(language);
-        
-        // Fallback to default language if not found
-        if (config == null) {
-            config = languageConfigs.get(defaultLanguage);
+        if (config == null) config = languageConfigs.get(defaultLanguage);
+        if (config == null) config = languageConfigs.get("en");
+        String message = config != null ? config.getString(key) : null;
+        if (message == null) {
+            // Fallback: try to load from embedded resource (keeps existing file as-is)
+            message = loadFromEmbedded(language, key);
+            if (message == null && !"en".equals(language)) {
+                message = loadFromEmbedded("en", key);
+            }
+            if (message == null) message = key; // final fallback prints the key
         }
-        
-        // Fallback to English if still not found
-        if (config == null) {
-            config = languageConfigs.get("en");
-        }
-        
-        String message = config != null ? config.getString(key, key) : key;
         
         // Apply formatting with arguments
         return formatMessage(message, args);
+    }
+
+    private String loadFromEmbedded(String language, String key) {
+        try (java.io.InputStream in = plugin.getResource("languages/messages_" + language + ".yml")) {
+            if (in == null) return null;
+            org.bukkit.configuration.file.FileConfiguration cfg = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(in));
+            return cfg.getString(key);
+        } catch (Exception ignored) { return null; }
     }
     
     @Override

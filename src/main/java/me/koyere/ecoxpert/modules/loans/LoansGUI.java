@@ -29,19 +29,39 @@ public class LoansGUI extends BaseGUI {
     @Override
     protected Inventory create(Player player) {
         Inventory inv = Bukkit.createInventory(null, 27, tm.getMessage("loans.gui.title"));
-        inv.setItem(10, button(Material.EMERALD, tm.getMessage("loans.gui.offer", "+1000")));
-        inv.setItem(11, button(Material.EMERALD, tm.getMessage("loans.gui.offer", "+5000")));
-        inv.setItem(13, button(Material.PAPER, tm.getMessage("loans.gui.status")));
-        inv.setItem(15, button(Material.GOLD_INGOT, tm.getMessage("loans.gui.pay", "500")));
-        inv.setItem(16, button(Material.GOLD_INGOT, tm.getMessage("loans.gui.pay", "1000")));
-        inv.setItem(22, button(Material.BOOK, tm.getMessage("loans.gui.schedule")));
+        inv.setItem(10, button(Material.EMERALD, tm.getMessage("loans.gui.offer", "+1000"), new String[]{
+            "§7Solicita un préstamo inteligente.",
+            "§7Tasa y plazo se adaptan a tu score."
+        }));
+        inv.setItem(11, button(Material.EMERALD, tm.getMessage("loans.gui.offer", "+5000"), new String[]{
+            "§7Solicita un préstamo mayor.",
+            "§7Sujeto a límites y score."
+        }));
+        inv.setItem(13, button(Material.PAPER, tm.getMessage("loans.gui.status"), new String[]{
+            "§7Consulta tu préstamo activo:",
+            "§7Saldo pendiente, principal y tasa."
+        }));
+        inv.setItem(15, button(Material.GOLD_INGOT, tm.getMessage("loans.gui.pay", "500"), new String[]{
+            "§7Paga la siguiente cuota o parte de ella.",
+            "§7Reducirá tu saldo pendiente."
+        }));
+        inv.setItem(16, button(Material.GOLD_INGOT, tm.getMessage("loans.gui.pay", "1000"), new String[]{
+            "§7Pago rápido de mayor cantidad.",
+            "§7Menos intereses a futuro."
+        }));
+        inv.setItem(22, button(Material.BOOK, tm.getMessage("loans.gui.schedule"), new String[]{
+            "§7Muestra el calendario de pagos.",
+            "§7Cuotas PENDING / PAID / LATE."
+        }));
         return inv;
     }
 
-    private ItemStack button(Material mat, String name) {
+    private ItemStack button(Material mat, String name) { return button(mat, name, null); }
+    private ItemStack button(Material mat, String name, String[] lore) {
         ItemStack it = new ItemStack(mat);
         ItemMeta meta = it.getItemMeta();
         meta.setDisplayName("§e" + name);
+        if (lore != null) meta.setLore(java.util.Arrays.asList(lore));
         it.setItemMeta(meta);
         return it;
     }
@@ -87,4 +107,3 @@ public class LoansGUI extends BaseGUI {
         }
     }
 }
-
