@@ -476,6 +476,21 @@ public class DataManagerImpl implements DataManager {
                 last_payment_at TIMESTAMP
             )
             """
+            ,
+            // Loan repayment schedules
+            """
+            CREATE TABLE IF NOT EXISTS ecoxpert_loan_schedules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                loan_id INTEGER NOT NULL,
+                installment_no INTEGER NOT NULL,
+                due_date DATE NOT NULL,
+                amount_due DECIMAL(20,2) NOT NULL,
+                paid_amount DECIMAL(20,2) NOT NULL DEFAULT 0.00,
+                status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+                paid_at TIMESTAMP,
+                UNIQUE(loan_id, installment_no)
+            )
+            """
         };
         
         try (Connection conn = dataSource.getConnection()) {

@@ -159,6 +159,11 @@ bank:
   insufficient-bank-funds: "&cInsufficient funds in your bank account"
   interest-earned: "&aYou earned &e{0} &ain interest"
   daily-limit-reached: "&cYou have reached your daily transaction limit"
+  gui:
+    title: "Bank"
+    deposit: "Deposit"
+    withdraw: "Withdraw"
+    balance: "Balance"
   error:
     safe-mode: "&eBank operations are temporarily paused (Safe Mode)."
   
@@ -167,11 +172,14 @@ loans:
   usage:
     request: "&cUsage: &e/loans request <amount>"
     pay: "&cUsage: &e/loans pay <amount>"
+    offer: "&cUsage: &e/loans offer <amount>"
   help:
     header: "&6=== Loans Commands ==="
     request: "&e/loans request <amount> &7- Request a new loan"
     pay: "&e/loans pay <amount> &7- Pay towards your loan"
     status: "&e/loans status &7- View your current loan"
+    offer: "&e/loans offer <amount> &7- View a personalized loan offer"
+    schedule: "&e/loans schedule &7- View your repayment schedule"
   request-sent: "&aLoan request for &e{0} &ahas been submitted"
   loan-approved: "&aYour loan of &e{0} &ahas been approved"
   loan-denied: "&cYour loan request has been denied: {0}"
@@ -183,15 +191,54 @@ loans:
   error:
     safe-mode: "&eLoan operations are temporarily paused (Safe Mode)."
   status: "&7Loan Outstanding: &e{0} &7(&e{1}&7 principal) &7| Rate: &e{2}"
+  overdue-summary: "&cYou have &e{0} &coverdue loan installment(s). Please pay soon."
+  offer:
+    header: "&6=== Personalized Loan Offer ==="
+    summary: "&7Amount: &e{0} &7| Rate: &e{1} &7| Term: &e{2} &7days | Score: &e{3}"
+    details: "&7Amount: &e{0} &7| Rate: &e{1} &7| Term: &e{2} &7days | Score: &e{3}"
+  schedule:
+    header: "&6=== Repayment Schedule ==="
+    item: "&7#{0} &7Due: &e{1} &7Amount: &e{2} &7Status: &e{3}"
+  gui:
+    title: "Loans"
+    offer: "Offer {0}"
+    status: "Loan Status"
+    pay: "Pay {0}"
+    schedule: "Schedule"
   
 # Economic Events
 events:
+  banner: "&6&l[ECONOMIC EVENT]"
   started: "&6Economic Event: &e{0} &6has started!"
   ended: "&6Economic Event: &e{0} &6has ended"
   inflation-warning: "&cWarning: High inflation detected in the economy"
   deflation-warning: "&eNotice: Deflation detected in the economy"
   market-crash: "&cMarket crash! All prices reduced by {0}%"
   economic-boom: "&aEconomic boom! All prices increased by {0}%"
+  info:
+    description: "&7{0}"
+    duration: "&7Duration: &e{0} &7minutes"
+  stimulus:
+    received: "&aYou received &e{0} &afrom government stimulus!"
+    injected: "&e💰 Government injected &a{0} &einto the economy!"
+  trade_boom:
+    announce: "&e📈 Trade Boom! All market trades give &a{0}% &ebonus rewards!"
+  market_discovery:
+    announce: "&e🔍 Market Discovery! New valuable items: &a{0} &e(+{1}% value)"
+  investment:
+    announce: "&e💼 Investment opportunity! Market returns up to &a{0}% &eon selected items."
+  market_correction:
+    announce: "&e⚖️ Market correction active: buy +&c{0}% &e, sell -&c{1}%"
+  tech_breakthrough:
+    announce: "&e🧪 Technological breakthrough! Redstone category cheaper: buy -&a{0}% &e, sell -&a{1}%"
+  luxury_demand:
+    announce: "&e💎 Luxury demand! Luxury items sell up to &a{0}% &ehigher."
+  resource_shortage:
+    announce: "&e⛏️ Resource shortage! Affected items prices increased by &a{0}%"
+  seasonal_demand:
+    announce: "&e🍂 Seasonal demand! Selected items increased up to &a{0}%"
+  black_swan:
+    announce: "&e⚠️ Black swan event! Market shock: buy -&a{0}% &e, sell -&a{1}%"
   
   admin:
     help:
@@ -199,6 +246,12 @@ events:
       status: "&e/ecoxpert events status &7- View engine status"
       active: "&e/ecoxpert events active &7- List active events"
       history: "&e/ecoxpert events history &7- Show recent events"
+      stats: "&e/ecoxpert events stats [days] &7- Show event counts"
+      statsdetail: "&e/ecoxpert events statsdetail <TYPE> [days] &7- Detailed stats"
+      recent: "&e/ecoxpert events recent &7- Show events from database"
+      antistagnation: "&e/ecoxpert events anti-stagnation &7- Show quiet hours"
+      pause: "&e/ecoxpert events pause &7- Pause event engine"
+      resume: "&e/ecoxpert events resume &7- Resume event engine"
       trigger: "&e/ecoxpert events trigger <TYPE> &7- Trigger an event"
       end: "&e/ecoxpert events end <ID> &7- End an active event"
     unknown: "&cUnknown events subcommand"
@@ -221,6 +274,41 @@ events:
       usage: "&cUsage: &e/ecoxpert events end <ID>"
     ended: "&aEnded event: &e{0}"
     not_found: "&cActive event not found: {0}"
+    stats:
+      header: "&6=== Event Stats (last {0} days) ==="
+      item: "&7{0}: &e{1}"
+      none: "&7No events in the last {0} days"
+      total: "&7Total events: &e{0}"
+    recent:
+      header: "&6=== DB Recent Events ==="
+      none: "&7No persisted events found"
+      item: "&7ID: &e{0} &7Type: &e{1} &7Status: &e{2} &7Start: &e{3} &7End: &e{4}"
+    antistagnation:
+      info: "&7Hours since last event: &e{0} &7| Quiet hours: &e{1}"
+    engine:
+      paused: "&eEvents engine paused"
+      resumed: "&aEvents engine resumed"
+  gui:
+    title: "Events Admin"
+    pause: "Pause Engine"
+    resume: "Resume Engine"
+    status: "Status"
+    recent: "Recent"
+admin:
+  gui:
+    title: "EcoXpert Admin"
+    events: "Events"
+    market: "Market"
+    loans: "Loans"
+    economy: "Economy"
+    statsdetail:
+      header: "&6=== Event Stats: {0} (last {1} days) ==="
+      count: "&7Count: &e{0}"
+      avg_duration: "&7Avg Duration: &e{0} &7minutes"
+      avg_items: "&7Avg Items Affected: &e{0}"
+      avg_buy_delta: "&7Avg Buy Delta: &e{0}"
+      avg_sell_delta: "&7Avg Sell Delta: &e{0}"
+      total_stimulus: "&7Total Stimulus: &e{0}"
 # Professions System
 professions:
   selected: "&aYou are now a &e{0}"
@@ -303,6 +391,21 @@ economy:
       invalid_value: "&cInvalid value: {0}"
       reloaded: "&aPolicy reloaded from configuration"
       usage: "&cUsage: &e/ecoxpert economy policy [show|set <param> <value>|reload]"
+    loans:
+      help:
+        header: "&6=== Loans Admin ==="
+        stats: "&e/ecoxpert economy loans stats [days] &7- Totals"
+        statsdetail: "&e/ecoxpert economy loans statsdetail [days] &7- Detailed"
+      stats:
+        header: "&6=== Loans Stats (last {0} days) ==="
+        active: "&7Active loans: &e{0}"
+        outstanding: "&7Total outstanding: &e{0}"
+        avg_rate: "&7Average rate: &e{0}"
+        late: "&7Late installments: &e{0}"
+      statsdetail:
+        header: "&6=== Loans Detailed (last {0} days) ==="
+        created: "&7Loans created: &e{0}"
+        installments: "&7Installments (total/paid/pending/late): &e{0} &7/ &a{1} &7/ &e{2} &7/ &c{3}"
   
 # Update System
 updates:

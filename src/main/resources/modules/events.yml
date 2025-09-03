@@ -3,29 +3,78 @@
 
 enabled: true
 version: 1
+cooldown_hours: 6
 
 trade_boom:
+  cooldown_hours: 6
   duration_minutes: 10
+  weight: 1.2
   # Global market deltas (applied to price factors)
   global_buy_factor_delta: -0.01   # players pay ~1% less when buying
   global_sell_factor_delta: 0.01   # players get ~1% more when selling
 
 market_discovery:
+  cooldown_hours: 6
   duration_minutes: 10
+  weight: 1.0
   # Sell boost for discovered items (as fraction). 0.10 → +10% sell price
   sell_boost: 0.10
 
 resource_shortage:
+  cooldown_hours: 8
   duration_minutes: 10
+  weight: 0.9
   # Increase both buy and sell for affected items (fraction)
   buy_sell_delta: 0.08
 
 luxury_demand:
+  cooldown_hours: 6
   duration_minutes: 10
+  weight: 1.1
   # Category in market.yml to apply to (default: luxury)
   category: luxury
   category_buy_delta: 0.04
   category_sell_delta: 0.08
+
+investment_opportunity:
+  cooldown_hours: 6
+  duration_minutes: 10
+  weight: 1.0
+  # Favorable conditions for certain valuables (buy cheaper, sell better)
+  buy_delta: -0.02   # -2% to buy price factor (cheaper to buy)
+  sell_delta: 0.05   # +5% to sell price factor (better returns)
+
+market_correction:
+  cooldown_hours: 8
+  duration_minutes: 10
+  weight: 0.8
+  # Cooling the market globally (raise buy, lower sell)
+  global_buy_factor_delta: 0.02    # +2% to buy factor (more expensive)
+  global_sell_factor_delta: -0.02  # -2% to sell factor (lower returns)
+
+technological_breakthrough:
+  cooldown_hours: 8
+  duration_minutes: 10
+  weight: 0.9
+  category: redstone
+  # Tech boosts efficiency → cheaper items in the category
+  buy_delta: -0.05   # -5% cheaper to buy
+  sell_delta: -0.02  # -2% lower sell (minor deflation)
+
+seasonal_demand:
+  cooldown_hours: 6
+  duration_minutes: 10
+  weight: 0.8
+  category: food
+  buy_delta: 0.00
+  sell_delta: 0.06
+
+black_swan_event:
+  cooldown_hours: 12
+  duration_minutes: 20
+  weight: 0.2
+  global_buy_factor_delta: -0.10
+  global_sell_factor_delta: -0.10
 
 # Notes:
 # - Keep deltas modest (0.01–0.05) to avoid whiplash.

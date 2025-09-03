@@ -59,6 +59,44 @@ public class LoanManagerImpl implements LoanManager {
     }
 
     @Override
+    public CompletableFuture<LoanOffer> getOffer(UUID playerUuid, BigDecimal amount) {
+        return CompletableFuture.supplyAsync(() -> new LoanScoringPolicy(plugin, dataManager)
+            .computeOffer(playerUuid, amount));
+    }
+
+    @Override
+    public CompletableFuture<Boolean> requestLoanSmart(UUID playerUuid, BigDecimal amount) {
+        return getOffer(playerUuid, amount).thenCompose(offer -> {
+            if (!offer.approved()) return CompletableFuture.completedFuture(false);
+            BigDecimal rate = offer.interestRate();
+
+            // Prevent multiple active loans
+            return getActiveLoan(playerUuid).thenCompose(active -> {
+                if (active.isPresent()) return CompletableFuture.completedFuture(false);
+
+                String sql = "INSERT INTO ecoxpert_loans (player_uuid, principal, outstanding, interest_rate, status, created_at) " +
+                             "VALUES (?, ?, ?, ?, 'ACTIVE', CURRENT_TIMESTAMP)";
+                return dataManager.executeUpdate(sql, playerUuid.toString(), amount, amount, rate)
+                    .thenCompose(updated -> {
+                        if (updated <= 0) return CompletableFuture.completedFuture(false);
+                        // Deposit funds
+                        return economyManager.addMoney(playerUuid, amount, "Loan disbursement").thenCompose(v -> {
+                            // Create schedule
+                            return new LoanScoringPolicy(plugin, dataManager).createScheduleFor(playerUuid, amount, rate, offer.termDays())
+                                .thenApply(ok -> true);
+                        });
+                    });
+            });
+        });
+    }
+
+    @Override
+    public CompletableFuture<java.util.List<LoanPayment>> getSchedule(UUID playerUuid) {
+        return CompletableFuture.supplyAsync(() -> new LoanScoringPolicy(plugin, dataManager)
+            .getSchedule(playerUuid));
+    }
+
+    @Override
     public CompletableFuture<Boolean> payLoan(UUID playerUuid, BigDecimal amount) {
         if (amount == null || amount.signum() <= 0) {
             return CompletableFuture.completedFuture(false);
@@ -82,8 +120,39 @@ public class LoanManagerImpl implements LoanManager {
                              "status = CASE WHEN ? <= 0 THEN 'PAID' ELSE 'ACTIVE' END WHERE id = ?";
 
                 return dataManager.executeUpdate(sql, newOutstanding, newOutstanding, loan.getId())
-                    .thenApply(rows -> rows > 0);
+                    .thenCompose(rows -> {
+                        // Apply payment to next due installment(s)
+                        return applyPaymentToSchedule(loan.getId(), amount)
+                            .thenApply(v -> rows > 0);
+                    });
             });
+        });
+    }
+
+    private CompletableFuture<Void> applyPaymentToSchedule(long loanId, BigDecimal amount) {
+        return CompletableFuture.runAsync(() -> {
+            BigDecimal remaining = amount;
+            try {
+                while (remaining.signum() > 0) {
+                    try (QueryResult qr = dataManager.executeQuery(
+                        "SELECT id, amount_due, paid_amount FROM ecoxpert_loan_schedules WHERE loan_id = ? AND status != 'PAID' ORDER BY installment_no LIMIT 1",
+                        loanId).join()) {
+                        if (!qr.next()) break;
+                        long schedId = qr.getLong("id");
+                        BigDecimal due = qr.getBigDecimal("amount_due");
+                        BigDecimal paid = qr.getBigDecimal("paid_amount");
+                        BigDecimal toPay = due.subtract(paid);
+                        BigDecimal payNow = remaining.min(toPay);
+                        BigDecimal newPaid = paid.add(payNow);
+                        String newStatus = newPaid.compareTo(due) >= 0 ? "PAID" : "PENDING";
+                        dataManager.executeUpdate(
+                            "UPDATE ecoxpert_loan_schedules SET paid_amount = ?, status = ?, paid_at = CASE WHEN ? >= amount_due THEN CURRENT_TIMESTAMP ELSE paid_at END WHERE id = ?",
+                            newPaid, newStatus, newPaid, schedId
+                        ).join();
+                        remaining = remaining.subtract(payNow);
+                    }
+                }
+            } catch (Exception ignored) {}
         });
     }
 

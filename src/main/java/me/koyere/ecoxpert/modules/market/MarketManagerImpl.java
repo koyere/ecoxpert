@@ -92,6 +92,15 @@ public class MarketManagerImpl implements MarketManager {
             loadPricingConfig();
             // Load market items from database into cache
             loadItemsIntoCache();
+
+            // Optional seeding on empty markets (first run)
+            try {
+                boolean seedOnEmpty = configManager.getConfig().getBoolean("modules.market.seed-on-empty", true);
+                if (seedOnEmpty && itemCache.isEmpty()) {
+                    seedDefaultMarketItems();
+                    loadItemsIntoCache();
+                }
+            } catch (Exception ignored) {}
             
             // Schedule price updates
             schedulePriceUpdates();
@@ -758,6 +767,34 @@ public class MarketManagerImpl implements MarketManager {
             itemCache.put(item.getMaterial(), item);
         }
         plugin.getLogger().info("Loaded " + items.size() + " market items into cache");
+    }
+
+    private void seedDefaultMarketItems() {
+        plugin.getLogger().info("Seeding default market items (first run)…");
+        Map<Material, BigDecimal> defaults = new LinkedHashMap<>();
+        defaults.put(Material.WHEAT, new BigDecimal("2.00"));
+        defaults.put(Material.BREAD, new BigDecimal("5.00"));
+        defaults.put(Material.APPLE, new BigDecimal("3.00"));
+        defaults.put(Material.COAL, new BigDecimal("8.00"));
+        defaults.put(Material.IRON_INGOT, new BigDecimal("20.00"));
+        defaults.put(Material.COPPER_INGOT, new BigDecimal("10.00"));
+        defaults.put(Material.GOLD_INGOT, new BigDecimal("30.00"));
+        defaults.put(Material.REDSTONE, new BigDecimal("6.00"));
+        defaults.put(Material.LAPIS_LAZULI, new BigDecimal("12.00"));
+        defaults.put(Material.DIAMOND, new BigDecimal("150.00"));
+        defaults.put(Material.EMERALD, new BigDecimal("120.00"));
+        defaults.put(Material.NETHERITE_INGOT, new BigDecimal("500.00"));
+
+        int seeded = 0;
+        for (Map.Entry<Material, BigDecimal> e : defaults.entrySet()) {
+            try {
+                addItem(e.getKey(), e.getValue(), true, true).join();
+                seeded++;
+            } catch (Exception ex) {
+                plugin.getLogger().warning("Failed to seed item " + e.getKey() + ": " + ex.getMessage());
+            }
+        }
+        plugin.getLogger().info("Seeded " + seeded + " default market items");
     }
     
     private List<MarketItem> loadItemsFromDatabase() {

@@ -204,6 +204,9 @@ Use `/ecox` or `/ecoxpert` to avoid conflicts with EssentialsX `/eco`.
 /bank help                      - Banking help
 ```
 
+### Testing
+- See `TESTING.md` for a global testing checklist (startup, economy, market, bank, loans, events, safe mode, logs).
+
 ### Intelligent Economy Policy (overview)
 - Runtime adjustments via `/ecoxpert economy policy`:
   - `show`: print current policy and global market factors.
@@ -229,6 +232,8 @@ Key parameters (quick reference)
 /loans request <amount>         - Request a new loan
 /loans pay <amount>             - Pay towards your active loan
 /loans status                   - View your current loan
+/loans offer <amount>           - View a personalized loan offer (smart rate/term)
+/loans schedule                 - View your repayment schedule
 ```
 
 ### Admin Commands
@@ -256,11 +261,29 @@ Key parameters (quick reference)
 ```
 /ecoxpert events active                  - View active economic events
 /ecoxpert events history                 - View recent event history
+/ecoxpert events stats [days]            - View counts per event type
+/ecoxpert events statsdetail <TYPE> [days] - Detailed metrics for a type
+/ecoxpert events recent                  - View last 10 persisted events
+/ecoxpert events anti-stagnation         - Check quiet hours and last event
+/ecoxpert events pause|resume            - Pause/Resume event engine
 /ecoxpert events trigger <type>          - Force trigger specific event type
 /ecoxpert events end <id>                - End specific active event
 /ecoxpert events status                  - View event engine status
-/ecoxpert events anti-stagnation         - Check anti-stagnation system
 ```
+
+### Events Settings (weights)
+- Each event in `modules/events.yml` supports `weight` to bias selection.
+- Higher weight increases probability when conditions trigger an event.
+
+### Loans Settings
+- File: `modules/loans.yml`
+- Keys:
+  - `policy.rate.min/base/max`: total loan fee fraction bounds.
+  - `policy.term_days.min/max`: min/max term in days.
+  - `policy.max_amount.multiplier_balance/floor`: cap per balance and base floor.
+  - `policy.payments.frequency_days`: schedule frequency (currently daily).
+  - `policy.late.penalty_rate` and `policy.late.notify`.
+  - `scheduler.interval_minutes`: delinquency sweep interval.
 
 ### Intelligence System Interventions
 ```
@@ -490,6 +513,16 @@ Premium SpigotMC plugin. All rights reserved.
 ---
 
 ## 📋 **Version History**
+
+### v1.0.1 - Phase 7 Enhancements
+- Dynamic Events: implemented handlers and i18n for Investment Opportunity, Market Correction, Technological Breakthrough.
+- Announcements: start/end banners and event messages are fully localized (EN/ES).
+- Config: new keys under `modules/events.yml`:
+  - `investment_opportunity`: `duration_minutes`, `buy_delta`, `sell_delta`, `cooldown_hours`.
+  - `market_correction`: `duration_minutes`, `global_buy_factor_delta`, `global_sell_factor_delta`, `cooldown_hours`.
+  - `technological_breakthrough`: `duration_minutes`, `category`, `buy_delta`, `sell_delta`, `cooldown_hours`.
+  - Added `cooldown_hours` defaults for `trade_boom`, `market_discovery`, `resource_shortage`, `luxury_demand`.
+- Safe Mode: fixed minor compilation issue in error spike logic.
 
 ### v1.0 - Initial Release
 - Core economy system with Vault integration

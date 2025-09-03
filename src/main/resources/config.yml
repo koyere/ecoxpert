@@ -106,6 +106,8 @@ modules:
   market:
     enabled: true
     config-file: "modules/market.yml"
+    # Seed a minimal set of items on first run when the market is empty
+    seed-on-empty: true
     
   # Banking module
   bank:

@@ -1,0 +1,22 @@
+enabled: true
+version: 1
+
+policy:
+  rate:
+    min: 0.02      # Minimum total loan fee fraction (2%)
+    base: 0.05     # Base total loan fee fraction (5%)
+    max: 0.15      # Maximum total loan fee fraction (15%)
+  term_days:
+    min: 15
+    max: 90
+  max_amount:
+    multiplier_balance: 0.5   # up to 50% of current balance
+    floor: 500                # minimum base cap
+  payments:
+    frequency_days: 1
+  late:
+    penalty_rate: 0.01   # 1% added to outstanding per late mark
+    notify: true         # notify player on late mark
+
+scheduler:
+  interval_minutes: 60   # delinquency check every hour

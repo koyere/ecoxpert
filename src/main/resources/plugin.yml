@@ -185,6 +185,25 @@ commands:
     usage: /<command> [request|pay|status]
     permission: ecoxpert.loans.request
     
+  bankgui:
+    description: Open bank GUI
+    usage: /<command>
+    permission: ecoxpert.bank.account
+
+  loansgui:
+    description: Open loans GUI
+    usage: /<command>
+    permission: ecoxpert.loans.request
+
+  ecoadmin:
+    description: Open admin dashboard
+    usage: /<command>
+    permission: ecoxpert.admin
+
+  ecoevents:
+    description: Open events admin GUI
+    usage: /<command>
+    permission: ecoxpert.admin.events
   # Banking system commands (Phase 4 - not yet implemented)
   # ecobank:
   #   description: Access banking system

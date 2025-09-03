@@ -226,6 +226,14 @@ public final class EcoXpertPlugin extends JavaPlugin {
         } catch (Exception e) {
             getLogger().warning("Safe Mode monitor failed to initialize: " + e.getMessage());
         }
+
+        // 11. Loans delinquency scheduler
+        try {
+            new me.koyere.ecoxpert.modules.loans.LoanDelinquencyScheduler(this,
+                dataManager, economyManager).start();
+        } catch (Exception e) {
+            getLogger().warning("Loan delinquency scheduler failed to start: " + e.getMessage());
+        }
         
         getLogger().info("Core managers initialized successfully");
     }

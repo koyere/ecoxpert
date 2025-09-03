@@ -117,6 +117,17 @@ public class EcoCommand extends BaseCommand {
                 return handleEventsActive(sender);
             case "history":
                 return handleEventsHistory(sender);
+            case "stats":
+                return handleEventsStats(sender, args);
+            case "recent":
+                return handleEventsRecent(sender);
+            case "anti-stagnation":
+            case "antistagnation":
+                return handleEventsAntiStagnation(sender);
+            case "pause":
+                return handleEventsPause(sender);
+            case "resume":
+                return handleEventsResume(sender);
             case "trigger":
                 return handleEventsTrigger(sender, args);
             case "end":
@@ -128,9 +139,53 @@ public class EcoCommand extends BaseCommand {
     }
 
     private boolean handleEventsStatus(CommandSender sender) {
+        boolean engineActive = eventEngine.isEventEngineActive();
         int active = eventEngine.getActiveEvents().size();
         int history = eventEngine.getEventHistory().size();
-        sendMessage(sender, "events.admin.status", active, history);
+        sendMessage(sender, "events.admin.status", engineActive, active, history);
+        return true;
+    }
+
+    private boolean handleEventsRecent(CommandSender sender) {
+        try {
+            var dm = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry().getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
+            try (me.koyere.ecoxpert.core.data.QueryResult qr = dm.executeQuery(
+                    "SELECT event_id, type, status, start_time, end_time FROM ecoxpert_economic_events ORDER BY id DESC LIMIT 10").join()) {
+                boolean any = false;
+                sendMessage(sender, "events.admin.recent.header");
+                while (qr.next()) {
+                    any = true;
+                    String id = qr.getString("event_id");
+                    String type = qr.getString("type");
+                    String status = qr.getString("status");
+                    String start = String.valueOf(qr.getTimestamp("start_time"));
+                    String end = String.valueOf(qr.getTimestamp("end_time"));
+                    sendMessage(sender, "events.admin.recent.item", id, type, status, start, end);
+                }
+                if (!any) sendMessage(sender, "events.admin.recent.none");
+            }
+        } catch (Exception e) {
+            sender.sendMessage("§cFailed to load recent events");
+        }
+        return true;
+    }
+
+    private boolean handleEventsAntiStagnation(CommandSender sender) {
+        long hoursSince = eventEngine.getHoursSinceLastEvent();
+        int quiet = eventEngine.getConsecutiveQuietHours();
+        sendMessage(sender, "events.admin.antistagnation.info", hoursSince, quiet);
+        return true;
+    }
+
+    private boolean handleEventsPause(CommandSender sender) {
+        eventEngine.pauseEngine();
+        sendMessage(sender, "events.admin.engine.paused");
+        return true;
+    }
+
+    private boolean handleEventsResume(CommandSender sender) {
+        eventEngine.resumeEngine();
+        sendMessage(sender, "events.admin.engine.resumed");
         return true;
     }
 
@@ -197,6 +252,125 @@ public class EcoCommand extends BaseCommand {
         return true;
     }
 
+    private boolean handleEventsStats(CommandSender sender, String[] args) {
+        int days = 30;
+        if (args.length >= 2) {
+            try {
+                days = Math.max(1, Integer.parseInt(args[1]));
+            } catch (NumberFormatException ignored) {}
+        }
+        try {
+            var dm = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry().getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
+            // Totales por tipo en ventana
+            try (me.koyere.ecoxpert.core.data.QueryResult qr = dm.executeQuery(
+                "SELECT type, COUNT(*) as cnt FROM ecoxpert_economic_events WHERE start_time >= datetime('now', '-' || ? || ' days') GROUP BY type ORDER BY cnt DESC",
+                days).join()) {
+                boolean any = false;
+                sendMessage(sender, "events.admin.stats.header", days);
+                int total = 0;
+                while (qr.next()) {
+                    any = true;
+                    String type = qr.getString("type");
+                    Integer cntObj = qr.getInt("cnt");
+                    int cnt = cntObj != null ? cntObj : (qr.getLong("cnt") != null ? qr.getLong("cnt").intValue() : 0);
+                    total += cnt;
+                    sendMessage(sender, "events.admin.stats.item", type, cnt);
+                }
+                if (!any) {
+                    sendMessage(sender, "events.admin.stats.none", days);
+                } else {
+                    sendMessage(sender, "events.admin.stats.total", total);
+                }
+            }
+        } catch (Exception e) {
+            sender.sendMessage("§cFailed to load event stats");
+        }
+        return true;
+    }
+
+    private boolean handleEventsStatsDetail(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage("§cUsage: /ecoxpert events statsdetail <TYPE> [days]");
+            return true;
+        }
+        String typeArg = args[1].toUpperCase();
+        int days = 30;
+        if (args.length >= 3) {
+            try { days = Math.max(1, Integer.parseInt(args[2])); } catch (NumberFormatException ignored) {}
+        }
+        try {
+            EconomicEventType type = EconomicEventType.valueOf(typeArg);
+            var dm = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry().getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
+            try (me.koyere.ecoxpert.core.data.QueryResult qr = dm.executeQuery(
+                "SELECT parameters, start_time, end_time FROM ecoxpert_economic_events WHERE type = ? AND start_time >= datetime('now', '-' || ? || ' days')",
+                type.name(), days).join()) {
+                int count = 0; long durSum = 0; int durCount = 0; int itemsSum = 0; int itemsCount = 0;
+                double buySum = 0.0; int buyCount = 0; double sellSum = 0.0; int sellCount = 0; double stimulusSum = 0.0;
+                while (qr.next()) {
+                    count++;
+                    String params = qr.getString("parameters");
+                    Long dur = parseJsonLong(params, "metrics.duration_minutes");
+                    if (dur == null) {
+                        try {
+                            var s = qr.getTimestamp("start_time");
+                            var e = qr.getTimestamp("end_time");
+                            if (s != null && e != null) {
+                                long mins = java.time.Duration.between(s.toLocalDateTime(), e.toLocalDateTime()).toMinutes();
+                                dur = mins;
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                    if (dur != null) { durSum += dur; durCount++; }
+                    Integer items = parseJsonInt(params, "metrics.items");
+                    if (items != null) { itemsSum += items; itemsCount++; }
+                    Double bd = parseJsonDouble(params, "metrics.buy_delta");
+                    if (bd != null) { buySum += bd; buyCount++; }
+                    Double sd = parseJsonDouble(params, "metrics.sell_delta");
+                    if (sd != null) { sellSum += sd; sellCount++; }
+                    Double stim = parseJsonDouble(params, "metrics.total_stimulus");
+                    if (stim != null) { stimulusSum += stim; }
+                }
+                sendMessage(sender, "events.admin.statsdetail.header", type.name(), days);
+                sendMessage(sender, "events.admin.statsdetail.count", count);
+                if (durCount > 0) sendMessage(sender, "events.admin.statsdetail.avg_duration", durSum / Math.max(1, durCount));
+                if (itemsCount > 0) sendMessage(sender, "events.admin.statsdetail.avg_items", itemsSum / Math.max(1, itemsCount));
+                if (buyCount > 0) sendMessage(sender, "events.admin.statsdetail.avg_buy_delta", String.format("%.2f%%", (buySum / buyCount) * 100.0));
+                if (sellCount > 0) sendMessage(sender, "events.admin.statsdetail.avg_sell_delta", String.format("%.2f%%", (sellSum / sellCount) * 100.0));
+                if (stimulusSum > 0.0) {
+                    String money = economyManager.formatMoney(java.math.BigDecimal.valueOf(stimulusSum));
+                    sendMessage(sender, "events.admin.statsdetail.total_stimulus", money);
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            sendMessage(sender, "events.admin.unknown_type", args[1]);
+        } catch (Exception e) {
+            sender.sendMessage("§cFailed to load detailed stats");
+        }
+        return true;
+    }
+
+    private Double parseJsonDouble(String json, String key) {
+        try {
+            String token = "\"" + key + "\":";
+            int i = json.indexOf(token);
+            if (i < 0) return null;
+            i += token.length();
+            int j = i;
+            while (j < json.length() && "-+.0123456789".indexOf(json.charAt(j)) >= 0) j++;
+            return Double.parseDouble(json.substring(i, j));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+    private Integer parseJsonInt(String json, String key) {
+        Double d = parseJsonDouble(json, key);
+        return d != null ? (int) Math.round(d) : null;
+    }
+    private Long parseJsonLong(String json, String key) {
+        Double d = parseJsonDouble(json, key);
+        return d != null ? d.longValue() : null;
+    }
+
     /**
      * Economy status and diagnostics for admins.
      * Syntax: /ecoxpert economy status|diagnostics
@@ -226,10 +400,79 @@ public class EcoCommand extends BaseCommand {
                 return handleEconomyHealth(sender);
             case "policy":
                 return handleEconomyPolicy(sender, java.util.Arrays.copyOfRange(args, 1, args.length));
+            case "loans":
+                return handleEconomyLoans(sender, java.util.Arrays.copyOfRange(args, 1, args.length));
             default:
                 sendMessage(sender, "economy.admin.unknown");
                 return true;
         }
+    }
+
+    private boolean handleEconomyLoans(CommandSender sender, String[] args) {
+        if (!(sender.hasPermission("ecoxpert.admin") || sender.hasPermission("ecoxpert.admin.loans"))) {
+            sendMessage(sender, "error.no_permission");
+            return true;
+        }
+        if (args.length == 0) {
+            sendMessage(sender, "economy.admin.loans.help.header");
+            sendMessage(sender, "economy.admin.loans.help.stats");
+            sendMessage(sender, "economy.admin.loans.help.statsdetail");
+            return true;
+        }
+        String sub = args[0].toLowerCase();
+        int days = 30;
+        if (args.length >= 2) {
+            try { days = Math.max(1, Integer.parseInt(args[1])); } catch (NumberFormatException ignored) {}
+        }
+        try {
+            var dm = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry().getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
+            if (sub.equals("stats")) {
+                int active = 0; String outstanding = "0"; String avgRate = "0"; int late = 0;
+                try (me.koyere.ecoxpert.core.data.QueryResult q1 = dm.executeQuery("SELECT COUNT(*) as c FROM ecoxpert_loans WHERE status='ACTIVE'").join()) {
+                    if (q1.next()) { Integer c = q1.getInt("c"); active = c != null ? c : (q1.getLong("c") != null ? q1.getLong("c").intValue() : 0); }
+                }
+                try (me.koyere.ecoxpert.core.data.QueryResult q2 = dm.executeQuery("SELECT SUM(outstanding) as s, AVG(interest_rate) as r FROM ecoxpert_loans WHERE status='ACTIVE'").join()) {
+                    if (q2.next()) {
+                        java.math.BigDecimal s = q2.getBigDecimal("s");
+                        java.math.BigDecimal r = q2.getBigDecimal("r");
+                        outstanding = s != null ? JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry().getInstance(me.koyere.ecoxpert.economy.EconomyManager.class).formatMoney(s) : "$0";
+                        avgRate = r != null ? r.multiply(new java.math.BigDecimal("100")).setScale(2) + "%" : "0%";
+                    }
+                }
+                try (me.koyere.ecoxpert.core.data.QueryResult q3 = dm.executeQuery("SELECT COUNT(*) as c FROM ecoxpert_loan_schedules WHERE status='LATE' AND due_date >= date('now', '-' || ? || ' days')", days).join()) {
+                    if (q3.next()) { Integer c = q3.getInt("c"); late = c != null ? c : (q3.getLong("c") != null ? q3.getLong("c").intValue() : 0); }
+                }
+                sendMessage(sender, "economy.admin.loans.stats.header", days);
+                sendMessage(sender, "economy.admin.loans.stats.active", active);
+                sendMessage(sender, "economy.admin.loans.stats.outstanding", outstanding);
+                sendMessage(sender, "economy.admin.loans.stats.avg_rate", avgRate);
+                sendMessage(sender, "economy.admin.loans.stats.late", late);
+                return true;
+            } else if (sub.equals("statsdetail")) {
+                // Breakdown by buckets of score and term (if desired in future). For now: counts created in window and paid vs pending installments.
+                int created = 0, paidInst = 0, pendingInst = 0, lateInst = 0;
+                try (me.koyere.ecoxpert.core.data.QueryResult q1 = dm.executeQuery("SELECT COUNT(*) as c FROM ecoxpert_loans WHERE created_at >= datetime('now', '-' || ? || ' days')", days).join()) {
+                    if (q1.next()) { Integer c = q1.getInt("c"); created = c != null ? c : (q1.getLong("c") != null ? q1.getLong("c").intValue() : 0); }
+                }
+                try (me.koyere.ecoxpert.core.data.QueryResult q2 = dm.executeQuery("SELECT status, COUNT(*) as c FROM ecoxpert_loan_schedules WHERE due_date >= date('now', '-' || ? || ' days') GROUP BY status", days).join()) {
+                    while (q2.next()) {
+                        String st = q2.getString("status");
+                        Integer c = q2.getInt("c");
+                        int v = c != null ? c : (q2.getLong("c") != null ? q2.getLong("c").intValue() : 0);
+                        if ("PAID".equalsIgnoreCase(st)) paidInst = v;
+                        else if ("LATE".equalsIgnoreCase(st)) lateInst = v;
+                        else pendingInst = v;
+                    }
+                }
+                sendMessage(sender, "economy.admin.loans.statsdetail.header", days);
+                sendMessage(sender, "economy.admin.loans.statsdetail.created", created);
+                sendMessage(sender, "economy.admin.loans.statsdetail.installments", paidInst + pendingInst + lateInst, paidInst, pendingInst, lateInst);
+                return true;
+            }
+        } catch (Exception e) {
+            sender.sendMessage("§cFailed to load loans stats");
+        }
+        return true;
     }
 
     private boolean handleEconomyHealth(CommandSender sender) {

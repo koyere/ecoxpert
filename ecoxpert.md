@@ -113,6 +113,46 @@ Versión del Documento: 1.0
    4.2. Fases Globales Modulares (basadas en el Roadmap Técnico)
    Fase 1: Mercado Dinámico Funcional (Implementación del Módulo 1)
 
+4. Bitácora de Avances (Registro Técnico)
+   4.1. 2025-09-03 (Phase 7 - Eventos Económicos)
+   - Implementado: Motor de eventos con inteligencia (análisis 15 min, anti-estancamiento 60 min, scheduler 5 min).
+   - Handlers activos:
+     * Government Stimulus (i18n, mensajes a jugador y broadcast, montos formateados).
+     * Trade Boom (i18n, anuncio, leves factores globales temporales).
+     * Market Discovery (i18n, anuncio con lista de ítems, boost temporal por ítem).
+     * Luxury Demand (aplicación de factores por categoría + anuncio i18n).
+     * Resource Shortage (aplicación de factores por ítem + anuncio i18n).
+     * Investment Opportunity (buy -2%, sell +5% por defecto, anuncio i18n).
+     * Market Correction (enfriamiento global temporal con restauración, anuncio i18n).
+     * Technological Breakthrough (categoría redstone por defecto, anuncio i18n).
+   - Configuración añadida (modules/events.yml):
+     * Secciones nuevas: investment_opportunity, market_correction, technological_breakthrough.
+     * Clave `cooldown_hours` por evento; clave global `cooldown_hours` (fallback 6).
+   - Internacionalización: anuncios y banners de eventos migrados a TranslationManager (EN/ES).
+   - Safe Mode: corrección de compilación en `errorSpike()`.
+
+5. Comandos y Permisos (Resumen Operativo)
+   5.1. Comandos Principales
+   - `/ecoxpert` (alias `/ecox`, `/ex`): subcomandos economy, events, migrate.
+     * `economy status|diagnostics|health|policy [show|set <param> <valor>|reload]|loans [stats|statsdetail] [días]`
+     * `events status|active|history|stats [días]|statsdetail <TYPE> [días]|recent|anti-stagnation|pause|resume|trigger <TYPE>|end <ID>`
+   - `/market`: `buy|sell|prices|stats|help`.
+   - `/bank`: `balance|deposit|withdraw|transfer|help`.
+   - `/loans`: `offer <amount>|request <amount>|pay <amount>|status|schedule`.
+   
+   5.2. Permisos Relevantes
+   - Usuarios: `ecoxpert.user`, `ecoxpert.economy.balance`, `ecoxpert.economy.pay`, `ecoxpert.market.*`, `ecoxpert.bank.*`, `ecoxpert.loans.request`, `ecoxpert.loans.pay`.
+   - Admin: `ecoxpert.admin`, `ecoxpert.admin.economy`, `ecoxpert.admin.events`, `ecoxpert.admin.market`, `ecoxpert.admin.bank`.
+
+6. Funcionamiento de Eventos (Operación)
+   - Inicio/Fin: El motor agenda análisis cada 15 min; usa i18n para banner y anuncios.
+   - Cooldown: Respeta `cooldown_hours` específico por tipo; fallback global 6h.
+   - Efectos:
+     * Globales: `setGlobalPriceFactors()` con restauración programada (Market Correction, Trade Boom leve).
+     * Por ítem/categoría: `applyTemporaryItemFactors()` durante `duration_minutes`.
+   - Configuración: `modules/events.yml` controla duración e intensidades por evento; categorías provienen de `modules/market.yml`.
+   - Pesos: `weight` por evento para sesgar la selección inteligente.
+
 [M1-F1] Desarrollo del motor de precios: almacenamiento de historial de precios, logs de transacciones.
 [M1-F2] Implementación del algoritmo de cálculo automático de precios en tiempo real (basado en oferta/demanda).
 [M1-F3] Adición de soporte para categorías de ítems y configuraciones de precios base/mínimos/máximos.
@@ -241,3 +281,10 @@ EcoXpert/
 ├── README.md                      # Información del proyecto, instrucciones de compilación/instalación
 └──LICENSE                          # Archivo de licencia (importante para un plugin premium)
 Este documento debería servir como una referencia centralizada. Podemos actualizarlo a medida que el proyecto evolucione y se tomen nuevas decisiones.
+   4.2. 2025-09-03 (Loans Inteligentes)
+   - Scoring crediticio (300–1000) con factores: balance, ingresos 7d, morosidad.
+   - Ofertas dinámicas: tasa y plazo según score; límites por balance y piso configurable.
+   - Calendario de pagos: generación de cuotas diarias (frequency_days configurable).
+   - Persistencia: tabla `ecoxpert_loan_schedules` con estados PENDING/PAID/LATE.
+   - Comandos: `/loans offer <monto>`, `/loans request <monto>`, `/loans schedule`.
+   - i18n actualizado para ofertas/calendario.

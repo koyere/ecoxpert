@@ -4,6 +4,7 @@ import me.koyere.ecoxpert.core.translation.TranslationManager;
 import me.koyere.ecoxpert.economy.EconomyManager;
 import me.koyere.ecoxpert.modules.loans.Loan;
 import me.koyere.ecoxpert.modules.loans.LoanManager;
+import me.koyere.ecoxpert.modules.loans.LoanPayment;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -41,18 +42,24 @@ public class LoansCommand extends BaseCommand {
         String sub = args[0].toLowerCase();
         switch (sub) {
             case "request":
-                return handleRequest(player, args);
+                return handleRequestSmart(player, args);
             case "pay":
                 return handlePay(player, args);
             case "status":
                 return handleStatus(player);
+            case "offer":
+                return handleOffer(player, args);
+            case "schedule":
+                return handleSchedule(player);
+            case "policy":
+                return handlePolicy(player, args);
             default:
                 showHelp(player);
                 return true;
         }
     }
 
-    private boolean handleRequest(Player player, String[] args) {
+    private boolean handleRequestSmart(Player player, String[] args) {
         if (!player.hasPermission("ecoxpert.loans.request")) {
             sendMessage(player, "error.no_permission");
             return true;
@@ -64,9 +71,16 @@ public class LoansCommand extends BaseCommand {
         BigDecimal amount = parseAmount(player, args[1]);
         if (amount == null) return true;
 
-        // Basic interest rate for MVP (e.g., 5%)
-        BigDecimal rate = new BigDecimal("0.05");
-        loanManager.requestLoan(player.getUniqueId(), amount, rate).thenAccept(success -> {
+        loanManager.getOffer(player.getUniqueId(), amount).thenCompose(offer -> {
+            if (!offer.approved()) {
+                player.sendMessage(translationManager.getMessage("loans.loan-denied", offer.reason()));
+                return java.util.concurrent.CompletableFuture.completedFuture(false);
+            }
+            String fmtAmount = economyManager.formatMoney(amount);
+            String fmtRate = offer.interestRate().multiply(new BigDecimal("100")).setScale(2) + "%";
+            player.sendMessage(translationManager.getMessage("loans.offer.summary", fmtAmount, fmtRate, offer.termDays(), offer.score()));
+            return loanManager.requestLoanSmart(player.getUniqueId(), amount);
+        }).thenAccept(success -> {
             if (success) {
                 player.sendMessage(translationManager.getMessage("loans.request-sent", economyManager.formatMoney(amount)));
                 player.sendMessage(translationManager.getMessage("loans.loan-approved", economyManager.formatMoney(amount)));
@@ -123,6 +137,58 @@ public class LoansCommand extends BaseCommand {
         return true;
     }
 
+    private boolean handleOffer(Player player, String[] args) {
+        if (args.length < 2) {
+            player.sendMessage(translationManager.getMessage("loans.usage.request"));
+            return true;
+        }
+        BigDecimal amount = parseAmount(player, args[1]);
+        if (amount == null) return true;
+        loanManager.getOffer(player.getUniqueId(), amount).thenAccept(offer -> {
+            if (!offer.approved()) {
+                player.sendMessage(translationManager.getMessage("loans.loan-denied", offer.reason()));
+                return;
+            }
+            String fmtAmount = economyManager.formatMoney(offer.amount());
+            String fmtRate = offer.interestRate().multiply(new BigDecimal("100")).setScale(2) + "%";
+            player.sendMessage(translationManager.getMessage("loans.offer.header"));
+            player.sendMessage(translationManager.getMessage("loans.offer.details", fmtAmount, fmtRate, offer.termDays(), offer.score()));
+        }).exceptionally(ex -> {
+            player.sendMessage(translationManager.getMessage("errors.database-error"));
+            return null;
+        });
+        return true;
+    }
+
+    private boolean handleSchedule(Player player) {
+        loanManager.getSchedule(player.getUniqueId()).thenAccept(list -> {
+            if (list.isEmpty()) {
+                player.sendMessage(translationManager.getMessage("loans.no-active-loans"));
+                return;
+            }
+            player.sendMessage(translationManager.getMessage("loans.schedule.header"));
+            int shown = 0;
+            for (LoanPayment p : list) {
+                if (shown++ > 15) { player.sendMessage("§7..." ); break; }
+                player.sendMessage(translationManager.getMessage("loans.schedule.item",
+                    p.installmentNo(), p.dueDate(), economyManager.formatMoney(p.amountDue()), p.status()));
+            }
+        }).exceptionally(ex -> {
+            player.sendMessage(translationManager.getMessage("errors.database-error"));
+            return null;
+        });
+        return true;
+    }
+
+    private boolean handlePolicy(Player player, String[] args) {
+        if (!player.hasPermission("ecoxpert.admin.loans")) {
+            sendMessage(player, "error.no_permission");
+            return true;
+        }
+        player.sendMessage("§7Policy is loaded from modules/loans.yml. Use config reload to apply changes.");
+        return true;
+    }
+
     private void showHelp(Player player) {
         player.sendMessage(translationManager.getMessage("loans.help.header"));
         player.sendMessage(translationManager.getMessage("loans.help.request"));
@@ -134,10 +200,10 @@ public class LoansCommand extends BaseCommand {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            for (String s : new String[]{"request", "pay", "status"}) {
+            for (String s : new String[]{"request", "offer", "pay", "status", "schedule", "policy"}) {
                 if (s.startsWith(args[0].toLowerCase())) out.add(s);
             }
-        } else if (args.length == 2 && ("request".equalsIgnoreCase(args[0]) || "pay".equalsIgnoreCase(args[0]))) {
+        } else if (args.length == 2 && ("request".equalsIgnoreCase(args[0]) || "pay".equalsIgnoreCase(args[0]) || "offer".equalsIgnoreCase(args[0]))) {
             for (String s : new String[]{"100", "500", "1000", "5000"}) {
                 if (s.startsWith(args[1])) out.add(s);
             }
@@ -145,4 +211,3 @@ public class LoansCommand extends BaseCommand {
         return out;
     }
 }
-

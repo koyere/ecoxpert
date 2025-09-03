@@ -26,6 +26,35 @@ economy:
   payment-sent: "&aEnviaste &e{0} &aa &e{1}"
   payment-received: "&aRecibiste &e{0} &ade &e{1}"
   account-created: "&aCuenta de economía creada exitosamente"
+  admin:
+    help:
+      header: "&6=== Administración de Economía ==="
+      status: "&e/ecoxpert economy status &7- Mostrar provider y estado DB"
+      diagnostics: "&e/ecoxpert economy diagnostics &7- Ejecutar diagnóstico seguro"
+      policy: "&e/ecoxpert economy policy [show|set <param> <valor>|reload] &7- Ver/ajustar política"
+    unknown: "&cSubcomando de economía desconocido"
+    policy:
+      header: "&6=== Política Económica ==="
+      updated: "&aParámetro actualizado: &e{0} &7= &e{1}"
+      unknown_param: "&cParámetro desconocido: {0}"
+      invalid_value: "&cValor inválido: {0}"
+      reloaded: "&aPolítica recargada desde configuración"
+      usage: "&cUso: &e/ecoxpert economy policy [show|set <param> <valor>|reload]"
+    loans:
+      help:
+        header: "&6=== Administración de Préstamos ==="
+        stats: "&e/ecoxpert economy loans stats [días] &7- Totales"
+        statsdetail: "&e/ecoxpert economy loans statsdetail [días] &7- Detalle"
+      stats:
+        header: "&6=== Estadísticas de Préstamos (últimos {0} días) ==="
+        active: "&7Préstamos activos: &e{0}"
+        outstanding: "&7Total pendiente: &e{0}"
+        avg_rate: "&7Tasa promedio: &e{0}"
+        late: "&7Cuotas en mora: &e{0}"
+      statsdetail:
+        header: "&6=== Detalle de Préstamos (últimos {0} días) ==="
+        created: "&7Préstamos creados: &e{0}"
+        installments: "&7Cuotas (total/pagadas/pendientes/mora): &e{0} &7/ &a{1} &7/ &e{2} &7/ &c{3}"
 
 # Commands
 commands:
@@ -156,9 +185,25 @@ bank:
   insufficient-bank-funds: "&cFondos insuficientes en tu cuenta bancaria"
   interest-earned: "&aGanaste &e{0} &aen intereses"
   daily-limit-reached: "&cHas alcanzado tu límite diario de transacciones"
+  gui:
+    title: "Banco"
+    deposit: "Depositar"
+    withdraw: "Retirar"
+    balance: "Saldo"
   
 # Loan System
 loans:
+  usage:
+    request: "&cUso: &e/loans request <cantidad>"
+    pay: "&cUso: &e/loans pay <cantidad>"
+    offer: "&cUso: &e/loans offer <cantidad>"
+  help:
+    header: "&6=== Comandos de Préstamos ==="
+    request: "&e/loans request <cantidad> &7- Solicitar un nuevo préstamo"
+    pay: "&e/loans pay <cantidad> &7- Pagar tu préstamo"
+    status: "&e/loans status &7- Ver tu préstamo actual"
+    offer: "&e/loans offer <cantidad> &7- Ver oferta personalizada"
+    schedule: "&e/loans schedule &7- Ver calendario de pagos"
   request-sent: "&aSolicitud de préstamo por &e{0} &aha sido enviada"
   loan-approved: "&aTu préstamo de &e{0} &aha sido aprobado"
   loan-denied: "&cTu solicitud de préstamo ha sido denegada: {0}"
@@ -167,15 +212,124 @@ loans:
   payment-overdue: "&cTu pago de préstamo está vencido. Por favor paga inmediatamente"
   credit-score: "&7Tu puntuación crediticia: &e{0}/1000"
   no-active-loans: "&7No tienes préstamos activos"
+  status: "&7Préstamo Pendiente: &e{0} &7(&e{1}&7 principal) &7| Tasa: &e{2}"
+  overdue-summary: "&cTienes &e{0} &ccuota(s) de préstamo en mora. Por favor paga pronto."
+  offer:
+    header: "&6=== Oferta de Préstamo Personalizada ==="
+    summary: "&7Monto: &e{0} &7| Tasa: &e{1} &7| Plazo: &e{2} &7días | Score: &e{3}"
+    details: "&7Monto: &e{0} &7| Tasa: &e{1} &7| Plazo: &e{2} &7días | Score: &e{3}"
+  schedule:
+    header: "&6=== Calendario de Pagos ==="
+    item: "&7#{0} &7Vence: &e{1} &7Monto: &e{2} &7Estado: &e{3}"
+  gui:
+    title: "Préstamos"
+    offer: "Oferta {0}"
+    status: "Estado del Préstamo"
+    pay: "Pagar {0}"
+    schedule: "Calendario"
   
 # Economic Events
 events:
+  banner: "&6&l[EVENTO ECONÓMICO]"
   started: "&6Evento Económico: &e{0} &6¡ha comenzado!"
   ended: "&6Evento Económico: &e{0} &6ha terminado"
   inflation-warning: "&cAdvertencia: Alta inflación detectada en la economía"
   deflation-warning: "&eAviso: Deflación detectada en la economía"
   market-crash: "&c¡Colapso del mercado! Todos los precios reducidos en {0}%"
   economic-boom: "&a¡Auge económico! Todos los precios aumentaron en {0}%"
+  info:
+    description: "&7{0}"
+    duration: "&7Duración: &e{0} &7minutos"
+  stimulus:
+    received: "&a¡Has recibido &e{0} &adel estímulo gubernamental!"
+    injected: "&e💰 ¡El gobierno inyectó &a{0} &ea la economía!"
+  trade_boom:
+    announce: "&e📈 ¡Auge Comercial! ¡Todas las transacciones tienen &a{0}% &ede bono!"
+  market_discovery:
+    announce: "&e🔍 ¡Descubrimiento de Mercado! Ítems valiosos: &a{0} &e(+{1}% valor)"
+  investment:
+    announce: "&e💼 ¡Oportunidad de inversión! Retornos de mercado hasta &a{0}% &een ítems seleccionados."
+  market_correction:
+    announce: "&e⚖️ Corrección de mercado activa: compra +&c{0}% &e, venta -&c{1}%"
+  tech_breakthrough:
+    announce: "&e🧪 ¡Avance tecnológico! Categoría redstone más barata: compra -&a{0}% &e, venta -&a{1}%"
+  luxury_demand:
+    announce: "&e💎 ¡Demanda de lujo! Los ítems de lujo se venden hasta &a{0}% &emás caros."
+  resource_shortage:
+    announce: "&e⛏️ ¡Escasez de recursos! Los ítems afectados aumentan &a{0}% &een precio"
+  seasonal_demand:
+    announce: "&e🍂 ¡Demanda estacional! Ítems seleccionados aumentan hasta &a{0}%"
+  black_swan:
+    announce: "&e⚠️ ¡Evento cisne negro! Choque de mercado: compra -&a{0}% &e, venta -&a{1}%"
+  admin:
+    help:
+      header: "&6=== Administración de Eventos ==="
+      status: "&e/ecoxpert events status &7- Ver estado del motor"
+      active: "&e/ecoxpert events active &7- Listar eventos activos"
+      history: "&e/ecoxpert events history &7- Ver eventos recientes"
+      stats: "&e/ecoxpert events stats [días] &7- Ver conteo de eventos"
+      statsdetail: "&e/ecoxpert events statsdetail <TIPO> [días] &7- Estadísticas detalladas"
+      recent: "&e/ecoxpert events recent &7- Ver eventos desde la base de datos"
+      antistagnation: "&e/ecoxpert events anti-stagnation &7- Ver horas de quietud"
+      pause: "&e/ecoxpert events pause &7- Pausar motor de eventos"
+      resume: "&e/ecoxpert events resume &7- Reanudar motor de eventos"
+      trigger: "&e/ecoxpert events trigger <TIPO> &7- Disparar un evento"
+      end: "&e/ecoxpert events end <ID> &7- Terminar un evento activo"
+    unknown: "&cSubcomando de eventos desconocido"
+    status: "&7Motor de Eventos: &eActivo: {0} &7| Activos: &e{1} &7| Historial: &e{2}"
+    active:
+      header: "&6=== Eventos Activos ==="
+      none: "&7No hay eventos activos"
+      item: "&7ID: &e{0} &7Nombre: &e{1} &7Tipo: &e{2} &7Duración: &e{3}m"
+    history:
+      header: "&6=== Eventos Recientes ==="
+      none: "&7No hay eventos pasados"
+      item: "&7ID: &e{0} &7Nombre: &e{1} &7Tipo: &e{2} &7Estado: &e{3}"
+    trigger:
+      usage: "&cUso: &e/ecoxpert events trigger <TIPO>"
+    triggered: "&aEvento activado: &e{0}"
+    trigger:
+      failed: "&cError al activar el evento: {0}"
+    unknown_type: "&cTipo de evento desconocido: {0}"
+    end:
+      usage: "&cUso: &e/ecoxpert events end <ID>"
+    ended: "&aEvento finalizado: &e{0}"
+    not_found: "&cNo se encontró el evento activo: {0}"
+    stats:
+      header: "&6=== Estadísticas de Eventos (últimos {0} días) ==="
+      item: "&7{0}: &e{1}"
+      none: "&7Sin eventos en los últimos {0} días"
+      total: "&7Eventos totales: &e{0}"
+    recent:
+      header: "&6=== Eventos Recientes (DB) ==="
+      none: "&7No hay eventos persistidos"
+      item: "&7ID: &e{0} &7Tipo: &e{1} &7Estado: &e{2} &7Inicio: &e{3} &7Fin: &e{4}"
+    antistagnation:
+      info: "&7Horas desde el último evento: &e{0} &7| Horas de quietud: &e{1}"
+    engine:
+      paused: "&eMotor de eventos en pausa"
+      resumed: "&aMotor de eventos reanudado"
+  gui:
+    title: "Administrador de Eventos"
+    pause: "Pausar Motor"
+    resume: "Reanudar Motor"
+    status: "Estado"
+    recent: "Recientes"
+admin:
+  gui:
+    title: "Panel Admin EcoXpert"
+    events: "Eventos"
+    market: "Mercado"
+    loans: "Préstamos"
+    economy: "Economía"
+    statsdetail:
+      header: "&6=== Estadísticas de Evento: {0} (últimos {1} días) ==="
+      count: "&7Cantidad: &e{0}"
+      avg_duration: "&7Duración Promedio: &e{0} &7minutos"
+      avg_items: "&7Ítems Afectados Promedio: &e{0}"
+      avg_buy_delta: "&7Delta Promedio Compra: &e{0}"
+      avg_sell_delta: "&7Delta Promedio Venta: &e{0}"
+      total_stimulus: "&7Estímulo Total: &e{0}"
   
 # Professions System
 professions:

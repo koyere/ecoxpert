@@ -35,5 +35,19 @@ public interface LoanManager {
      * Get the player's active loan, if any.
      */
     CompletableFuture<Optional<Loan>> getActiveLoan(UUID playerUuid);
-}
 
+    /**
+     * Compute a smart loan offer for the player based on scoring and policy.
+     */
+    CompletableFuture<LoanOffer> getOffer(UUID playerUuid, BigDecimal amount);
+
+    /**
+     * Request a loan using dynamic rate/term according to policy and scoring.
+     */
+    CompletableFuture<Boolean> requestLoanSmart(UUID playerUuid, BigDecimal amount);
+
+    /**
+     * Get the repayment schedule for the player's active loan, if any.
+     */
+    CompletableFuture<java.util.List<LoanPayment>> getSchedule(UUID playerUuid);
+}

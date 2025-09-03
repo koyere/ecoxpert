@@ -59,17 +59,41 @@ public class CommandManager {
         
         // Register MarketGUI events
         plugin.getServer().getPluginManager().registerEvents(marketCommand.getMarketGUI(), plugin);
+        // Register loan notifications
+        plugin.getServer().getPluginManager().registerEvents(
+            new me.koyere.ecoxpert.modules.loans.LoanNotificationListener(
+                plugin,
+                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.data.DataManager.class),
+                translationManager
+            ), plugin);
         
         // Bank commands
         BankCommand bankCommand = new BankCommand(bankManager, economyManager, translationManager);
         plugin.getCommand("bank").setExecutor(bankCommand);
         plugin.getCommand("bank").setTabCompleter(bankCommand);
+        // Bank GUI command
+        if (plugin.getCommand("bankgui") != null) {
+            plugin.getCommand("bankgui").setExecutor(new BankGuiCommand(plugin, bankManager, economyManager, translationManager));
+        }
 
         // Loans commands
         LoansCommand loansCommand = new LoansCommand(loanManager, economyManager, translationManager);
         if (plugin.getCommand("loans") != null) {
             plugin.getCommand("loans").setExecutor(loansCommand);
             plugin.getCommand("loans").setTabCompleter(loansCommand);
+        }
+        if (plugin.getCommand("loansgui") != null) {
+            plugin.getCommand("loansgui").setExecutor(new LoansGuiCommand(plugin, loanManager, economyManager, translationManager));
+        }
+
+        // Admin GUI command
+        if (plugin.getCommand("ecoadmin") != null) {
+            plugin.getCommand("ecoadmin").setExecutor(new AdminGuiCommand(plugin, translationManager));
+        }
+        if (plugin.getCommand("ecoevents") != null) {
+            plugin.getCommand("ecoevents").setExecutor(new EventsGuiCommand(plugin,
+                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.events.EconomicEventEngine.class),
+                translationManager));
         }
         
         plugin.getLogger().info("Registered economy and market commands");

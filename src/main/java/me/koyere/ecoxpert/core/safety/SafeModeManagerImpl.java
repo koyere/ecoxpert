@@ -99,7 +99,8 @@ public class SafeModeManagerImpl implements SafeModeManager {
     }
 
     private boolean errorSpike() {
-        long now = System.currentTimeMillis();n+        synchronized (errorTimestamps) {
+        long now = System.currentTimeMillis();
+        synchronized (errorTimestamps) {
             while (!errorTimestamps.isEmpty() && now - errorTimestamps.peekFirst() > 60_000L) {
                 errorTimestamps.pollFirst();
             }
@@ -123,4 +124,3 @@ public class SafeModeManagerImpl implements SafeModeManager {
         else plugin.getLogger().info("Safe Mode deactivated: " + reason);
     }
 }
-

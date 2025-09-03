@@ -45,6 +45,8 @@ public class EconomicEventEngine {
     private final Map<String, EconomicEvent> activeEvents = new ConcurrentHashMap<>();
     private final List<EconomicEvent> eventHistory = new ArrayList<>();
     private boolean eventEngineActive = false;
+    // Track last end time per event type to enforce cooldowns
+    private final Map<EconomicEventType, LocalDateTime> lastEventEndTime = new ConcurrentHashMap<>();
     
     // Intelligence Integration
     private LocalDateTime lastEventTime = LocalDateTime.now().minusHours(2);
@@ -182,22 +184,80 @@ public class EconomicEventEngine {
      */
     private EconomicEventType selectOptimalEventType(EconomicIntelligenceEngine.EconomicCycle cycle,
                                                     double health, double inflation) {
-        
-        // Crisis Response Events
-        if (health < 0.4) {
-            return ThreadLocalRandom.current().nextBoolean() ? 
-                EconomicEventType.GOVERNMENT_STIMULUS : EconomicEventType.TRADE_BOOM;
+        // Weighted selection driven by configuration and cycle/health.
+        Map<EconomicEventType, Double> weights = new EnumMap<>(EconomicEventType.class);
+        for (EconomicEventType t : EconomicEventType.values()) {
+            double w = getEventWeight(t, cycle, health, inflation);
+            if (w > 0) weights.put(t, w);
         }
-        
-        // Cycle-Specific Events
-        return switch (cycle) {
-            case DEPRESSION -> EconomicEventType.GOVERNMENT_STIMULUS;
-            case RECESSION -> EconomicEventType.TRADE_BOOM;
-            case STABLE -> EconomicEventType.MARKET_DISCOVERY;
-            case GROWTH -> EconomicEventType.INVESTMENT_OPPORTUNITY;
-            case BOOM -> EconomicEventType.LUXURY_DEMAND;
-            case BUBBLE -> EconomicEventType.MARKET_CORRECTION;
-        };
+        if (weights.isEmpty()) return EconomicEventType.MARKET_DISCOVERY;
+        return pickWeighted(weights);
+    }
+
+    private double getEventWeight(EconomicEventType type, EconomicIntelligenceEngine.EconomicCycle cycle,
+                                  double health, double inflation) {
+        double base = 1.0;
+        try {
+            var cfg = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class);
+            var ev = cfg.getModuleConfig("events");
+            String key = (type.name().toLowerCase() + ".weight").replace(' ', '_');
+            base = Math.max(0.0, ev.getDouble(key, 1.0));
+        } catch (Exception ignored) {}
+
+        double modifier = 1.0;
+        // Cycle/health-driven modifiers (gentle)
+        switch (cycle) {
+            case DEPRESSION -> {
+                if (type == EconomicEventType.GOVERNMENT_STIMULUS) modifier *= 2.0;
+                if (type == EconomicEventType.TRADE_BOOM) modifier *= 1.5;
+                if (type == EconomicEventType.MARKET_CORRECTION) modifier *= 0.7;
+            }
+            case RECESSION -> {
+                if (type == EconomicEventType.TRADE_BOOM) modifier *= 1.6;
+                if (type == EconomicEventType.GOVERNMENT_STIMULUS) modifier *= 1.4;
+            }
+            case STABLE -> {
+                if (type == EconomicEventType.MARKET_DISCOVERY || type == EconomicEventType.SEASONAL_DEMAND)
+                    modifier *= 1.3;
+            }
+            case GROWTH -> {
+                if (type == EconomicEventType.INVESTMENT_OPPORTUNITY || type == EconomicEventType.TECHNOLOGICAL_BREAKTHROUGH)
+                    modifier *= 1.5;
+            }
+            case BOOM -> {
+                if (type == EconomicEventType.LUXURY_DEMAND) modifier *= 1.7;
+                if (type == EconomicEventType.MARKET_CORRECTION) modifier *= 1.2;
+            }
+            case BUBBLE -> {
+                if (type == EconomicEventType.MARKET_CORRECTION || type == EconomicEventType.BLACK_SWAN_EVENT)
+                    modifier *= 1.6;
+            }
+        }
+        if (health < 0.4) {
+            if (type == EconomicEventType.GOVERNMENT_STIMULUS || type == EconomicEventType.TRADE_BOOM)
+                modifier *= 1.5;
+        }
+        if (health > 0.85) {
+            if (type == EconomicEventType.LUXURY_DEMAND || type == EconomicEventType.INVESTMENT_OPPORTUNITY)
+                modifier *= 1.3;
+        }
+        // Inflation extremes favor correction-like events
+        if (Math.abs(inflation) > 0.08 && type == EconomicEventType.MARKET_CORRECTION) modifier *= 1.4;
+
+        return base * modifier;
+    }
+
+    private EconomicEventType pickWeighted(Map<EconomicEventType, Double> weights) {
+        double total = 0.0;
+        for (double w : weights.values()) total += w;
+        if (total <= 0.0) return EconomicEventType.MARKET_DISCOVERY;
+        double r = ThreadLocalRandom.current().nextDouble() * total;
+        double acc = 0.0;
+        for (Map.Entry<EconomicEventType, Double> e : weights.entrySet()) {
+            acc += e.getValue();
+            if (r <= acc) return e.getKey();
+        }
+        return EconomicEventType.MARKET_DISCOVERY;
     }
     
     // === Event Execution System ===
@@ -206,7 +266,7 @@ public class EconomicEventEngine {
      * Trigger an intelligent economic event
      */
     private void triggerIntelligentEvent(EconomicEventType eventType) {
-        if (activeEvents.containsKey(eventType.name())) {
+        if (isTypeActive(eventType)) {
             plugin.getLogger().info("Event " + eventType + " already active, skipping");
             return;
         }
@@ -236,7 +296,7 @@ public class EconomicEventEngine {
      */
     public boolean triggerEvent(EconomicEventType eventType) {
         try {
-            if (activeEvents.containsKey(eventType.name())) {
+            if (isTypeActive(eventType)) {
                 plugin.getLogger().info("Event " + eventType + " already active, skipping");
                 return false;
             }
@@ -266,6 +326,13 @@ public class EconomicEventEngine {
         }
     }
 
+    private boolean isTypeActive(EconomicEventType type) {
+        for (EconomicEvent ev : activeEvents.values()) {
+            if (ev.getType() == type && ev.getStatus() == EconomicEvent.EventStatus.ACTIVE) return true;
+        }
+        return false;
+    }
+
     private int getEventCooldownHours(EconomicEventType type) {
         try {
             var cfg = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class);
@@ -281,7 +348,7 @@ public class EconomicEventEngine {
     private void persistEvent(EconomicEvent event, String status) {
         try {
             var dm = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
-            String paramsJson = ""; // TODO: serialize parameters if needed
+            String paramsJson = toJson(event.getParameters());
             dm.executeUpdate(
                 "INSERT INTO ecoxpert_economic_events (event_id, type, status, parameters, start_time) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
                 event.getId(), event.getType().name(), status, paramsJson
@@ -292,11 +359,54 @@ public class EconomicEventEngine {
     private void persistEventEnd(EconomicEvent event) {
         try {
             var dm = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
+            long minutes = java.time.Duration.between(event.getStartTime(), java.time.LocalDateTime.now()).toMinutes();
+            addMetric(event, "metrics.duration_minutes", minutes);
+            String paramsJson = toJson(event.getParameters());
             dm.executeUpdate(
-                "UPDATE ecoxpert_economic_events SET status = ?, end_time = CURRENT_TIMESTAMP WHERE event_id = ?",
-                "COMPLETED", event.getId()
+                "UPDATE ecoxpert_economic_events SET status = ?, end_time = CURRENT_TIMESTAMP, parameters = ? WHERE event_id = ?",
+                "COMPLETED", paramsJson, event.getId()
             ).join();
         } catch (Exception ignored) {}
+    }
+
+    // Minimal JSON serialization for parameters (numbers, strings, lists of Material)
+    private String toJson(Map<String, Object> map) {
+        if (map == null || map.isEmpty()) return "{}";
+        StringBuilder sb = new StringBuilder();
+        sb.append('{');
+        boolean first = true;
+        for (Map.Entry<String, Object> e : map.entrySet()) {
+            if (!first) sb.append(',');
+            first = false;
+            sb.append('"').append(escape(e.getKey())).append('"').append(':');
+            sb.append(toJsonValue(e.getValue()));
+        }
+        sb.append('}');
+        return sb.toString();
+    }
+    private String toJsonValue(Object v) {
+        if (v == null) return "null";
+        if (v instanceof Number) return v.toString();
+        if (v instanceof Boolean) return v.toString();
+        if (v instanceof CharSequence) return '"' + escape(v.toString()) + '"';
+        if (v instanceof Material) return '"' + ((Material) v).name() + '"';
+        if (v instanceof List<?>) {
+            StringBuilder sb = new StringBuilder();
+            sb.append('[');
+            boolean first = true;
+            for (Object o : (List<?>) v) {
+                if (!first) sb.append(',');
+                first = false;
+                sb.append(toJsonValue(o));
+            }
+            sb.append(']');
+            return sb.toString();
+        }
+        // Fallback to string
+        return '"' + escape(v.toString()) + '"';
+    }
+    private String escape(String s) {
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
     
     /**
@@ -386,23 +496,33 @@ public class EconomicEventEngine {
      */
     private void applyGovernmentStimulus(EconomicEvent event) {
         plugin.getLogger().info("💉 GOVERNMENT STIMULUS: Distributing emergency economic aid");
-        
+
         double totalStimulus = (Double) event.getParameters().get("total_stimulus");
         double perPlayerAmount = totalStimulus / Math.max(1, Bukkit.getOnlinePlayers().size());
-        
+
+        me.koyere.ecoxpert.core.translation.TranslationManager tm =
+            plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+
         // Distribute stimulus to online players
         Bukkit.getOnlinePlayers().forEach(player -> {
-            economyManager.addMoney(player.getUniqueId(), 
+            economyManager.addMoney(
+                player.getUniqueId(),
                 BigDecimal.valueOf(perPlayerAmount),
-                "Government Economic Stimulus - " + event.getName());
-            
-            player.sendMessage("§6[EcoXpert] §aYou received $" + 
-                String.format("%.2f", perPlayerAmount) + " from government stimulus!");
+                "Government Economic Stimulus - " + event.getName()
+            );
+            String amountStr = economyManager.formatMoney(BigDecimal.valueOf(perPlayerAmount));
+            player.sendMessage(tm.getMessage("prefix") + tm.getPlayerMessage(player, "events.stimulus.received", amountStr));
         });
-        
-        // Announce economic impact
-        Bukkit.broadcastMessage("§6[Economic Event] §e💰 Government injected $" + 
-            String.format("%.0f", totalStimulus) + " into the economy!");
+
+        // Announce economic impact (use formatted money)
+        String totalStr = economyManager.formatMoney(BigDecimal.valueOf(totalStimulus));
+        Bukkit.broadcastMessage(tm.getMessage("prefix") + tm.getMessage("events.stimulus.injected", totalStr));
+
+        // Metrics
+        addMetric(event, "metrics.type", "stimulus");
+        addMetric(event, "metrics.total_stimulus", totalStimulus);
+        addMetric(event, "metrics.per_player_amount", perPlayerAmount);
+        addMetric(event, "metrics.recipients", Bukkit.getOnlinePlayers().size());
     }
     
     /**
@@ -410,12 +530,15 @@ public class EconomicEventEngine {
      */
     private void applyTradeBoom(EconomicEvent event) {
         plugin.getLogger().info("📈 TRADE BOOM: Boosting market activity and rewards");
-        
+
         double multiplier = (Double) event.getParameters().get("trade_multiplier");
-        
-        // This would integrate with the market system to boost prices/rewards
-        Bukkit.broadcastMessage("§6[Economic Event] §e📈 Trade Boom! All market trades give " + 
-            String.format("%.0f%%", (multiplier - 1) * 100) + " bonus rewards!");
+
+        me.koyere.ecoxpert.core.translation.TranslationManager tm =
+            plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+        String pct = String.format("%.0f", (multiplier - 1) * 100);
+        Bukkit.broadcastMessage(tm.getMessage("prefix") + tm.getMessage("events.trade_boom.announce", pct));
+        addMetric(event, "metrics.type", "global_bonus");
+        addMetric(event, "metrics.trade_bonus_pct", (multiplier - 1) * 100.0);
         
         // Apply temporary market boost
         if (marketManager != null) {
@@ -430,17 +553,25 @@ public class EconomicEventEngine {
      */
     private void applyMarketDiscovery(EconomicEvent event) {
         plugin.getLogger().info("🔍 MARKET DISCOVERY: New valuable resources discovered");
-        
+
         @SuppressWarnings("unchecked")
         List<Material> newItems = (List<Material>) event.getParameters().get("discovered_items");
         double priceBoost = (Double) event.getParameters().get("discovery_bonus");
-        
+
         StringBuilder itemList = new StringBuilder();
-        for (Material item : newItems) {
-            itemList.append(item.name().toLowerCase().replace('_', ' ')).append(", ");
+        for (int i = 0; i < newItems.size(); i++) {
+            Material item = newItems.get(i);
+            if (i > 0) itemList.append(", ");
+            itemList.append(item.name().toLowerCase().replace('_', ' '));
         }
-        Bukkit.broadcastMessage("§6[Economic Event] §e🔍 Market Discovery! " + 
-            itemList.toString() + "now worth " + String.format("%.0f%%", priceBoost * 100) + " more!");
+        me.koyere.ecoxpert.core.translation.TranslationManager tm =
+            plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+        String pct = String.format("%.0f", (priceBoost - 1.0) * 100);
+        Bukkit.broadcastMessage(tm.getMessage("prefix") + tm.getMessage("events.market_discovery.announce", itemList.toString(), pct));
+
+        addMetric(event, "metrics.type", "per_item");
+        addMetric(event, "metrics.items", newItems.size());
+        addMetric(event, "metrics.sell_boost_pct", (priceBoost - 1.0) * 100.0);
 
         // Apply temporary per-item sell boost (encourage players to supply discovered items)
         if (marketManager != null && !newItems.isEmpty()) {
@@ -760,15 +891,19 @@ public class EconomicEventEngine {
     }
     
     private void broadcastEventStart(EconomicEvent event) {
-        Bukkit.broadcastMessage("§6§l[ECONOMIC EVENT]");
-        Bukkit.broadcastMessage("§e🎪 " + event.getName() + " has begun!");
-        Bukkit.broadcastMessage("§7" + event.getDescription());
-        Bukkit.broadcastMessage("§7Duration: " + event.getDuration() + " minutes");
+        me.koyere.ecoxpert.core.translation.TranslationManager tm =
+            plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+        Bukkit.broadcastMessage(tm.getMessage("events.banner"));
+        Bukkit.broadcastMessage(tm.getMessage("events.started", event.getName()));
+        Bukkit.broadcastMessage(tm.getMessage("events.info.description", event.getDescription()));
+        Bukkit.broadcastMessage(tm.getMessage("events.info.duration", event.getDuration()));
     }
     
     private void broadcastEventEnd(EconomicEvent event) {
-        Bukkit.broadcastMessage("§6§l[ECONOMIC EVENT]");
-        Bukkit.broadcastMessage("§e🏁 " + event.getName() + " has ended!");
+        me.koyere.ecoxpert.core.translation.TranslationManager tm =
+            plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+        Bukkit.broadcastMessage(tm.getMessage("events.banner"));
+        Bukkit.broadcastMessage(tm.getMessage("events.ended", event.getName()));
     }
     
     private void applyEventEndEffects(EconomicEvent event) {
@@ -776,7 +911,44 @@ public class EconomicEventEngine {
     }
     
     // Additional effect implementations (stubs for brevity)
-    private void applyInvestmentOpportunity(EconomicEvent event) { /* TODO */ }
+    private void applyInvestmentOpportunity(EconomicEvent event) {
+        if (marketManager == null) return;
+        try {
+            me.koyere.ecoxpert.core.config.ConfigManager cfg = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class);
+            var marketCfg = cfg.getModuleConfig("market");
+            var evcfg = cfg.getModuleConfig("events");
+            int minutes = evcfg.getInt("investment_opportunity.duration_minutes", 10);
+            double buyDelta = evcfg.getDouble("investment_opportunity.buy_delta", -0.02); // cheaper buy
+            double sellDelta = evcfg.getDouble("investment_opportunity.sell_delta", 0.05); // better sell
+
+            java.util.Set<Material> targets = new java.util.HashSet<>();
+            if (event.getAffectedItems() != null && !event.getAffectedItems().isEmpty()) {
+                targets.addAll(event.getAffectedItems());
+            } else {
+                // fallback to a reasonable investment set (emerald/diamond/gold)
+                for (String s : new String[]{"EMERALD","DIAMOND","GOLD_INGOT"}) {
+                    try { targets.add(Material.valueOf(s)); } catch (IllegalArgumentException ignored) {}
+                }
+            }
+            if (targets.isEmpty()) return;
+
+            java.util.Map<Material, double[]> factors = new java.util.HashMap<>();
+            for (Material m : targets) {
+                factors.put(m, new double[]{1.0 + buyDelta, 1.0 + sellDelta});
+            }
+            marketManager.applyTemporaryItemFactors(factors, minutes);
+
+            me.koyere.ecoxpert.core.translation.TranslationManager tm =
+                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+            String up = String.format("%.0f", Math.max(0, sellDelta) * 100);
+            Bukkit.broadcastMessage(tm.getMessage("prefix") + tm.getMessage("events.investment.announce", up));
+
+            addMetric(event, "metrics.type", "per_item");
+            addMetric(event, "metrics.items", targets.size());
+            addMetric(event, "metrics.buy_delta", buyDelta);
+            addMetric(event, "metrics.sell_delta", sellDelta);
+        } catch (Exception ignored) { }
+    }
     private void applyLuxuryDemand(EconomicEvent event) { 
         // Luxury items fetch higher prices temporarily
         if (marketManager == null) return;
@@ -800,10 +972,49 @@ public class EconomicEventEngine {
                     factors.put(m, new double[]{1.0 + buyDelta, 1.0 + sellDelta});
                 }
                 marketManager.applyTemporaryItemFactors(factors, minutes);
+
+                me.koyere.ecoxpert.core.translation.TranslationManager tm =
+                    plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+                String pct = String.format("%.0f", sellDelta * 100);
+                Bukkit.broadcastMessage(tm.getMessage("prefix") + tm.getMessage("events.luxury_demand.announce", pct));
+
+                addMetric(event, "metrics.type", "category");
+                addMetric(event, "metrics.items", targets.size());
+                addMetric(event, "metrics.category", category);
+                addMetric(event, "metrics.buy_delta", buyDelta);
+                addMetric(event, "metrics.sell_delta", sellDelta);
             }
         } catch (Exception ignored) {}
     }
-    private void applyMarketCorrection(EconomicEvent event) { /* TODO */ }
+    private void applyMarketCorrection(EconomicEvent event) {
+        // Apply a temporary global cooling: raise buy prices a bit, lower sell prices a bit
+        try {
+            me.koyere.ecoxpert.core.config.ConfigManager cfg = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class);
+            var evcfg = cfg.getModuleConfig("events");
+            int minutes = evcfg.getInt("market_correction.duration_minutes", 10);
+            double buyDelta = evcfg.getDouble("market_correction.global_buy_factor_delta", 0.02);   // +2% cost to buy
+            double sellDelta = evcfg.getDouble("market_correction.global_sell_factor_delta", -0.02); // -2% returns to sell
+
+            double[] prev = marketManager.getGlobalPriceFactors();
+            double newBuy = Math.max(0.5, prev[0] + buyDelta);
+            double newSell = Math.max(0.5, prev[1] + sellDelta);
+            marketManager.setGlobalPriceFactors(newBuy, newSell);
+
+            me.koyere.ecoxpert.core.translation.TranslationManager tm =
+                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+            String buyPct = String.format("%.0f", buyDelta * 100);
+            String sellPct = String.format("%.0f", Math.abs(sellDelta) * 100);
+            Bukkit.broadcastMessage(tm.getMessage("prefix") + tm.getMessage("events.market_correction.announce", buyPct, sellPct));
+
+            // Reset after duration
+            Bukkit.getScheduler().runTaskLater(plugin, () -> marketManager.setGlobalPriceFactors(prev[0], prev[1]), minutes * 60L * 20L);
+
+            addMetric(event, "metrics.type", "global");
+            addMetric(event, "metrics.buy_delta", buyDelta);
+            addMetric(event, "metrics.sell_delta", sellDelta);
+            addMetric(event, "metrics.duration_minutes", minutes);
+        } catch (Exception ignored) { }
+    }
     private void applyResourceShortage(EconomicEvent event) {
         if (marketManager == null || event.getAffectedItems() == null || event.getAffectedItems().isEmpty()) return;
         try {
@@ -816,16 +1027,130 @@ public class EconomicEventEngine {
                 factors.put(m, new double[]{1.0 + delta, 1.0 + delta});
             }
             marketManager.applyTemporaryItemFactors(factors, minutes);
+
+            me.koyere.ecoxpert.core.translation.TranslationManager tm =
+                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+            String pct = String.format("%.0f", delta * 100);
+            Bukkit.broadcastMessage(tm.getMessage("prefix") + tm.getMessage("events.resource_shortage.announce", pct));
+
+            addMetric(event, "metrics.type", "per_item");
+            addMetric(event, "metrics.items", event.getAffectedItems().size());
+            addMetric(event, "metrics.buy_delta", delta);
+            addMetric(event, "metrics.sell_delta", delta);
         } catch (Exception ignored) {}
     }
-    private void applyTechnologicalBreakthrough(EconomicEvent event) { /* TODO */ }
-    private void applySeasonalDemand(EconomicEvent event) { /* TODO */ }
-    private void applyBlackSwanEvent(EconomicEvent event) { /* TODO */ }
+    private void applyTechnologicalBreakthrough(EconomicEvent event) {
+        if (marketManager == null) return;
+        try {
+            me.koyere.ecoxpert.core.config.ConfigManager cfg = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class);
+            var marketCfg = cfg.getModuleConfig("market");
+            var evcfg = cfg.getModuleConfig("events");
+            String category = evcfg.getString("technological_breakthrough.category", "redstone");
+            java.util.List<String> mats = marketCfg.getStringList("categories." + category + ".materials");
+            java.util.Set<Material> targets = new java.util.HashSet<>();
+            for (String s : mats) { try { targets.add(Material.valueOf(s)); } catch (IllegalArgumentException ignored) {} }
+            if (event.getAffectedItems() != null) targets.addAll(event.getAffectedItems());
+            if (targets.isEmpty()) return;
+
+            int minutes = evcfg.getInt("technological_breakthrough.duration_minutes", 10);
+            double buyDelta = evcfg.getDouble("technological_breakthrough.buy_delta", -0.05); // cheaper to buy
+            double sellDelta = evcfg.getDouble("technological_breakthrough.sell_delta", -0.02); // slightly lower sell (deflation)
+            java.util.Map<Material, double[]> factors = new java.util.HashMap<>();
+            for (Material m : targets) {
+                factors.put(m, new double[]{1.0 + buyDelta, 1.0 + sellDelta});
+            }
+            marketManager.applyTemporaryItemFactors(factors, minutes);
+
+            me.koyere.ecoxpert.core.translation.TranslationManager tm =
+                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+            String buyPct = String.format("%.0f", Math.abs(buyDelta) * 100);
+            String sellPct = String.format("%.0f", Math.abs(sellDelta) * 100);
+            Bukkit.broadcastMessage(tm.getMessage("prefix") + tm.getMessage("events.tech_breakthrough.announce", buyPct, sellPct));
+
+            addMetric(event, "metrics.type", "category");
+            addMetric(event, "metrics.items", targets.size());
+            addMetric(event, "metrics.category", category);
+            addMetric(event, "metrics.buy_delta", buyDelta);
+            addMetric(event, "metrics.sell_delta", sellDelta);
+        } catch (Exception ignored) { }
+    }
+    private void applySeasonalDemand(EconomicEvent event) {
+        if (marketManager == null) return;
+        try {
+            me.koyere.ecoxpert.core.config.ConfigManager cfg = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class);
+            var marketCfg = cfg.getModuleConfig("market");
+            var evcfg = cfg.getModuleConfig("events");
+            String category = evcfg.getString("seasonal_demand.category", "food");
+            int minutes = evcfg.getInt("seasonal_demand.duration_minutes", 10);
+            double buyDelta = evcfg.getDouble("seasonal_demand.buy_delta", 0.00);
+            double sellDelta = evcfg.getDouble("seasonal_demand.sell_delta", 0.06); // default +6% sell
+
+            java.util.List<String> mats = marketCfg.getStringList("categories." + category + ".materials");
+            java.util.Set<Material> targets = new java.util.HashSet<>();
+            for (String s : mats) { try { targets.add(Material.valueOf(s)); } catch (IllegalArgumentException ignored) {} }
+            if (event.getAffectedItems() != null) targets.addAll(event.getAffectedItems());
+            if (targets.isEmpty()) return;
+
+            java.util.Map<Material, double[]> factors = new java.util.HashMap<>();
+            for (Material m : targets) {
+                factors.put(m, new double[]{1.0 + buyDelta, 1.0 + sellDelta});
+            }
+            marketManager.applyTemporaryItemFactors(factors, minutes);
+
+            me.koyere.ecoxpert.core.translation.TranslationManager tm =
+                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+            String pct = String.format("%.0f", Math.max(buyDelta, sellDelta) * 100);
+            Bukkit.broadcastMessage(tm.getMessage("prefix") + tm.getMessage("events.seasonal_demand.announce", pct));
+            addMetric(event, "metrics.type", "category");
+            addMetric(event, "metrics.items", targets.size());
+            addMetric(event, "metrics.category", category);
+            addMetric(event, "metrics.buy_delta", buyDelta);
+            addMetric(event, "metrics.sell_delta", sellDelta);
+        } catch (Exception ignored) { }
+    }
+    private void applyBlackSwanEvent(EconomicEvent event) {
+        try {
+            me.koyere.ecoxpert.core.config.ConfigManager cfg = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class);
+            var evcfg = cfg.getModuleConfig("events");
+            int minutes = evcfg.getInt("black_swan_event.duration_minutes", 20);
+            double buyDelta = evcfg.getDouble("black_swan_event.global_buy_factor_delta", -0.10);
+            double sellDelta = evcfg.getDouble("black_swan_event.global_sell_factor_delta", -0.10);
+
+            double[] prev = marketManager.getGlobalPriceFactors();
+            double newBuy = Math.max(0.3, prev[0] + buyDelta);
+            double newSell = Math.max(0.3, prev[1] + sellDelta);
+            marketManager.setGlobalPriceFactors(newBuy, newSell);
+
+            me.koyere.ecoxpert.core.translation.TranslationManager tm =
+                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+            String b = String.format("%.0f", Math.abs(buyDelta) * 100);
+            String s = String.format("%.0f", Math.abs(sellDelta) * 100);
+            Bukkit.broadcastMessage(tm.getMessage("prefix") + tm.getMessage("events.black_swan.announce", b, s));
+
+            Bukkit.getScheduler().runTaskLater(plugin, () -> marketManager.setGlobalPriceFactors(prev[0], prev[1]), minutes * 60L * 20L);
+            addMetric(event, "metrics.type", "global");
+            addMetric(event, "metrics.buy_delta", buyDelta);
+            addMetric(event, "metrics.sell_delta", sellDelta);
+            addMetric(event, "metrics.duration_minutes", minutes);
+        } catch (Exception ignored) { }
+    }
+
+    private void addMetric(EconomicEvent event, String key, Object value) {
+        try {
+            event.getParameters().put(key, value);
+        } catch (Exception ignored) {}
+    }
     
     // Getters for external access
     public Map<String, EconomicEvent> getActiveEvents() { return new HashMap<>(activeEvents); }
     public List<EconomicEvent> getEventHistory() { return new ArrayList<>(eventHistory); }
     public boolean isEventEngineActive() { return eventEngineActive; }
+    public void pauseEngine() { this.eventEngineActive = false; }
+    public void resumeEngine() { this.eventEngineActive = true; }
+    public int getConsecutiveQuietHours() { return consecutiveQuietHours; }
+    public long getHoursSinceLastEvent() {
+        return java.time.Duration.between(lastEventTime, java.time.LocalDateTime.now()).toHours();
+    }
     
     // Inner Classes
     private static class EventTemplate {

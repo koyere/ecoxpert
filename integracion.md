@@ -10,3 +10,28 @@ bStats: Incluiremos la clase bStats en el proyecto y la inicializaremos en el m�
 Notificador de Actualizaciones: Implementaremos una función (configurable, para que los admins puedan desactivarla si lo desean) que revise si hay una nueva versión del plugin disponible (probablemente consultando la API de SpigotMC o una fuente que designes) y lo notifique en la consola al iniciar el servidor.
 Actualización Automática de Configs: Implementaremos un sistema para manejar las actualizaciones de config.yml y messages.yml. Generalmente, esto implica verificar una versión en el archivo, respaldar el archivo antiguo y generar uno nuevo con las claves actualizadas, preservando los valores antiguos siempre que sea posible. Es un punto delicado que trataremos con cuidado.
 Sugerencias: ¡Excelente! Si veo alguna oportunidad de mejora o una alternativa interesante, te la presentaré para que podamos discutirla y decidir juntos el mejor camino a seguir.
+
+---
+
+Notas de Integración Operativa (2025-09-03)
+
+- Vault & Migración:
+  - Al habilitar el plugin, si EssentialsX/CMI están presentes y `economy.migration.import_on_startup: true`, EcoXpert difiere ~3s la importación y crea un backup SQLite en `plugins/EcoXpert/backups/` si `backup_before_import: true`.
+  - Luego importa saldos desde el provider activo de Vault y registra su propio provider.
+
+- Eventos Dinámicos:
+  - Configuración en `modules/events.yml`; nuevas secciones para `investment_opportunity`, `market_correction`, `technological_breakthrough` con `duration_minutes` e intensidades.
+  - `cooldown_hours` por evento (fallback global).
+  - Mensajes i18n (EN/ES) para banners y anuncios.
+  - Pesos `weight` por evento para sesgo de selección.
+
+- Traducciones:
+  - Archivos creados automáticamente en `plugins/EcoXpert/languages/` si no existen.
+  - Clave `prefix` se antepone a mensajes enviados a jugador/broadcast según contexto.
+
+- Compatibilidad:
+  - Evitamos NMS; integración vía Spigot API. Con GeyserMC detectado, se informa soporte Bedrock.
+
+- Préstamos:
+  - Config: `modules/loans.yml` (tasa, plazo, límites, pagos, penalizaciones, scheduler).
+  - Scheduler de morosidad: marca PENDING vencidas como LATE, aplica penalización y notifica.
