@@ -17,6 +17,12 @@ plugin:
   # Update checking
   updates:
     check-enabled: true
+    # Spigot resource id (legacy endpoint). If 0, uses check-url or skips
+    resource-id: 0
+    # Custom URL returning plain latest version string (optional)
+    check-url: ""
+    # Download page to show admins when update is available
+    download-url: "https://github.com/koyere/ecoxpert"
     notify-admins: true
     check-interval: 21600 # 6 hours in seconds
 
@@ -68,6 +74,11 @@ economy:
     maximum: 0
     # Daily transaction limit per player (0 = unlimited)
     daily-limit: 0
+
+  # Migration from other economy providers (EssentialsX, CMI via Vault)
+  migration:
+    import_on_startup: true
+    backup_before_import: true
 
 # Cross-Platform Settings
 cross-platform:

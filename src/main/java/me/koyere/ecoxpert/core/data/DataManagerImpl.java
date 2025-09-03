@@ -449,6 +449,20 @@ public class DataManagerImpl implements DataManager {
                 UNIQUE(account_uuid, statement_year, statement_month)
             )
             """
+            ,
+            // Player loans (minimal schema: one ACTIVE loan per player)
+            """
+            CREATE TABLE IF NOT EXISTS ecoxpert_loans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_uuid VARCHAR(36) NOT NULL,
+                principal DECIMAL(20,2) NOT NULL,
+                outstanding DECIMAL(20,2) NOT NULL,
+                interest_rate DECIMAL(5,4) NOT NULL DEFAULT 0.0000,
+                status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_payment_at TIMESTAMP
+            )
+            """
         };
         
         try (Connection conn = dataSource.getConnection()) {
@@ -527,7 +541,7 @@ public class DataManagerImpl implements DataManager {
                 // For SQLite, we can copy the file directly
                 if (databaseType == DatabaseType.SQLITE) {
                     java.nio.file.Files.copy(
-                        new File(plugin.getDataFolder(), "database.db").toPath(),
+                        new File(plugin.getDataFolder(), "ecoxpert.db").toPath(),
                         backupPath,
                         java.nio.file.StandardCopyOption.REPLACE_EXISTING
                     );
@@ -564,7 +578,7 @@ public class DataManagerImpl implements DataManager {
                     // Copy backup over current database
                     java.nio.file.Files.copy(
                         backupPath,
-                        new File(plugin.getDataFolder(), "database.db").toPath(),
+                        new File(plugin.getDataFolder(), "ecoxpert.db").toPath(),
                         java.nio.file.StandardCopyOption.REPLACE_EXISTING
                     );
                     

@@ -39,6 +39,9 @@ public class MarketManagerImpl implements MarketManager {
     private final TranslationManager translationManager;
     private final ConfigManager configManager;
     private final PriceCalculator priceCalculator;
+    // Global price adjustment factors (applied to dynamic prices)
+    private volatile double buyPriceFactor = 1.0;  // multiplier for buy prices
+    private volatile double sellPriceFactor = 1.0; // multiplier for sell prices
     
     // Cache for market items
     private final Map<Material, MarketItem> itemCache = new ConcurrentHashMap<>();
@@ -123,6 +126,20 @@ public class MarketManagerImpl implements MarketManager {
     public void setMarketOpen(boolean open) {
         this.marketOpen = open;
         plugin.getLogger().info("Market is now " + (open ? "open" : "closed"));
+    }
+
+    @Override
+    public void setGlobalPriceFactors(double buyFactor, double sellFactor) {
+        // Clamp to sane bounds to avoid extremes
+        this.buyPriceFactor = Math.max(0.5, Math.min(1.5, buyFactor));
+        this.sellPriceFactor = Math.max(0.5, Math.min(1.5, sellFactor));
+        plugin.getLogger().info("Market global price factors set: buy=" + this.buyPriceFactor + 
+            ", sell=" + this.sellPriceFactor);
+    }
+
+    @Override
+    public double[] getGlobalPriceFactors() {
+        return new double[]{buyPriceFactor, sellPriceFactor};
     }
     
     // === Item Management ===
@@ -231,21 +248,20 @@ public class MarketManagerImpl implements MarketManager {
                     ORDER BY snapshot_time DESC
                     """;
                 
-                QueryResult result = dataManager.executeQuery(sql, material.name(), days).join();
-                List<MarketPriceHistory> history = new ArrayList<>();
-                
-                while (result.next()) {
-                    history.add(new MarketPriceHistory(
-                        material,
-                        result.getBigDecimal("buy_price"),
-                        result.getBigDecimal("sell_price"),
-                        result.getTimestamp("snapshot_time").toLocalDateTime(),
-                        result.getInt("transaction_count"),
-                        result.getBigDecimal("volume")
-                    ));
+                try (QueryResult result = dataManager.executeQuery(sql, material.name(), days).join()) {
+                    List<MarketPriceHistory> history = new ArrayList<>();
+                    while (result.next()) {
+                        history.add(new MarketPriceHistory(
+                            material,
+                            result.getBigDecimal("buy_price"),
+                            result.getBigDecimal("sell_price"),
+                            result.getTimestamp("snapshot_time").toLocalDateTime(),
+                            result.getInt("transaction_count"),
+                            result.getBigDecimal("volume")
+                        ));
+                    }
+                    return history;
                 }
-                
-                return history;
                 
             } catch (Exception e) {
                 plugin.getLogger().log(Level.SEVERE, "Failed to get price history for: " + material.name(), e);
@@ -443,8 +459,7 @@ public class MarketManagerImpl implements MarketManager {
                     FROM ecoxpert_market_transactions
                     """;
                 
-                QueryResult result = dataManager.executeQuery(transactionSql).join();
-                
+                try (QueryResult result = dataManager.executeQuery(transactionSql).join()) {
                 if (result.next()) {
                     long totalTransactions = result.getLong("total_transactions");
                     BigDecimal totalVolume = result.getBigDecimal("total_volume");
@@ -463,6 +478,7 @@ public class MarketManagerImpl implements MarketManager {
                         avgPrice, marketCap, LocalDateTime.now(),
                         dailyVolume, dailyTransactions, activity
                     );
+                }
                 }
                 
                 // Return empty statistics if no data
@@ -500,7 +516,7 @@ public class MarketManagerImpl implements MarketManager {
                     LIMIT ?
                     """;
                 
-                QueryResult result = dataManager.executeQuery(sql, limit).join();
+                try (QueryResult result = dataManager.executeQuery(sql, limit).join()) {
                 List<MarketItemStats> stats = new ArrayList<>();
                 int rank = 1;
                 
@@ -519,6 +535,7 @@ public class MarketManagerImpl implements MarketManager {
                 }
                 
                 return stats;
+                }
                 
             } catch (Exception e) {
                 plugin.getLogger().log(Level.SEVERE, "Failed to get top traded items", e);
@@ -695,7 +712,7 @@ public class MarketManagerImpl implements MarketManager {
     private List<MarketItem> loadItemsFromDatabase() {
         try {
             String sql = "SELECT * FROM ecoxpert_market_items ORDER BY material";
-            QueryResult result = dataManager.executeQuery(sql).join();
+            try (QueryResult result = dataManager.executeQuery(sql).join()) {
             List<MarketItem> items = new ArrayList<>();
             
             while (result.next()) {
@@ -713,6 +730,7 @@ public class MarketManagerImpl implements MarketManager {
             }
             
             return items;
+            }
             
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to load market items from database", e);
@@ -723,7 +741,7 @@ public class MarketManagerImpl implements MarketManager {
     private Optional<MarketItem> loadItemFromDatabase(Material material) {
         try {
             String sql = "SELECT * FROM ecoxpert_market_items WHERE material = ?";
-            QueryResult result = dataManager.executeQuery(sql, material.name()).join();
+            try (QueryResult result = dataManager.executeQuery(sql, material.name()).join()) {
             
             if (result.next()) {
                 MarketItem item = MarketItem.builder(material, result.getBigDecimal("base_price"))
@@ -743,6 +761,7 @@ public class MarketManagerImpl implements MarketManager {
             }
             
             return Optional.empty();
+            }
             
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to load market item: " + material.name(), e);
@@ -780,6 +799,12 @@ public class MarketManagerImpl implements MarketManager {
             PriceCalculator.MarketPriceUpdate priceUpdate = 
                 priceCalculator.calculatePriceUpdate(item, recentTransactions);
             
+            // Apply global market factors for intelligent interventions
+            BigDecimal adjustedBuy = priceUpdate.getNewBuyPrice()
+                .multiply(BigDecimal.valueOf(buyPriceFactor));
+            BigDecimal adjustedSell = priceUpdate.getNewSellPrice()
+                .multiply(BigDecimal.valueOf(sellPriceFactor));
+
             // Update database
             String sql = """
                 UPDATE ecoxpert_market_items 
@@ -789,8 +814,8 @@ public class MarketManagerImpl implements MarketManager {
                 """;
             
             dataManager.executeUpdate(sql,
-                priceUpdate.getNewBuyPrice(),
-                priceUpdate.getNewSellPrice(),
+                adjustedBuy,
+                adjustedSell,
                 BigDecimal.valueOf(priceUpdate.getVolatility()),
                 Timestamp.valueOf(priceUpdate.getUpdateTime()),
                 Timestamp.valueOf(LocalDateTime.now()),
@@ -799,8 +824,8 @@ public class MarketManagerImpl implements MarketManager {
             
             // Update cache
             MarketItem updatedItem = item.withPrices(
-                priceUpdate.getNewBuyPrice(), 
-                priceUpdate.getNewSellPrice()
+                adjustedBuy, 
+                adjustedSell
             );
             itemCache.put(item.getMaterial(), updatedItem);
             
@@ -943,7 +968,7 @@ public class MarketManagerImpl implements MarketManager {
     
     private List<MarketTransaction> loadTransactionsFromQuery(String sql, Object... params) {
         try {
-            QueryResult result = dataManager.executeQuery(sql, params).join();
+            try (QueryResult result = dataManager.executeQuery(sql, params).join()) {
             List<MarketTransaction> transactions = new ArrayList<>();
             
             while (result.next()) {
@@ -964,6 +989,7 @@ public class MarketManagerImpl implements MarketManager {
             }
             
             return transactions;
+            }
             
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to load transactions from query", e);

@@ -9,7 +9,7 @@
     <version>1.0</version>
     <packaging>jar</packaging>
 
-    <name>EcoXpert Pro</name>
+    <name>EcoXpert</name>
     <description>Premium Minecraft Economy Plugin for SpigotMC</description>
     <url>https://github.com/koyere/ecoxpert</url>
 
@@ -73,6 +73,13 @@
     </repositories>
 
     <dependencies>
+        <!-- javax.inject annotations used across the codebase -->
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <version>1</version>
+            <scope>compile</scope>
+        </dependency>
         <!-- Spigot API (Base Compatibility) -->
         <dependency>
             <groupId>org.spigotmc</groupId>

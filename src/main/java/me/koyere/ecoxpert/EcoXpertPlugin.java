@@ -4,6 +4,7 @@ import me.koyere.ecoxpert.core.ServiceRegistry;
 import me.koyere.ecoxpert.core.platform.PlatformManager;
 import me.koyere.ecoxpert.core.config.ConfigManager;
 import me.koyere.ecoxpert.core.data.DataManager;
+import me.koyere.ecoxpert.core.economy.EconomySyncManager;
 import me.koyere.ecoxpert.core.translation.TranslationManager;
 import me.koyere.ecoxpert.core.update.UpdateChecker;
 import me.koyere.ecoxpert.core.dependencies.DependencyManager;
@@ -12,6 +13,7 @@ import me.koyere.ecoxpert.api.EcoXpertAPI;
 import me.koyere.ecoxpert.economy.EconomyManager;
 import me.koyere.ecoxpert.economy.VaultEconomyProvider;
 import me.koyere.ecoxpert.modules.market.MarketManager;
+import me.koyere.ecoxpert.modules.events.EconomicEventEngine;
 import me.koyere.ecoxpert.commands.CommandManager;
 import org.bstats.bukkit.Metrics;
 import org.bstats.charts.SimplePie;
@@ -49,6 +51,7 @@ public final class EcoXpertPlugin extends JavaPlugin {
     private EconomyFailsafeManager failsafeManager;
     private EconomyManager economyManager;
     private MarketManager marketManager;
+    private EconomicEventEngine eventEngine;
     private VaultEconomyProvider vaultProvider;
     private CommandManager commandManager;
     
@@ -174,6 +177,7 @@ public final class EcoXpertPlugin extends JavaPlugin {
         this.failsafeManager = serviceRegistry.getInstance(EconomyFailsafeManager.class);
         this.economyManager = serviceRegistry.getInstance(EconomyManager.class);
         this.marketManager = serviceRegistry.getInstance(MarketManager.class);
+        this.eventEngine = serviceRegistry.getInstance(EconomicEventEngine.class);
         this.vaultProvider = serviceRegistry.getInstance(VaultEconomyProvider.class);
         this.commandManager = serviceRegistry.getInstance(CommandManager.class);
     }
@@ -207,6 +211,13 @@ public final class EcoXpertPlugin extends JavaPlugin {
         // 8. Market system
         marketManager.initialize();
         
+        // 9. Dynamic Economic Events Engine (async initialize)
+        try {
+            eventEngine.initialize();
+        } catch (Exception e) {
+            getLogger().warning("Dynamic Economic Events Engine failed to initialize: " + e.getMessage());
+        }
+        
         getLogger().info("Core managers initialized successfully");
     }
     
@@ -222,18 +233,62 @@ public final class EcoXpertPlugin extends JavaPlugin {
      * Register Vault economy provider if Vault is available
      */
     private void registerVaultProvider() {
-        if (getServer().getPluginManager().getPlugin("Vault") != null) {
-            // Check for EssentialsX compatibility
-            if (getServer().getPluginManager().getPlugin("Essentials") != null || 
-                getServer().getPluginManager().getPlugin("EssentialsX") != null) {
-                getLogger().warning("EssentialsX detected - EcoXpert will override economy provider");
-                getLogger().warning("To use EssentialsX economy instead, disable EcoXpert or configure Vault priority");
-            }
-            
+        if (getServer().getPluginManager().getPlugin("Vault") == null) {
+            getLogger().warning("Vault not found - economy features limited");
+            return;
+        }
+
+        // Nota informativa para admins: conflicto de comandos y alias recomendado
+        boolean hasEssentials = getServer().getPluginManager().getPlugin("Essentials") != null
+                || getServer().getPluginManager().getPlugin("EssentialsX") != null;
+        boolean hasCMI = getServer().getPluginManager().getPlugin("CMI") != null;
+        if (hasEssentials) {
+            getLogger().info("EssentialsX detected: use /ecox or /ecoxpert to avoid /eco conflicts");
+        }
+
+        boolean importOnStartup = getConfig().getBoolean("economy.migration.import_on_startup", true);
+        boolean backupBeforeImport = getConfig().getBoolean("economy.migration.backup_before_import", true);
+
+        // If Essentials/CMI are present, defer import and registration to ensure their API is ready
+        if (importOnStartup && (hasEssentials || hasCMI)) {
+            getServer().getScheduler().runTaskLaterAsynchronously(this, () -> {
+                try {
+                    var registration = getServer().getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class);
+                    if (registration != null) {
+                        String providerPlugin = registration.getPlugin() != null ? registration.getPlugin().getName() : "Unknown";
+                        if (providerPlugin != null && !providerPlugin.toLowerCase().contains("ecoxpert")) {
+                            if (backupBeforeImport) {
+                                try {
+                                    java.nio.file.Path backups = getDataFolder().toPath().resolve("backups");
+                                    java.nio.file.Files.createDirectories(backups);
+                                    String ts = new java.text.SimpleDateFormat("yyyyMMdd-HHmmss").format(new java.util.Date());
+                                    java.nio.file.Path backupPath = backups.resolve("pre_import-" + ts + ".db");
+                                    dataManager.exportDatabase(backupPath).join();
+                                    getLogger().info("Database backup created: " + backupPath.getFileName());
+                                } catch (Exception e) {
+                                    getLogger().warning("Could not create backup before import: " + e.getMessage());
+                                }
+                            }
+                            getLogger().info("Importing balances from existing provider: " + providerPlugin + "...");
+                            EconomySyncManager tempSync = new EconomySyncManager(this, economyManager, registration.getProvider());
+                            int imported = tempSync.importBalancesFromFallback().join();
+                            getLogger().info("Import completed. Imported accounts: " + imported);
+                        }
+                    }
+                } catch (Exception e) {
+                    getLogger().warning("Error during startup balance import: " + e.getMessage());
+                } finally {
+                    // Register our provider on the main thread after import completes
+                    getServer().getScheduler().runTask(this, () -> {
+                        vaultProvider.register();
+                        getLogger().info("Vault economy provider registered successfully");
+                    });
+                }
+            }, 60L); // ~3 segundos tras el enable
+        } else {
+            // Register immediately if no relevant providers detected or import is disabled
             vaultProvider.register();
             getLogger().info("Vault economy provider registered successfully");
-        } else {
-            getLogger().warning("Vault not found - economy features limited");
         }
     }
     
@@ -271,9 +326,16 @@ public final class EcoXpertPlugin extends JavaPlugin {
      */
     private void scheduleUpdateCheck() {
         if (configManager.isUpdateCheckEnabled()) {
-            // Check for updates every 6 hours
-            getServer().getScheduler().runTaskTimerAsynchronously(this, 
-                updateChecker::checkForUpdates, 0L, 20L * 60 * 60 * 6);
+            // Initial check
+            getServer().getScheduler().runTaskAsynchronously(this, () -> {
+                updateChecker.checkForUpdates();
+                updateChecker.notifyAdmins();
+            });
+            // Periodic checks (6 hours)
+            getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+                updateChecker.checkForUpdates();
+                updateChecker.notifyAdmins();
+            }, 20L * 60 * 60 * 6, 20L * 60 * 60 * 6);
         }
     }
     

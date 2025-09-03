@@ -139,4 +139,11 @@ public interface EconomyManager {
      * @return Currency symbol
      */
     String getCurrencySymbol();
+
+    /**
+     * Apply a wealth tax across accounts above a threshold.
+     * Reduces balances by (balance * rate) where balance > threshold.
+     * Returns the number of affected accounts.
+     */
+    CompletableFuture<Integer> applyWealthTax(BigDecimal rate, BigDecimal threshold, String reason);
 }

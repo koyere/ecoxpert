@@ -147,4 +147,15 @@ public interface MarketManager {
      * Remove items from player inventory
      */
     boolean removeItemsFromInventory(Player player, Material material, int quantity);
+
+    /**
+     * Set global price factors (buy/sell) applied to dynamic prices.
+     * Values around 1.0. Example: buyFactor 0.98 lowers buy prices by 2%.
+     */
+    void setGlobalPriceFactors(double buyFactor, double sellFactor);
+
+    /**
+     * Get current global price factors [buyFactor, sellFactor].
+     */
+    double[] getGlobalPriceFactors();
 }

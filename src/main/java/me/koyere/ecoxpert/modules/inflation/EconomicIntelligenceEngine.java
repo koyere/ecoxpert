@@ -393,10 +393,69 @@ public class EconomicIntelligenceEngine {
     }
     
     // === Abstract method stubs (to be implemented) ===
-    private void reduceLiquidity(EconomicSnapshot snapshot) { /* TODO */ }
-    private void stimulateMarketActivity() { /* TODO */ }
-    private void adjustInterestRates(EconomicSnapshot snapshot) { /* TODO */ }
-    private void adjustMarketPricingFactors(EconomicSnapshot snapshot) { /* TODO */ }
+    /**
+     * Reduce liquidity during overheating (soft sink):
+     * - Apply a small wealth tax to accounts above a dynamic threshold
+     * - Make market slightly less favorable for players (temporary factors)
+     */
+    private void reduceLiquidity(EconomicSnapshot snapshot) {
+        try {
+            // Wealth tax: 0.5% on balances above 2x average balance
+            BigDecimal rate = new BigDecimal("0.005");
+            BigDecimal threshold = BigDecimal.valueOf(snapshot.getAverageBalance() * 2.0)
+                .setScale(2, RoundingMode.HALF_UP);
+            economyManager.applyWealthTax(rate, threshold, "Overheating liquidity reduction");
+
+            // Market discouragement: increase buy prices (+2%), decrease sell prices (-2%) for 10 minutes
+            marketManager.setGlobalPriceFactors(1.02, 0.98);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> marketManager.setGlobalPriceFactors(1.0, 1.0), 20L * 60 * 10);
+
+            plugin.getLogger().info("Applied liquidity reduction: wealth tax and market factors (10m)");
+        } catch (Exception e) {
+            plugin.getLogger().warning("reduceLiquidity failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Stimulate market activity in stagnation:
+     * - Slightly lower buy prices and increase sell prices for a short period
+     */
+    private void stimulateMarketActivity() {
+        try {
+            marketManager.setGlobalPriceFactors(0.98, 1.02);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> marketManager.setGlobalPriceFactors(1.0, 1.0), 20L * 60 * 10);
+            plugin.getLogger().info("Stimulating market activity: adjusted price factors for 10m");
+        } catch (Exception e) {
+            plugin.getLogger().warning("stimulateMarketActivity failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Adjust interest rates recommendation based on economic health/inflation.
+     * (Future: integrate with BankManager to apply dynamically.)
+     */
+    private void adjustInterestRates(EconomicSnapshot snapshot) {
+        // Recommend higher interest in downturns (to reward saving), lower during booms
+        double base = 0.01; // 1%
+        double adjust = (0.5 - snapshot.getEconomicHealth()) * 0.02; // +/-2%
+        double recommended = Math.max(0.0, Math.min(0.05, base + adjust));
+        plugin.getLogger().info(String.format("Recommended bank interest rate: %.2f%%", recommended * 100));
+        // TODO: Expose API in BankManager to set base interest; for now, logging only.
+    }
+
+    /**
+     * Adjust market pricing factors smoothly based on inflation and health (gentle bias).
+     */
+    private void adjustMarketPricingFactors(EconomicSnapshot snapshot) {
+        double infl = snapshot.getInflationRate();
+        double health = snapshot.getEconomicHealth();
+
+        // Bias buy/sell factors within [0.97, 1.03]
+        double buyBias = 1.0 + Math.max(-0.03, Math.min(0.03, infl * 0.5 - (health - 0.5) * 0.02));
+        double sellBias = 1.0 + Math.max(-0.03, Math.min(0.03, -(infl * 0.5) + (health - 0.5) * 0.02));
+
+        marketManager.setGlobalPriceFactors(buyBias, sellBias);
+    }
     private double calculateOptimalInjectionAmount(EconomicSnapshot snapshot) { return 10000.0; }
     private double calculatePlayerStimulus(PlayerEconomicProfile profile, double pool) { return 100.0; }
     private void updateVelocityOfMoney() { /* TODO */ }

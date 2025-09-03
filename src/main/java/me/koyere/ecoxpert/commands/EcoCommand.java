@@ -2,6 +2,14 @@ package me.koyere.ecoxpert.commands;
 
 import me.koyere.ecoxpert.core.translation.TranslationManager;
 import me.koyere.ecoxpert.economy.EconomyManager;
+import me.koyere.ecoxpert.core.economy.EconomySyncManager;
+import me.koyere.ecoxpert.EcoXpertPlugin;
+import me.koyere.ecoxpert.modules.events.EconomicEventEngine;
+import me.koyere.ecoxpert.modules.events.EconomicEvent;
+import me.koyere.ecoxpert.modules.events.EconomicEventType;
+import net.milkbowl.vault.economy.Economy;
+import org.bukkit.plugin.RegisteredServiceProvider;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -25,9 +33,12 @@ import java.util.stream.Collectors;
  * - remove: Remove money from player (admin)
  */
 public class EcoCommand extends BaseCommand {
+    // Dynamic events engine used for /ecoxpert events admin operations
+    private final EconomicEventEngine eventEngine;
     
-    public EcoCommand(EconomyManager economyManager, TranslationManager translationManager) {
+    public EcoCommand(EconomyManager economyManager, TranslationManager translationManager, EconomicEventEngine eventEngine) {
         super(economyManager, translationManager);
+        this.eventEngine = eventEngine;
     }
     
     @Override
@@ -58,12 +69,230 @@ public class EcoCommand extends BaseCommand {
             case "remove":
             case "take":
                 return handleRemove(sender, subArgs);
+            
+            case "events":
+                return handleEvents(sender, subArgs);
+
+            case "economy":
+                return handleEconomy(sender, subArgs);
+
+            case "migrate":
+            case "import":
+                return handleMigrate(sender, subArgs);
                 
             case "help":
             default:
                 sendHelpMessage(sender);
                 return true;
         }
+    }
+
+    /**
+     * Handle admin events subcommands
+     * Syntax: /ecoxpert events status|active|history|trigger <TYPE>|end <ID>
+     */
+    private boolean handleEvents(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ecoxpert.admin.events")) {
+            sendMessage(sender, "error.no_permission");
+            return true;
+        }
+
+        if (args.length == 0) {
+            // Show basic help
+            sendMessage(sender, "events.admin.help.header");
+            sendMessage(sender, "events.admin.help.status");
+            sendMessage(sender, "events.admin.help.active");
+            sendMessage(sender, "events.admin.help.history");
+            sendMessage(sender, "events.admin.help.trigger");
+            sendMessage(sender, "events.admin.help.end");
+            return true;
+        }
+
+        String sub = args[0].toLowerCase();
+        switch (sub) {
+            case "status":
+                return handleEventsStatus(sender);
+            case "active":
+                return handleEventsActive(sender);
+            case "history":
+                return handleEventsHistory(sender);
+            case "trigger":
+                return handleEventsTrigger(sender, args);
+            case "end":
+                return handleEventsEnd(sender, args);
+            default:
+                sendMessage(sender, "events.admin.unknown");
+                return true;
+        }
+    }
+
+    private boolean handleEventsStatus(CommandSender sender) {
+        int active = eventEngine.getActiveEvents().size();
+        int history = eventEngine.getEventHistory().size();
+        sendMessage(sender, "events.admin.status", active, history);
+        return true;
+    }
+
+    private boolean handleEventsActive(CommandSender sender) {
+        var active = eventEngine.getActiveEvents();
+        if (active.isEmpty()) {
+            sendMessage(sender, "events.admin.active.none");
+            return true;
+        }
+        sendMessage(sender, "events.admin.active.header");
+        for (EconomicEvent ev : active.values()) {
+            sendMessage(sender, "events.admin.active.item", ev.getId(), ev.getName(), ev.getType().name(), ev.getDuration());
+        }
+        return true;
+    }
+
+    private boolean handleEventsHistory(CommandSender sender) {
+        var history = eventEngine.getEventHistory();
+        if (history.isEmpty()) {
+            sendMessage(sender, "events.admin.history.none");
+            return true;
+        }
+        sendMessage(sender, "events.admin.history.header");
+        // Show last 10 items max
+        int start = Math.max(0, history.size() - 10);
+        for (int i = history.size() - 1; i >= start; i--) {
+            EconomicEvent ev = history.get(i);
+            sendMessage(sender, "events.admin.history.item", ev.getId(), ev.getName(), ev.getType().name(), ev.getStatus().name());
+        }
+        return true;
+    }
+
+    private boolean handleEventsTrigger(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sendMessage(sender, "events.admin.trigger.usage");
+            return true;
+        }
+        try {
+            EconomicEventType type = EconomicEventType.valueOf(args[1].toUpperCase());
+            boolean ok = eventEngine.triggerEvent(type);
+            if (ok) {
+                sendMessage(sender, "events.admin.triggered", type.name());
+            } else {
+                sendMessage(sender, "events.admin.trigger.failed", type.name());
+            }
+        } catch (IllegalArgumentException e) {
+            sendMessage(sender, "events.admin.unknown_type", args[1]);
+        }
+        return true;
+    }
+
+    private boolean handleEventsEnd(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sendMessage(sender, "events.admin.end.usage");
+            return true;
+        }
+        String id = args[1];
+        boolean ended = eventEngine.endEventById(id);
+        if (ended) {
+            sendMessage(sender, "events.admin.ended", id);
+        } else {
+            sendMessage(sender, "events.admin.not_found", id);
+        }
+        return true;
+    }
+
+    /**
+     * Economy status and diagnostics for admins.
+     * Syntax: /ecoxpert economy status|diagnostics
+     */
+    private boolean handleEconomy(CommandSender sender, String[] args) {
+        if (!(sender.hasPermission("ecoxpert.admin") || sender.hasPermission("ecoxpert.admin.economy"))) {
+            sendMessage(sender, "error.no_permission");
+            return true;
+        }
+
+        if (args.length == 0) {
+            sendMessage(sender, "economy.admin.help.header");
+            sendMessage(sender, "economy.admin.help.status");
+            sendMessage(sender, "economy.admin.help.diagnostics");
+            return true;
+        }
+
+        String sub = args[0].toLowerCase();
+        switch (sub) {
+            case "status":
+                return handleEconomyStatus(sender);
+            case "diagnostics":
+                return handleEconomyDiagnostics(sender);
+            default:
+                sendMessage(sender, "economy.admin.unknown");
+                return true;
+        }
+    }
+
+    private boolean handleEconomyStatus(CommandSender sender) {
+        // Provider detection
+        me.koyere.ecoxpert.core.economy.EconomyConflictDetector detector =
+            new me.koyere.ecoxpert.core.economy.EconomyConflictDetector(JavaPlugin.getPlugin(EcoXpertPlugin.class));
+        var status = detector.detectEconomyProvider();
+        var plugins = detector.detectInstalledEconomyPlugins();
+
+        // DB status
+        var dm = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry()
+            .getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
+        var dbStatus = dm.getStatus();
+
+        sendMessage(sender, "economy.admin.status.header");
+        sendMessage(sender, "economy.admin.status.provider", status.getStatus().name(), String.valueOf(status.getPluginName()));
+        sendMessage(sender, "economy.admin.status.plugins", plugins.getInstalledCount());
+        sendMessage(sender, "economy.admin.status.db", dbStatus.getCurrentType(), dbStatus.isConnected(), dbStatus.isHealthy());
+        return true;
+    }
+
+    private boolean handleEconomyDiagnostics(CommandSender sender) {
+        EcoXpertPlugin plugin = JavaPlugin.getPlugin(EcoXpertPlugin.class);
+        me.koyere.ecoxpert.core.economy.EconomySystemTestRunner runner =
+            new me.koyere.ecoxpert.core.economy.EconomySystemTestRunner(plugin);
+        var results = runner.runSafeTests();
+        sender.sendMessage(results.toString());
+        return true;
+    }
+
+    private boolean handleMigrate(CommandSender sender, String[] args) {
+        // Admin-only: allow either database or economy admin perms
+        if (!(sender.hasPermission("ecoxpert.admin.database") || sender.hasPermission("ecoxpert.admin.economy"))) {
+            sendMessage(sender, "error.no_permission");
+            return true;
+        }
+
+        // Optional arg: balances
+        if (args.length > 0 && !args[0].equalsIgnoreCase("balances")) {
+            sendMessage(sender, "commands.migrate.usage");
+            return true;
+        }
+
+        // Get current Vault provider
+        RegisteredServiceProvider<Economy> registration = Bukkit.getServicesManager().getRegistration(Economy.class);
+        if (registration == null || registration.getProvider() == null) {
+            sendMessage(sender, "admin.migrate.none");
+            return true;
+        }
+
+        String providerPlugin = registration.getPlugin() != null ? registration.getPlugin().getName() : "Unknown";
+        if (providerPlugin.toLowerCase().contains("ecoxpert")) {
+            // We are the active provider; nothing to import
+            sendMessage(sender, "admin.migrate.none");
+            return true;
+        }
+
+        sendMessage(sender, "admin.migrate.started", providerPlugin);
+
+        // Use plugin instance to run the importer
+        EcoXpertPlugin plugin = JavaPlugin.getPlugin(EcoXpertPlugin.class);
+        EconomySyncManager sync = new EconomySyncManager(plugin, economyManager, registration.getProvider());
+        sync.importBalancesFromFallback().thenAccept(imported -> {
+            sendMessage(sender, "admin.migrate.completed", imported);
+        }).exceptionally(ex -> {
+            sendMessage(sender, "admin.migrate.error", ex.getMessage());
+            return null;
+        });
+
+        return true;
     }
     
     private boolean handleBalance(CommandSender sender, String[] args) {

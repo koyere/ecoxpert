@@ -28,6 +28,9 @@ import me.koyere.ecoxpert.modules.bank.BankManager;
 import me.koyere.ecoxpert.modules.bank.BankManagerImpl;
 import me.koyere.ecoxpert.modules.inflation.InflationManager;
 import me.koyere.ecoxpert.modules.inflation.InflationManagerImpl;
+import me.koyere.ecoxpert.modules.events.EconomicEventEngine;
+import me.koyere.ecoxpert.modules.loans.LoanManager;
+import me.koyere.ecoxpert.modules.loans.LoanManagerImpl;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -121,6 +124,12 @@ public class ServiceRegistry {
         
         // Inflation Intelligence System
         factoryMethods.put(InflationManager.class, this::createInflationManager);
+
+        // Dynamic Economic Events Engine
+        factoryMethods.put(EconomicEventEngine.class, this::createEconomicEventEngine);
+
+        // Loans module
+        factoryMethods.put(LoanManager.class, this::createLoanManager);
         
         // Command system
         factoryMethods.put(CommandManager.class, this::createCommandManager);
@@ -220,6 +229,24 @@ public class ServiceRegistry {
             plugin,
             getInstance(EconomyManager.class),
             getInstance(MarketManager.class)
+        );
+    }
+    
+    private EconomicEventEngine createEconomicEventEngine() {
+        // Event engine integrates core managers for cross-system effects
+        return new EconomicEventEngine(
+            plugin,
+            getInstance(EconomyManager.class),
+            getInstance(MarketManager.class),
+            getInstance(InflationManager.class)
+        );
+    }
+    
+    private LoanManager createLoanManager() {
+        return new LoanManagerImpl(
+            plugin,
+            getInstance(DataManager.class),
+            getInstance(EconomyManager.class)
         );
     }
     

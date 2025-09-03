@@ -294,6 +294,27 @@ public class EconomyManagerImpl implements EconomyManager {
     public String getCurrencySymbol() {
         return currencySymbol;
     }
+
+    @Override
+    public CompletableFuture<Integer> applyWealthTax(BigDecimal rate, BigDecimal threshold, String reason) {
+        // Validate inputs
+        if (rate == null || rate.signum() <= 0 || threshold == null || threshold.signum() < 0) {
+            return CompletableFuture.completedFuture(0);
+        }
+
+        // Reduce balances proportionally for accounts above threshold
+        String sql = """
+            UPDATE ecoxpert_accounts
+            SET balance = balance - (balance * ?), updated_at = CURRENT_TIMESTAMP
+            WHERE balance > ?
+            """;
+
+        return dataManager.executeUpdate(sql, rate, threshold).thenApply(rows -> {
+            plugin.getLogger().info("Applied wealth tax at rate " + rate + ", threshold " + threshold + 
+                ". Affected accounts: " + rows);
+            return rows;
+        });
+    }
     
     /**
      * Load economy configuration from config files

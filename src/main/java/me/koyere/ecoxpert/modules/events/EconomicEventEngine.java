@@ -225,6 +225,35 @@ public class EconomicEventEngine {
         lastEventTime = LocalDateTime.now();
         consecutiveQuietHours = 0;
     }
+
+    /**
+     * Public API: Trigger a dynamic economic event of the given type.
+     * Ensures idempotency (skips if an event of the same type is already active).
+     *
+     * @param eventType The event type to trigger
+     * @return true if the event was started; false if skipped or failed
+     */
+    public boolean triggerEvent(EconomicEventType eventType) {
+        try {
+            if (activeEvents.containsKey(eventType.name())) {
+                plugin.getLogger().info("Event " + eventType + " already active, skipping");
+                return false;
+            }
+            EventTemplate template = eventTemplates.get(eventType);
+            if (template == null) {
+                plugin.getLogger().warning("No template found for event type: " + eventType);
+                return false;
+            }
+            EconomicEvent event = createIntelligentEvent(template, eventType);
+            startEvent(event);
+            lastEventTime = LocalDateTime.now();
+            consecutiveQuietHours = 0;
+            return true;
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to trigger event " + eventType + ": " + e.getMessage());
+            return false;
+        }
+    }
     
     /**
      * Create an intelligent event with dynamic parameters
@@ -567,6 +596,21 @@ public class EconomicEventEngine {
         
         // Apply end effects if needed
         applyEventEndEffects(event);
+    }
+
+    /**
+     * Public API: End an active event by id.
+     *
+     * @param eventId The id returned when the event started
+     * @return true if an active event was found and ended
+     */
+    public boolean endEventById(String eventId) {
+        EconomicEvent ev = activeEvents.get(eventId);
+        if (ev == null) {
+            return false;
+        }
+        endEvent(ev);
+        return true;
     }
     
     // === Utility and Stub Methods ===

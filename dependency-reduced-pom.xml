@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>me.koyere</groupId>
   <artifactId>ecoxpert</artifactId>
-  <name>EcoXpert Pro</name>
+  <name>EcoXpert</name>
   <version>1.0</version>
   <description>Premium Minecraft Economy Plugin for SpigotMC</description>
   <url>https://github.com/koyere/ecoxpert</url>

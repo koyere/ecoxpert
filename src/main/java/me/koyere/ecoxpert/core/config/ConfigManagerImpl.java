@@ -117,11 +117,16 @@ public class ConfigManagerImpl implements ConfigManager {
     private void loadMainConfig() {
         FileConfiguration config = plugin.getConfig();
         
-        this.metricsEnabled = config.getBoolean("metrics.enabled", true);
-        this.updateCheckEnabled = config.getBoolean("updates.check-enabled", true);
+        // Prefer values under plugin.* with fallback to legacy root keys
+        this.metricsEnabled = config.getBoolean("plugin.metrics.enabled", 
+            config.getBoolean("metrics.enabled", true));
+        this.updateCheckEnabled = config.getBoolean("plugin.updates.check-enabled", 
+            config.getBoolean("updates.check-enabled", true));
         this.databaseType = config.getString("database.type", "sqlite");
-        this.language = config.getString("language", "en");
-        this.debugEnabled = config.getBoolean("debug", false);
+        this.language = config.getString("plugin.language", 
+            config.getString("language", "en"));
+        this.debugEnabled = config.getBoolean("plugin.debug", 
+            config.getBoolean("debug", false));
     }
     
     /**

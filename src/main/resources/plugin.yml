@@ -11,12 +11,10 @@ folia-supported: true
 
 # Plugin dependencies
 depend: [ Vault ]
-softdepend: [ PlaceholderAPI, WorldGuard, Lands, GeyserMC ]
+softdepend: [ PlaceholderAPI, WorldGuard, Lands, GeyserMC, Essentials, EssentialsX, CMI ]
 
-# Load order - Load after Vault but before economy plugins
+# Load order
 load: POSTWORLD
-loadafter: [ Vault ]
-loadbefore: [ Essentials, CMI, EssentialsX ]
 
 # Permissions
 permissions:
@@ -153,7 +151,7 @@ permissions:
 commands:
   ecoxpert:
     description: Main EcoXpert command
-    aliases: [ eco, ex ]
+    aliases: [ ecox, ex ]
     usage: /<command> [subcommand]
     permission: ecoxpert.user
     
@@ -180,6 +178,12 @@ commands:
     aliases: [ ecobank ]
     usage: /<command> [balance|deposit|withdraw|transfer|help]
     permission: ecoxpert.bank.account
+  
+  loans:
+    description: Manage your loans
+    aliases: [ loan ]
+    usage: /<command> [request|pay|status]
+    permission: ecoxpert.loans.request
     
   # Banking system commands (Phase 4 - not yet implemented)
   # ecobank:

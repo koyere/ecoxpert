@@ -177,11 +177,13 @@ EcoXpert operates in different modes based on your server setup:
 
 ## 🎮 **Commands**
 
+Use `/ecox` or `/ecoxpert` to avoid conflicts with EssentialsX `/eco`.
+
 ### Basic Economy Commands
 ```
-/ecoxpert balance [player]     - Check balance
-/ecoxpert pay <player> <amount> - Pay another player
-/ecoxpert help                  - Show help menu
+/ecox balance [player]          - Check balance
+/ecox pay <player> <amount>     - Pay another player
+/ecox help                      - Show help menu
 ```
 
 ### Market Commands
@@ -202,11 +204,19 @@ EcoXpert operates in different modes based on your server setup:
 /bank help                      - Banking help
 ```
 
+### Loans Commands
+```
+/loans request <amount>         - Request a new loan
+/loans pay <amount>             - Pay towards your active loan
+/loans status                   - View your current loan
+```
+
 ### Admin Commands
 ```
-/ecoxpert admin set <player> <amount>    - Set player balance
-/ecoxpert admin add <player> <amount>    - Add money to player
-/ecoxpert admin remove <player> <amount> - Remove money from player
+/ecoxpert admin set <player> <amount>     - Set player balance
+/ecoxpert admin add <player> <amount>     - Add money to player
+/ecoxpert admin remove <player> <amount>  - Remove money from player
+/ecoxpert migrate balances                - Import balances from current Vault provider (EssentialsX/CMI)
 ```
 
 ### Economic Intelligence Commands
@@ -271,8 +281,18 @@ economy:
     sync_interval: 60  # seconds
     
   migration:
-    import_on_startup: true
-    backup_before_import: true
+    import_on_startup: true        # import balances at startup if another Vault economy is active
+    backup_before_import: true     # create a DB backup before importing
+```
+
+### Update Checker
+```yaml
+plugin:
+  updates:
+    check-enabled: true
+    resource-id: 0                 # Spigot resource id (legacy API). 0 = disabled unless check-url is set
+    check-url: ""                 # Optional custom URL returning the latest version string
+    download-url: "https://github.com/koyere/ecoxpert"
 ```
 
 ### Market Settings
@@ -283,6 +303,10 @@ market:
   volatility_damping: 0.85    # Reduces extreme volatility
   trend_analysis_hours: 24    # Historical data for trends
 ```
+
+### Permissions (summary)
+- Users: `ecoxpert.user`, `ecoxpert.economy.balance`, `ecoxpert.economy.pay`, `ecoxpert.market.*`, `ecoxpert.bank.*`, `ecoxpert.loans.request`, `ecoxpert.loans.pay`
+- Admins: `ecoxpert.admin`, `ecoxpert.admin.economy`, `ecoxpert.admin.events`, `ecoxpert.admin.bank`, `ecoxpert.admin.market`
 
 ### Banking Configuration
 ```yaml
@@ -357,7 +381,7 @@ Runs comprehensive tests:
 A: Use `/ecoxpert` instead of `/eco` to avoid conflicts. EcoXpert detects conflicts automatically.
 
 **Q: Balances not syncing**
-A: Check `/ecoxpert economy status` - sync may be disabled or encountering errors.
+A: If using EssentialsX/CMI, balances are imported automatically a few seconds after startup (if enabled). You can also run `/ecoxpert migrate balances`.
 
 **Q: Market prices seem wrong**
 A: Market uses real supply/demand. Prices adjust based on actual trading activity.

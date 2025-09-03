@@ -485,9 +485,9 @@ public class BankManagerImpl implements BankManager {
             
             return CompletableFuture.supplyAsync(() -> {
                 BankAccount account = accountOpt.get();
-                // Create temporary account with intelligent rate for calculation
-                BigDecimal intelligentRate = getIntelligentInterestRate(account);
-                return InterestCalculator.calculateInterestForPeriod(account.getBalance(), account.getTier(), 1);
+                // Intelligent daily interest (1 day projection)
+                BigDecimal annualRate = getIntelligentInterestRate(account);
+                return calculateInterestForPeriodIntelligent(account.getBalance(), annualRate, 1);
             });
         });
     }
@@ -502,7 +502,7 @@ public class BankManagerImpl implements BankManager {
             
             for (BankAccount account : accountCache.values()) {
                 if (account.isInterestCalculationDue()) {
-                    BigDecimal interest = InterestCalculator.calculateDailyInterest(account);
+                    BigDecimal interest = calculateDailyInterestIntelligent(account);
                     
                     if (interest.compareTo(BigDecimal.ZERO) > 0) {
                         account.addInterest(interest);
@@ -546,11 +546,8 @@ public class BankManagerImpl implements BankManager {
             
             return CompletableFuture.supplyAsync(() -> {
                 BankAccount account = accountOpt.get();
-                BigDecimal dailyRate = getIntelligentInterestRate(account).divide(
-                    new BigDecimal("365"), 10, RoundingMode.HALF_UP);
-                
-                return InterestCalculator.calculateInterestForPeriod(
-                    account.getBalance(), account.getTier(), days);
+                BigDecimal annualRate = getIntelligentInterestRate(account);
+                return calculateInterestForPeriodIntelligent(account.getBalance(), annualRate, days);
             });
         });
     }
@@ -822,6 +819,47 @@ public class BankManagerImpl implements BankManager {
         }
         
         return BankAccountTier.BASIC;
+    }
+
+    /**
+     * Calculate daily interest using intelligent annual rate and global caps.
+     */
+    private BigDecimal calculateDailyInterestIntelligent(BankAccount account) {
+        if (account == null || account.isFrozen()) return BigDecimal.ZERO;
+
+        BigDecimal balance = account.getBalance();
+        if (balance.compareTo(InterestCalculator.getMinimumInterestBalance()) < 0) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal annualRate = getIntelligentInterestRate(account);
+        BigDecimal dailyRate = annualRate.divide(new BigDecimal("365"), 10, RoundingMode.HALF_UP);
+        BigDecimal interest = balance.multiply(dailyRate);
+
+        BigDecimal cap = InterestCalculator.getMaximumDailyInterest();
+        if (interest.compareTo(cap) > 0) interest = cap;
+
+        return interest.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Calculate compound interest for N days using an intelligent annual rate.
+     * Applies the same anti-exploit cap pattern as InterestCalculator.
+     */
+    private BigDecimal calculateInterestForPeriodIntelligent(BigDecimal principal, BigDecimal annualRate, int days) {
+        if (principal == null || principal.compareTo(InterestCalculator.getMinimumInterestBalance()) < 0 || days <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal dailyRate = annualRate.divide(new BigDecimal("365"), 10, RoundingMode.HALF_UP);
+        BigDecimal onePlus = BigDecimal.ONE.add(dailyRate);
+        BigDecimal compound = onePlus.pow(days);
+        BigDecimal futureValue = principal.multiply(compound);
+        BigDecimal interestEarned = futureValue.subtract(principal);
+
+        BigDecimal max = InterestCalculator.getMaximumDailyInterest().multiply(new BigDecimal(days));
+        if (interestEarned.compareTo(max) > 0) interestEarned = max;
+
+        return interestEarned.setScale(2, RoundingMode.HALF_UP);
     }
     
     /**
