@@ -204,6 +204,26 @@ Use `/ecox` or `/ecoxpert` to avoid conflicts with EssentialsX `/eco`.
 /bank help                      - Banking help
 ```
 
+### Intelligent Economy Policy (overview)
+- Runtime adjustments via `/ecoxpert economy policy`:
+  - `show`: print current policy and global market factors.
+  - `set <param> <value>`: adjust parameters in-memory (e.g., `wealth_tax_rate`, `wealth_tax_threshold_multiplier`, `stimulus_factor`, `cooldown_factor`, `intervention_minutes`, `bias_max`).
+  - `reload`: reload from `modules/inflation.yml`.
+- Effects (automatic):
+  - Overheating: small wealth tax on high balances + mild price cooldown (time‑bound).
+  - Stagnation: mild market stimulation (time‑bound).
+  - Continuous bias: gentle ±3% max according to health/inflation.
+
+### YAML Modules
+- `modules/inflation.yml`: self‑regulation policy (wealth tax, market factors, intervention windows). Safe defaults, adjust gently.
+- `modules/market.yml`: item categories (luxury, basics, minerals, building, redstone, food, mob_drops) used by events.
+- `modules/events.yml`: per‑event intensities and durations (trade_boom, market_discovery, resource_shortage, luxury_demand).
+
+Key parameters (quick reference)
+- Market pricing: `pricing.max_price_change` (0.01–0.50), `pricing.volatility_damping` (0.10–0.99), `pricing.trend_analysis_hours` (1–168).
+- Policy targets: `targets.inflation` (e.g., 1.02), `metrics.cpi_window_hours`.
+- Safe mode: `safe_mode.enabled`, `safe_mode.latency_ms_threshold`, `safe_mode.errors_per_minute_threshold`.
+
 ### Loans Commands
 ```
 /loans request <amount>         - Request a new loan

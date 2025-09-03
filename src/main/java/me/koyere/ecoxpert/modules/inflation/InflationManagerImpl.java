@@ -3,6 +3,7 @@ package me.koyere.ecoxpert.modules.inflation;
 import me.koyere.ecoxpert.EcoXpertPlugin;
 import me.koyere.ecoxpert.economy.EconomyManager;
 import me.koyere.ecoxpert.modules.market.MarketManager;
+import me.koyere.ecoxpert.core.config.ConfigManager;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +30,7 @@ public class InflationManagerImpl implements InflationManager {
     private final EcoXpertPlugin plugin;
     private final EconomyManager economyManager;
     private final MarketManager marketManager;
+    private final ConfigManager configManager;
     
     // Core Intelligence Components
     private EconomicIntelligenceEngine intelligenceEngine;
@@ -42,10 +44,11 @@ public class InflationManagerImpl implements InflationManager {
     private boolean initialized = false;
     private String lastInterventionDescription = "None";
     
-    public InflationManagerImpl(EcoXpertPlugin plugin, EconomyManager economyManager, MarketManager marketManager) {
+    public InflationManagerImpl(EcoXpertPlugin plugin, EconomyManager economyManager, MarketManager marketManager, ConfigManager configManager) {
         this.plugin = plugin;
         this.economyManager = economyManager;
         this.marketManager = marketManager;
+        this.configManager = configManager;
     }
     
     @Override
@@ -61,7 +64,7 @@ public class InflationManagerImpl implements InflationManager {
                 
                 // Initialize core components
                 this.economicMemory = new EconomicMemory();
-                this.intelligenceEngine = new EconomicIntelligenceEngine(plugin, economyManager, marketManager);
+                this.intelligenceEngine = new EconomicIntelligenceEngine(plugin, economyManager, marketManager, configManager);
                 
                 // Initialize the intelligence engine
                 intelligenceEngine.initialize().join();
@@ -257,6 +260,28 @@ public class InflationManagerImpl implements InflationManager {
         
         stats.append("=== End Statistics ===");
         return stats.toString();
+    }
+
+    @Override
+    public String getPolicyInfo() {
+        return intelligenceEngine != null ? intelligenceEngine.getPolicyInfo() : "Policy not available";
+    }
+
+    @Override
+    public boolean setPolicyParam(String name, double value) {
+        return intelligenceEngine != null && intelligenceEngine.setPolicyParam(name, value);
+    }
+
+    @Override
+    public double[] getMarketFactors() {
+        return marketManager.getGlobalPriceFactors();
+    }
+
+    @Override
+    public void reloadPolicy() {
+        if (intelligenceEngine != null) {
+            intelligenceEngine.reloadPolicy(configManager);
+        }
     }
     
     @Override

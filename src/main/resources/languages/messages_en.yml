@@ -121,6 +121,7 @@ market:
     invalid-quantity: "&cInvalid quantity specified."
     price-changed: "&cThe price has changed since you started this transaction."
     system-error: "&cA system error occurred. Please contact an administrator."
+    safe-mode: "&eMarket operations are temporarily paused (Safe Mode)."
   
   # GUI messages
   gui:
@@ -158,6 +159,8 @@ bank:
   insufficient-bank-funds: "&cInsufficient funds in your bank account"
   interest-earned: "&aYou earned &e{0} &ain interest"
   daily-limit-reached: "&cYou have reached your daily transaction limit"
+  error:
+    safe-mode: "&eBank operations are temporarily paused (Safe Mode)."
   
 # Loan System
 loans:
@@ -177,6 +180,8 @@ loans:
   payment-overdue: "&cYour loan payment is overdue. Please pay immediately"
   credit-score: "&7Your credit score: &e{0}/1000"
   no-active-loans: "&7You have no active loans"
+  error:
+    safe-mode: "&eLoan operations are temporarily paused (Safe Mode)."
   status: "&7Loan Outstanding: &e{0} &7(&e{1}&7 principal) &7| Rate: &e{2}"
   
 # Economic Events
@@ -248,6 +253,7 @@ errors:
   config-error: "&cConfiguration error. Please check the config file"
   api-error: "&cAPI error occurred. Please try again later"
   unknown-error: "&cAn unknown error occurred. Please contact support"
+  rate_limited: "&cYou're doing that too fast. Please slow down."
 
 # Error Keys (alternative format)
 error:
@@ -277,12 +283,26 @@ economy:
       header: "&6=== Economy Admin ==="
       status: "&e/ecoxpert economy status &7- Show provider and DB status"
       diagnostics: "&e/ecoxpert economy diagnostics &7- Run safe diagnostics"
+      policy: "&e/ecoxpert economy policy [show|set <param> <value>|reload] &7- View/adjust policy"
     unknown: "&cUnknown economy subcommand"
     status:
       header: "&6=== Economy Status ==="
       provider: "&7Provider: &e{0} &7(Plugin: &e{1}&7)"
       plugins: "&7Detected economy plugins: &e{0}"
       db: "&7Database: &e{0} &7| Connected: &e{1} &7| Healthy: &e{2}"
+    health:
+      header: "&6=== Economy Health ==="
+      cpi: "&7CPI Index: &e{0}"
+      inflation_annual: "&7Annualized Inflation: &e{0}%"
+      target: "&7Target Inflation: &e{0}"
+      score: "&7Health Score: &e{0}/100"
+    policy:
+      header: "&6=== Economy Policy ==="
+      updated: "&aUpdated policy parameter: &e{0} &7= &e{1}"
+      unknown_param: "&cUnknown policy parameter: {0}"
+      invalid_value: "&cInvalid value: {0}"
+      reloaded: "&aPolicy reloaded from configuration"
+      usage: "&cUsage: &e/ecoxpert economy policy [show|set <param> <value>|reload]"
   
 # Update System
 updates:

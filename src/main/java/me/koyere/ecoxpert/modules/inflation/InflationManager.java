@@ -138,6 +138,28 @@ public interface InflationManager {
      * @return Status information
      */
     InflationSystemStatus getSystemStatus();
+
+    /**
+     * Get current policy parameters summary.
+     */
+    String getPolicyInfo();
+
+    /**
+     * Update a policy parameter at runtime.
+     * Supported names: wealth_tax_rate, wealth_tax_threshold_multiplier,
+     * stimulus_factor, cooldown_factor, intervention_minutes, bias_max.
+     *
+     * @return true if updated
+     */
+    boolean setPolicyParam(String name, double value);
+
+    /**
+     * Get current global market price factors [buy, sell].
+     */
+    double[] getMarketFactors();
+
+    /** Reload policy from configuration files. */
+    void reloadPolicy();
     
     /**
      * System Status Information

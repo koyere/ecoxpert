@@ -179,18 +179,20 @@ public class ConfigManagerImpl implements ConfigManager {
     private void createDefaultModuleConfig(String moduleName, File configFile) {
         try {
             configFile.getParentFile().mkdirs();
+            // Try to copy default from resources if available
+            try (java.io.InputStream in = plugin.getResource("modules/" + moduleName + ".yml")) {
+                if (in != null) {
+                    java.nio.file.Files.copy(in, configFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    return;
+                }
+            }
+            // Fallback: create minimal file
             configFile.createNewFile();
-            
             FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
-            
-            // Add default header
-            config.options().setHeader(List.of("EcoXpert Pro - " + moduleName.substring(0, 1).toUpperCase() + 
-                                             moduleName.substring(1) + " Module Configuration"));
-            
-            // Add basic module settings
+            config.options().setHeader(List.of("EcoXpert Pro - " + moduleName.substring(0, 1).toUpperCase() +
+                    moduleName.substring(1) + " Module Configuration"));
             config.set("enabled", true);
             config.set("version", 1);
-            
             config.save(configFile);
             
         } catch (IOException e) {

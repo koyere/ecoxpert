@@ -7,6 +7,7 @@ import me.koyere.ecoxpert.EcoXpertPlugin;
 import me.koyere.ecoxpert.modules.events.EconomicEventEngine;
 import me.koyere.ecoxpert.modules.events.EconomicEvent;
 import me.koyere.ecoxpert.modules.events.EconomicEventType;
+import me.koyere.ecoxpert.modules.inflation.InflationManager;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -210,6 +211,8 @@ public class EcoCommand extends BaseCommand {
             sendMessage(sender, "economy.admin.help.header");
             sendMessage(sender, "economy.admin.help.status");
             sendMessage(sender, "economy.admin.help.diagnostics");
+            sendMessage(sender, "economy.admin.help.policy");
+            sender.sendMessage("§7Use §e/ecoxpert economy health §7to view CPI and score");
             return true;
         }
 
@@ -219,10 +222,130 @@ public class EcoCommand extends BaseCommand {
                 return handleEconomyStatus(sender);
             case "diagnostics":
                 return handleEconomyDiagnostics(sender);
+            case "health":
+                return handleEconomyHealth(sender);
+            case "policy":
+                return handleEconomyPolicy(sender, java.util.Arrays.copyOfRange(args, 1, args.length));
             default:
                 sendMessage(sender, "economy.admin.unknown");
                 return true;
         }
+    }
+
+    private boolean handleEconomyHealth(CommandSender sender) {
+        if (!(sender.hasPermission("ecoxpert.admin") || sender.hasPermission("ecoxpert.admin.economy"))) {
+            sendMessage(sender, "error.no_permission");
+            return true;
+        }
+        var plugin = JavaPlugin.getPlugin(EcoXpertPlugin.class);
+        var services = plugin.getServiceRegistry();
+        var cfg = services.getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class);
+        var dm = services.getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
+        var econ = services.getInstance(me.koyere.ecoxpert.economy.EconomyManager.class);
+
+        var inflCfg = cfg.getModuleConfig("inflation");
+        double targetInflation = inflCfg.getDouble("targets.inflation", 1.02);
+        int windowHours = inflCfg.getInt("metrics.cpi_window_hours", 72);
+
+        var marketCfg = cfg.getModuleConfig("market");
+        java.util.List<String> basket = marketCfg.getStringList("metrics.basket");
+        if (basket == null || basket.isEmpty()) {
+            basket = java.util.List.of("WHEAT","BREAD","APPLE","COAL","IRON_INGOT","GOLD_INGOT");
+        }
+
+        try {
+            java.math.BigDecimal cpiSum = java.math.BigDecimal.ZERO;
+            int cpiCount = 0;
+            java.math.BigDecimal windowInflationSum = java.math.BigDecimal.ZERO;
+            int inflCount = 0;
+
+            for (String mat : basket) {
+                try (me.koyere.ecoxpert.core.data.QueryResult qr = dm.executeQuery(
+                        "SELECT base_price, current_buy_price FROM ecoxpert_market_items WHERE material = ?",
+                        mat).join()) {
+                    if (qr.next()) {
+                        var base = qr.getBigDecimal("base_price");
+                        var cur = qr.getBigDecimal("current_buy_price");
+                        if (base != null && cur != null && base.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                            cpiSum = cpiSum.add(cur.divide(base, 6, java.math.RoundingMode.HALF_UP));
+                            cpiCount++;
+                        }
+                    }
+                } catch (Exception ignored) {}
+
+                try (me.koyere.ecoxpert.core.data.QueryResult qwin = dm.executeQuery(
+                        "SELECT buy_price, snapshot_time FROM ecoxpert_market_price_history WHERE material = ? AND snapshot_time >= datetime('now', '-' || ? || ' hours') ORDER BY snapshot_time ASC",
+                        mat, windowHours).join()) {
+                    java.math.BigDecimal first = null;
+                    java.math.BigDecimal last = null;
+                    while (qwin.next()) {
+                        if (first == null) first = qwin.getBigDecimal("buy_price");
+                        last = qwin.getBigDecimal("buy_price");
+                    }
+                    if (first != null && last != null && first.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                        windowInflationSum = windowInflationSum.add(last.divide(first, 6, java.math.RoundingMode.HALF_UP));
+                        inflCount++;
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            double cpi = cpiCount > 0 ? cpiSum.divide(java.math.BigDecimal.valueOf(cpiCount), 4, java.math.RoundingMode.HALF_UP).doubleValue() : 1.0;
+            double windowInflation = inflCount > 0 ? windowInflationSum.divide(java.math.BigDecimal.valueOf(inflCount), 6, java.math.RoundingMode.HALF_UP).doubleValue() : 1.0;
+            double annualized = windowHours > 0 ? Math.pow(windowInflation, (365.0*24.0)/windowHours) - 1.0 : 0.0;
+
+            double deviation = Math.abs(cpi - targetInflation);
+            double tolerance = 0.05;
+            int healthScore = (int) Math.max(0, 100 - Math.min(100, (deviation / tolerance) * 100));
+
+            sendMessage(sender, "economy.admin.health.header");
+            sender.sendMessage(String.format("§7CPI Index: §e%.3f", cpi));
+            sender.sendMessage(String.format("§7Annualized Inflation: §e%.2f%%", annualized * 100));
+            sender.sendMessage(String.format("§7Target Inflation: §e%.3f", targetInflation));
+            sender.sendMessage(String.format("§7Health Score: §e%d/100", healthScore));
+
+        } catch (Exception e) {
+            sender.sendMessage("§cFailed to compute economy health");
+        }
+        return true;
+    }
+
+    private boolean handleEconomyPolicy(CommandSender sender, String[] args) {
+        if (!(sender.hasPermission("ecoxpert.admin") || sender.hasPermission("ecoxpert.admin.economy"))) {
+            sendMessage(sender, "error.no_permission");
+            return true;
+        }
+        InflationManager infl = JavaPlugin.getPlugin(EcoXpertPlugin.class)
+            .getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.inflation.InflationManager.class);
+        if (infl == null) {
+            sender.sendMessage("Policy not available");
+            return true;
+        }
+        if (args.length == 0 || args[0].equalsIgnoreCase("show")) {
+            sendMessage(sender, "economy.admin.policy.header");
+            sender.sendMessage(infl.getPolicyInfo());
+            double[] f = infl.getMarketFactors();
+            sender.sendMessage(String.format("§7Global factors: buy=%.3f, sell=%.3f", f[0], f[1]));
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("set") && args.length >= 3) {
+            String name = args[1];
+            try {
+                double value = Double.parseDouble(args[2]);
+                boolean ok = infl.setPolicyParam(name, value);
+                if (ok) sendMessage(sender, "economy.admin.policy.updated", name, value);
+                else sendMessage(sender, "economy.admin.policy.unknown_param", name);
+            } catch (NumberFormatException e) {
+                sendMessage(sender, "economy.admin.policy.invalid_value", args[2]);
+            }
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("reload")) {
+            infl.reloadPolicy();
+            sendMessage(sender, "economy.admin.policy.reloaded");
+            return true;
+        }
+        sendMessage(sender, "economy.admin.policy.usage");
+        return true;
     }
 
     private boolean handleEconomyStatus(CommandSender sender) {
@@ -241,6 +364,31 @@ public class EcoCommand extends BaseCommand {
         sendMessage(sender, "economy.admin.status.provider", status.getStatus().name(), String.valueOf(status.getPluginName()));
         sendMessage(sender, "economy.admin.status.plugins", plugins.getInstalledCount());
         sendMessage(sender, "economy.admin.status.db", dbStatus.getCurrentType(), dbStatus.isConnected(), dbStatus.isHealthy());
+
+        // Accounts summary (total money, average, count)
+        try (me.koyere.ecoxpert.core.data.QueryResult qr = dm.executeQuery(
+                "SELECT COUNT(*) as cnt, COALESCE(SUM(balance),0) as total, COALESCE(AVG(balance),0) as avg FROM ecoxpert_accounts"
+        ).join()) {
+            if (qr.next()) {
+                long cnt = qr.getLong("cnt");
+                java.math.BigDecimal total = qr.getBigDecimal("total");
+                java.math.BigDecimal avg = qr.getBigDecimal("avg");
+                sender.sendMessage(String.format("§7Accounts: §e%d §7| Total: §e%s §7| Avg: §e%s",
+                        cnt,
+                        JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry()
+                                .getInstance(me.koyere.ecoxpert.economy.EconomyManager.class).formatMoney(total),
+                        JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry()
+                                .getInstance(me.koyere.ecoxpert.economy.EconomyManager.class).formatMoney(avg)));
+            }
+        } catch (Exception ignored) {}
+
+        // Market global factors (from InflationManager)
+        var infl = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry()
+            .getInstance(me.koyere.ecoxpert.modules.inflation.InflationManager.class);
+        if (infl != null) {
+            double[] f = infl.getMarketFactors();
+            sender.sendMessage(String.format("§7Market factors: buy=%.3f, sell=%.3f", f[0], f[1]));
+        }
         return true;
     }
 

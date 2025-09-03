@@ -33,13 +33,17 @@ public class DatabaseTransactionImpl implements DatabaseTransaction {
     @Override
     public CompletableFuture<Integer> executeUpdate(String sql, Object... params) {
         return CompletableFuture.supplyAsync(() -> {
-            logger.info("ECOXPERT DEBUG - DatabaseTransaction.executeUpdate: " + sql);
+            if (logger.isLoggable(Level.FINE)) {
+                logger.fine("ECOXPERT DEBUG - DatabaseTransaction.executeUpdate: " + sql);
+            }
             checkActive();
             
             try (PreparedStatement stmt = connection.prepareStatement(sql)) {
                 setParameters(stmt, params);
                 int result = stmt.executeUpdate();
-                logger.info("ECOXPERT DEBUG - executeUpdate result: " + result + " rows affected");
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.fine("ECOXPERT DEBUG - executeUpdate result: " + result + " rows affected");
+                }
                 return result;
             } catch (SQLException e) {
                 logger.log(Level.SEVERE, "ECOXPERT ERROR - executeUpdate failed for SQL: " + sql, e);
@@ -51,13 +55,17 @@ public class DatabaseTransactionImpl implements DatabaseTransaction {
     @Override
     public CompletableFuture<QueryResult> executeQuery(String sql, Object... params) {
         return CompletableFuture.supplyAsync(() -> {
-            logger.info("ECOXPERT DEBUG - DatabaseTransaction.executeQuery: " + sql);
+            if (logger.isLoggable(Level.FINE)) {
+                logger.fine("ECOXPERT DEBUG - DatabaseTransaction.executeQuery: " + sql);
+            }
             checkActive();
             
             try (PreparedStatement stmt = connection.prepareStatement(sql)) {
                 setParameters(stmt, params);
                 QueryResult result = new QueryResultImpl(stmt.executeQuery());
-                logger.info("ECOXPERT DEBUG - executeQuery completed successfully");
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.fine("ECOXPERT DEBUG - executeQuery completed successfully");
+                }
                 return result;
             } catch (SQLException e) {
                 logger.log(Level.SEVERE, "ECOXPERT ERROR - executeQuery failed for SQL: " + sql, e);

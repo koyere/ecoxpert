@@ -8,6 +8,7 @@ import me.koyere.ecoxpert.core.data.QueryResult;
 import me.koyere.ecoxpert.core.translation.TranslationManager;
 import me.koyere.ecoxpert.economy.EconomyManager;
 import org.bukkit.Material;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -42,6 +43,18 @@ public class MarketManagerImpl implements MarketManager {
     // Global price adjustment factors (applied to dynamic prices)
     private volatile double buyPriceFactor = 1.0;  // multiplier for buy prices
     private volatile double sellPriceFactor = 1.0; // multiplier for sell prices
+    // Per-item temporary factors with expiry in millis
+    private final Map<Material, ItemFactor> itemFactors = new ConcurrentHashMap<>();
+
+    private static class ItemFactor {
+        final double buy;
+        final double sell;
+        final long expiresAt;
+        ItemFactor(double buy, double sell, long expiresAt) {
+            this.buy = buy; this.sell = sell; this.expiresAt = expiresAt;
+        }
+        boolean expired() { return System.currentTimeMillis() > expiresAt; }
+    }
     
     // Cache for market items
     private final Map<Material, MarketItem> itemCache = new ConcurrentHashMap<>();
@@ -75,6 +88,8 @@ public class MarketManagerImpl implements MarketManager {
         plugin.getLogger().info("Initializing Market System...");
         
         try {
+            // Load pricing configuration
+            loadPricingConfig();
             // Load market items from database into cache
             loadItemsIntoCache();
             
@@ -140,6 +155,20 @@ public class MarketManagerImpl implements MarketManager {
     @Override
     public double[] getGlobalPriceFactors() {
         return new double[]{buyPriceFactor, sellPriceFactor};
+    }
+
+    @Override
+    public void applyTemporaryItemFactors(Map<Material, double[]> factors, int minutes) {
+        long expires = System.currentTimeMillis() + minutes * 60_000L;
+        for (Map.Entry<Material, double[]> e : factors.entrySet()) {
+            double[] f = e.getValue();
+            double buy = Math.max(0.5, Math.min(1.5, f[0]));
+            double sell = Math.max(0.5, Math.min(1.5, f[1]));
+            itemFactors.put(e.getKey(), new ItemFactor(buy, sell, expires));
+        }
+        // Schedule cleanup
+        Bukkit.getScheduler().runTaskLater(plugin, () ->
+            itemFactors.entrySet().removeIf(en -> en.getValue().expired()), 20L * 60 * Math.max(1, minutes));
     }
     
     // === Item Management ===
@@ -274,6 +303,14 @@ public class MarketManagerImpl implements MarketManager {
     public CompletableFuture<Void> updatePrices() {
         return CompletableFuture.runAsync(() -> {
             try {
+                // Safe Mode: skip market updates
+                var safe = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.safety.SafeModeManager.class);
+                if (safe != null && safe.isActive()) {
+                    plugin.getLogger().info("Safe Mode active: skipping market price updates");
+                    return;
+                }
+                // Refresh pricing config to allow dynamic tuning
+                loadPricingConfig();
                 // Get recent transactions for analysis
                 List<MarketTransaction> recentTransactions = getRecentTransactionsSync(100);
                 
@@ -285,9 +322,23 @@ public class MarketManagerImpl implements MarketManager {
                 plugin.getLogger().info("Price update completed for " + itemCache.size() + " items");
                 
             } catch (Exception e) {
+                var safe = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.safety.SafeModeManager.class);
+                if (safe != null) safe.recordCriticalError();
                 plugin.getLogger().log(Level.SEVERE, "Failed to update market prices", e);
             }
         });
+    }
+
+    private void loadPricingConfig() {
+        try {
+            var marketCfg = configManager.getModuleConfig("market");
+            double maxChange = marketCfg.getDouble("pricing.max_price_change", 0.20);
+            double damping = marketCfg.getDouble("pricing.volatility_damping", 0.85);
+            int trendHours = marketCfg.getInt("pricing.trend_analysis_hours", 24);
+            priceCalculator.configure(maxChange, damping, trendHours);
+        } catch (Exception e) {
+            // Keep defaults on error
+        }
     }
     
     // === Transaction Operations ===
@@ -804,6 +855,15 @@ public class MarketManagerImpl implements MarketManager {
                 .multiply(BigDecimal.valueOf(buyPriceFactor));
             BigDecimal adjustedSell = priceUpdate.getNewSellPrice()
                 .multiply(BigDecimal.valueOf(sellPriceFactor));
+
+            // Apply per-item factor if present and not expired
+            ItemFactor f = itemFactors.get(item.getMaterial());
+            if (f != null && !f.expired()) {
+                adjustedBuy = adjustedBuy.multiply(BigDecimal.valueOf(f.buy));
+                adjustedSell = adjustedSell.multiply(BigDecimal.valueOf(f.sell));
+            } else if (f != null && f.expired()) {
+                itemFactors.remove(item.getMaterial());
+            }
 
             // Update database
             String sql = """

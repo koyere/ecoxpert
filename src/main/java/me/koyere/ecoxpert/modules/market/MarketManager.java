@@ -158,4 +158,10 @@ public interface MarketManager {
      * Get current global price factors [buyFactor, sellFactor].
      */
     double[] getGlobalPriceFactors();
+
+    /**
+     * Apply temporary per-item price factors for a duration (minutes).
+     * Each entry maps a material to [buyFactor, sellFactor].
+     */
+    void applyTemporaryItemFactors(java.util.Map<org.bukkit.Material, double[]> factors, int minutes);
 }

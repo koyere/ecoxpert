@@ -94,6 +94,18 @@ public class MarketCommand implements TabExecutor {
      * Handle market buy command
      */
     private boolean handleBuyCommand(Player player, String[] args) {
+        var safe = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+            .getServiceRegistry().getInstance(me.koyere.ecoxpert.core.safety.SafeModeManager.class);
+        if (safe != null && safe.isActive()) {
+            player.sendMessage(translationManager.getMessage("market.error.safe-mode"));
+            return true;
+        }
+        var limiter = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+            .getServiceRegistry().getInstance(me.koyere.ecoxpert.core.safety.RateLimitManager.class);
+        if (limiter != null && !limiter.allow(player.getUniqueId(), "market.buy")) {
+            player.sendMessage(translationManager.getMessage("errors.rate_limited"));
+            return true;
+        }
         if (args.length < 2) {
             player.sendMessage(translationManager.getMessage("market.buy-usage"));
             return true;
@@ -148,6 +160,18 @@ public class MarketCommand implements TabExecutor {
      * Handle market sell command
      */
     private boolean handleSellCommand(Player player, String[] args) {
+        var safe = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+            .getServiceRegistry().getInstance(me.koyere.ecoxpert.core.safety.SafeModeManager.class);
+        if (safe != null && safe.isActive()) {
+            player.sendMessage(translationManager.getMessage("market.error.safe-mode"));
+            return true;
+        }
+        var limiter = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+            .getServiceRegistry().getInstance(me.koyere.ecoxpert.core.safety.RateLimitManager.class);
+        if (limiter != null && !limiter.allow(player.getUniqueId(), "market.sell")) {
+            player.sendMessage(translationManager.getMessage("errors.rate_limited"));
+            return true;
+        }
         if (args.length < 2) {
             player.sendMessage(translationManager.getMessage("market.sell-usage"));
             return true;

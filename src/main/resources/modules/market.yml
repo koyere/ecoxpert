@@ -1,0 +1,109 @@
+# EcoXpert Pro - Market Configuration
+# Categories help apply event effects to groups of items in a realistic way.
+
+enabled: true
+version: 1
+
+pricing:
+  # Maximum relative price change per update (0.01 – 0.50)
+  max_price_change: 0.20
+  # Volatility damping (0.10 – 0.99). Higher = smoother
+  volatility_damping: 0.85
+  # Hours considered for trend/supply-demand analysis (1 – 168)
+  trend_analysis_hours: 24
+
+categories:
+  # Luxury items: higher sensitivity during Luxury Demand events
+  luxury:
+    materials:
+      - DIAMOND
+      - EMERALD
+      - NETHERITE_INGOT
+      - GOLD_INGOT
+      - LAPIS_LAZULI
+
+  # Basic commodities: affected during Resource Shortage / Seasonal Demand
+  basics:
+    materials:
+      - IRON_INGOT
+      - COAL
+      - REDSTONE
+      - COPPER_INGOT
+      - WHEAT
+      - BREAD
+      - APPLE
+
+  # Minerals/metals: general purpose category
+  minerals:
+    materials:
+      - IRON_INGOT
+      - GOLD_INGOT
+      - COPPER_INGOT
+      - COAL
+      - DIAMOND
+
+  # Building blocks: useful for building/utility events
+  building:
+    materials:
+      - STONE
+      - COBBLESTONE
+      - SAND
+      - GLASS
+      - OAK_PLANKS
+      - BRICKS
+
+  # Redstone components: affected by technological events
+  redstone:
+    materials:
+      - REDSTONE
+      - REDSTONE_TORCH
+      - REPEATER
+      - COMPARATOR
+      - OBSERVER
+
+  # Food & farming: affected by seasonal events
+  food:
+    materials:
+      - WHEAT
+      - CARROT
+      - POTATO
+      - BREAD
+      - COOKED_BEEF
+      - COOKED_PORKCHOP
+
+  # Mob drops: scarcity/surplus events may affect these
+  mob_drops:
+    materials:
+      - STRING
+      - GUNPOWDER
+      - BONE
+      - ROTTEN_FLESH
+      - ENDER_PEARL
+
+metrics:
+  # Basket of items for CPI calculation (20 recommended). Names must match Bukkit Material enums.
+  basket:
+    - WHEAT
+    - BREAD
+    - APPLE
+    - COAL
+    - IRON_INGOT
+    - GOLD_INGOT
+    - COPPER_INGOT
+    - REDSTONE
+    - LAPIS_LAZULI
+    - DIAMOND
+    - EMERALD
+    - NETHERITE_INGOT
+    - STONE
+    - COBBLESTONE
+    - SAND
+    - GLASS
+    - OAK_PLANKS
+    - STRING
+    - GUNPOWDER
+    - BONE
+
+# Notes:
+# - Categories are used by events (e.g., Luxury Demand) to apply per‑item price factors.
+# - You can add or remove materials at any time; names must match Bukkit Material enums.

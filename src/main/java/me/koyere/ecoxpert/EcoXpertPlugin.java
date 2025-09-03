@@ -52,6 +52,7 @@ public final class EcoXpertPlugin extends JavaPlugin {
     private EconomyManager economyManager;
     private MarketManager marketManager;
     private EconomicEventEngine eventEngine;
+    private me.koyere.ecoxpert.core.safety.SafeModeManager safeModeManager;
     private VaultEconomyProvider vaultProvider;
     private CommandManager commandManager;
     
@@ -178,6 +179,7 @@ public final class EcoXpertPlugin extends JavaPlugin {
         this.economyManager = serviceRegistry.getInstance(EconomyManager.class);
         this.marketManager = serviceRegistry.getInstance(MarketManager.class);
         this.eventEngine = serviceRegistry.getInstance(EconomicEventEngine.class);
+        this.safeModeManager = serviceRegistry.getInstance(me.koyere.ecoxpert.core.safety.SafeModeManager.class);
         this.vaultProvider = serviceRegistry.getInstance(VaultEconomyProvider.class);
         this.commandManager = serviceRegistry.getInstance(CommandManager.class);
     }
@@ -216,6 +218,13 @@ public final class EcoXpertPlugin extends JavaPlugin {
             eventEngine.initialize();
         } catch (Exception e) {
             getLogger().warning("Dynamic Economic Events Engine failed to initialize: " + e.getMessage());
+        }
+
+        // 10. Safe Mode monitor
+        try {
+            safeModeManager.initialize();
+        } catch (Exception e) {
+            getLogger().warning("Safe Mode monitor failed to initialize: " + e.getMessage());
         }
         
         getLogger().info("Core managers initialized successfully");

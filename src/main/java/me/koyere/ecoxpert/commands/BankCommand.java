@@ -68,6 +68,18 @@ public class BankCommand extends BaseCommand {
     }
 
     private void handleDeposit(Player player, String[] args) {
+        var safe = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+            .getServiceRegistry().getInstance(me.koyere.ecoxpert.core.safety.SafeModeManager.class);
+        if (safe != null && safe.isActive()) {
+            player.sendMessage(translationManager.getMessage("bank.error.safe-mode"));
+            return;
+        }
+        var limiter = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+            .getServiceRegistry().getInstance(me.koyere.ecoxpert.core.safety.RateLimitManager.class);
+        if (limiter != null && !limiter.allow(player.getUniqueId(), "bank.deposit")) {
+            player.sendMessage(translationManager.getMessage("errors.rate_limited"));
+            return;
+        }
         if (args.length < 2) {
             player.sendMessage(translationManager.getMessage("command.usage.bank.deposit"));
             return;
@@ -86,6 +98,18 @@ public class BankCommand extends BaseCommand {
     }
 
     private void handleWithdraw(Player player, String[] args) {
+        var safe = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+            .getServiceRegistry().getInstance(me.koyere.ecoxpert.core.safety.SafeModeManager.class);
+        if (safe != null && safe.isActive()) {
+            player.sendMessage(translationManager.getMessage("bank.error.safe-mode"));
+            return;
+        }
+        var limiter = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+            .getServiceRegistry().getInstance(me.koyere.ecoxpert.core.safety.RateLimitManager.class);
+        if (limiter != null && !limiter.allow(player.getUniqueId(), "bank.withdraw")) {
+            player.sendMessage(translationManager.getMessage("errors.rate_limited"));
+            return;
+        }
         if (args.length < 2) {
             player.sendMessage(translationManager.getMessage("command.usage.bank.withdraw"));
             return;
@@ -104,6 +128,18 @@ public class BankCommand extends BaseCommand {
     }
 
     private void handleTransfer(Player player, String[] args) {
+        var safe = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+            .getServiceRegistry().getInstance(me.koyere.ecoxpert.core.safety.SafeModeManager.class);
+        if (safe != null && safe.isActive()) {
+            player.sendMessage(translationManager.getMessage("bank.error.safe-mode"));
+            return;
+        }
+        var limiter = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+            .getServiceRegistry().getInstance(me.koyere.ecoxpert.core.safety.RateLimitManager.class);
+        if (limiter != null && !limiter.allow(player.getUniqueId(), "bank.transfer")) {
+            player.sendMessage(translationManager.getMessage("errors.rate_limited"));
+            return;
+        }
         if (args.length < 3) {
             player.sendMessage(translationManager.getMessage("command.usage.bank.transfer"));
             return;

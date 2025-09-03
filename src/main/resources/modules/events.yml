@@ -1,0 +1,32 @@
+# EcoXpert Pro - Dynamic Events Configuration
+# Tune intensities and durations for each event type.
+
+enabled: true
+version: 1
+
+trade_boom:
+  duration_minutes: 10
+  # Global market deltas (applied to price factors)
+  global_buy_factor_delta: -0.01   # players pay ~1% less when buying
+  global_sell_factor_delta: 0.01   # players get ~1% more when selling
+
+market_discovery:
+  duration_minutes: 10
+  # Sell boost for discovered items (as fraction). 0.10 → +10% sell price
+  sell_boost: 0.10
+
+resource_shortage:
+  duration_minutes: 10
+  # Increase both buy and sell for affected items (fraction)
+  buy_sell_delta: 0.08
+
+luxury_demand:
+  duration_minutes: 10
+  # Category in market.yml to apply to (default: luxury)
+  category: luxury
+  category_buy_delta: 0.04
+  category_sell_delta: 0.08
+
+# Notes:
+# - Keep deltas modest (0.01–0.05) to avoid whiplash.
+# - Durations are in minutes; overlapping events stack multiplicatively but are time‑limited.

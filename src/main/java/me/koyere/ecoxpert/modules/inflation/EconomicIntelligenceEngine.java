@@ -3,6 +3,7 @@ package me.koyere.ecoxpert.modules.inflation;
 import me.koyere.ecoxpert.EcoXpertPlugin;
 import me.koyere.ecoxpert.economy.EconomyManager;
 import me.koyere.ecoxpert.modules.market.MarketManager;
+import me.koyere.ecoxpert.core.config.ConfigManager;
 import org.bukkit.Bukkit;
 
 import java.math.BigDecimal;
@@ -65,12 +66,29 @@ public class EconomicIntelligenceEngine {
         public double getActivityMultiplier() { return activityMultiplier; }
         public double getBaseInflationRate() { return baseInflationRate; }
     }
-    
+    // Policy parameters (loaded from config; runtime adjustable)
+    private double wealthTaxRate = 0.005; // 0.5%
+    private double wealthTaxThresholdMultiplier = 2.0; // threshold = avgBalance * multiplier
+    private double stimulusFactor = 0.02; // -2% buy, +2% sell
+    private double cooldownFactor = 0.02; // +2% buy, -2% sell
+    private int interventionMinutes = 10;
+    private double biasMax = 0.03; // max absolute bias for continuous adjust
+
     public EconomicIntelligenceEngine(EcoXpertPlugin plugin, EconomyManager economyManager, 
-                                    MarketManager marketManager) {
+                                    MarketManager marketManager, ConfigManager configManager) {
         this.plugin = plugin;
         this.economyManager = economyManager;
         this.marketManager = marketManager;
+        // Load policy from module config
+        try {
+            var cfg = configManager.getModuleConfig("inflation");
+            this.wealthTaxRate = cfg.getDouble("policy.wealth_tax.rate", wealthTaxRate);
+            this.wealthTaxThresholdMultiplier = cfg.getDouble("policy.wealth_tax.threshold_multiplier", wealthTaxThresholdMultiplier);
+            this.stimulusFactor = cfg.getDouble("policy.market.stimulus_factor", stimulusFactor);
+            this.cooldownFactor = cfg.getDouble("policy.market.cooldown_factor", cooldownFactor);
+            this.interventionMinutes = cfg.getInt("policy.intervention.minutes", interventionMinutes);
+            this.biasMax = cfg.getDouble("policy.market.bias_max", biasMax);
+        } catch (Exception ignored) {}
     }
     
     /**
@@ -400,15 +418,14 @@ public class EconomicIntelligenceEngine {
      */
     private void reduceLiquidity(EconomicSnapshot snapshot) {
         try {
-            // Wealth tax: 0.5% on balances above 2x average balance
-            BigDecimal rate = new BigDecimal("0.005");
-            BigDecimal threshold = BigDecimal.valueOf(snapshot.getAverageBalance() * 2.0)
+            BigDecimal rate = BigDecimal.valueOf(wealthTaxRate);
+            BigDecimal threshold = BigDecimal.valueOf(snapshot.getAverageBalance() * wealthTaxThresholdMultiplier)
                 .setScale(2, RoundingMode.HALF_UP);
             economyManager.applyWealthTax(rate, threshold, "Overheating liquidity reduction");
 
-            // Market discouragement: increase buy prices (+2%), decrease sell prices (-2%) for 10 minutes
-            marketManager.setGlobalPriceFactors(1.02, 0.98);
-            Bukkit.getScheduler().runTaskLater(plugin, () -> marketManager.setGlobalPriceFactors(1.0, 1.0), 20L * 60 * 10);
+            // Market discouragement for a short period
+            marketManager.setGlobalPriceFactors(1.0 + cooldownFactor, 1.0 - cooldownFactor);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> marketManager.setGlobalPriceFactors(1.0, 1.0), 20L * 60 * interventionMinutes);
 
             plugin.getLogger().info("Applied liquidity reduction: wealth tax and market factors (10m)");
         } catch (Exception e) {
@@ -422,8 +439,8 @@ public class EconomicIntelligenceEngine {
      */
     private void stimulateMarketActivity() {
         try {
-            marketManager.setGlobalPriceFactors(0.98, 1.02);
-            Bukkit.getScheduler().runTaskLater(plugin, () -> marketManager.setGlobalPriceFactors(1.0, 1.0), 20L * 60 * 10);
+            marketManager.setGlobalPriceFactors(1.0 - stimulusFactor, 1.0 + stimulusFactor);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> marketManager.setGlobalPriceFactors(1.0, 1.0), 20L * 60 * interventionMinutes);
             plugin.getLogger().info("Stimulating market activity: adjusted price factors for 10m");
         } catch (Exception e) {
             plugin.getLogger().warning("stimulateMarketActivity failed: " + e.getMessage());
@@ -451,10 +468,48 @@ public class EconomicIntelligenceEngine {
         double health = snapshot.getEconomicHealth();
 
         // Bias buy/sell factors within [0.97, 1.03]
-        double buyBias = 1.0 + Math.max(-0.03, Math.min(0.03, infl * 0.5 - (health - 0.5) * 0.02));
-        double sellBias = 1.0 + Math.max(-0.03, Math.min(0.03, -(infl * 0.5) + (health - 0.5) * 0.02));
+        double buyBias = 1.0 + clamp(infl * 0.5 - (health - 0.5) * 0.02, -biasMax, biasMax);
+        double sellBias = 1.0 + clamp(-(infl * 0.5) + (health - 0.5) * 0.02, -biasMax, biasMax);
 
         marketManager.setGlobalPriceFactors(buyBias, sellBias);
+    }
+
+    private double clamp(double v, double min, double max) {
+        return Math.max(min, Math.min(max, v));
+    }
+
+    // Policy admin helpers
+    public String getPolicyInfo() {
+        return String.format("Policy{wealth_tax_rate=%.3f, threshold_mult=%.2f, stim=%.3f, cool=%.3f, minutes=%d, bias_max=%.3f}",
+            wealthTaxRate, wealthTaxThresholdMultiplier, stimulusFactor, cooldownFactor, interventionMinutes, biasMax);
+    }
+
+    public boolean setPolicyParam(String name, double value) {
+        switch (name.toLowerCase()) {
+            case "wealth_tax_rate" -> this.wealthTaxRate = clamp(value, 0.0, 0.05);
+            case "wealth_tax_threshold_multiplier" -> this.wealthTaxThresholdMultiplier = clamp(value, 1.0, 10.0);
+            case "stimulus_factor" -> this.stimulusFactor = clamp(value, 0.0, 0.2);
+            case "cooldown_factor" -> this.cooldownFactor = clamp(value, 0.0, 0.2);
+            case "intervention_minutes" -> this.interventionMinutes = (int) Math.max(1, Math.min(120, value));
+            case "bias_max" -> this.biasMax = clamp(value, 0.0, 0.2);
+            default -> { return false; }
+        }
+        return true;
+    }
+
+    public void reloadPolicy(ConfigManager configManager) {
+        try {
+            var cfg = configManager.getModuleConfig("inflation");
+            this.wealthTaxRate = cfg.getDouble("policy.wealth_tax.rate", wealthTaxRate);
+            this.wealthTaxThresholdMultiplier = cfg.getDouble("policy.wealth_tax.threshold_multiplier", wealthTaxThresholdMultiplier);
+            this.stimulusFactor = cfg.getDouble("policy.market.stimulus_factor", stimulusFactor);
+            this.cooldownFactor = cfg.getDouble("policy.market.cooldown_factor", cooldownFactor);
+            this.interventionMinutes = cfg.getInt("policy.intervention.minutes", interventionMinutes);
+            this.biasMax = cfg.getDouble("policy.market.bias_max", biasMax);
+            plugin.getLogger().info("Reloaded economic policy from configuration");
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to reload policy: " + e.getMessage());
+        }
     }
     private double calculateOptimalInjectionAmount(EconomicSnapshot snapshot) { return 10000.0; }
     private double calculatePlayerStimulus(PlayerEconomicProfile profile, double pool) { return 100.0; }

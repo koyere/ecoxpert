@@ -31,6 +31,9 @@ import me.koyere.ecoxpert.modules.inflation.InflationManagerImpl;
 import me.koyere.ecoxpert.modules.events.EconomicEventEngine;
 import me.koyere.ecoxpert.modules.loans.LoanManager;
 import me.koyere.ecoxpert.modules.loans.LoanManagerImpl;
+import me.koyere.ecoxpert.core.safety.SafeModeManager;
+import me.koyere.ecoxpert.core.safety.SafeModeManagerImpl;
+import me.koyere.ecoxpert.core.safety.RateLimitManager;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -136,6 +139,10 @@ public class ServiceRegistry {
         
         // Public API
         factoryMethods.put(EcoXpertAPI.class, this::createAPI);
+        
+        // Safety
+        factoryMethods.put(SafeModeManager.class, this::createSafeModeManager);
+        factoryMethods.put(RateLimitManager.class, this::createRateLimitManager);
     }
     
     // Factory methods with dependency injection
@@ -228,7 +235,8 @@ public class ServiceRegistry {
         return new InflationManagerImpl(
             plugin,
             getInstance(EconomyManager.class),
-            getInstance(MarketManager.class)
+            getInstance(MarketManager.class),
+            getInstance(ConfigManager.class)
         );
     }
     
@@ -252,5 +260,21 @@ public class ServiceRegistry {
     
     private EcoXpertAPI createAPI() {
         return new EcoXpertAPIImpl(plugin);
+    }
+    
+    private SafeModeManager createSafeModeManager() {
+        return new SafeModeManagerImpl(
+            plugin,
+            getInstance(DataManager.class),
+            getInstance(ConfigManager.class)
+        );
+    }
+
+    private RateLimitManager createRateLimitManager() {
+        int opsPerSecond = 5;
+        try {
+            opsPerSecond = Math.max(1, plugin.getConfig().getInt("security.anti-exploit.ops_per_second", 5));
+        } catch (Exception ignored) {}
+        return new RateLimitManager(opsPerSecond);
     }
 }

@@ -15,13 +15,27 @@ import java.util.List;
  */
 public class PriceCalculator {
     
-    // Algorithm configuration constants
-    private static final BigDecimal MAX_PRICE_CHANGE = BigDecimal.valueOf(0.20); // 20% max change per update
+    // Algorithm configuration (defaults; can be configured at runtime)
+    private BigDecimal maxPriceChange = BigDecimal.valueOf(0.20); // 20% per update cap
     private static final BigDecimal MIN_PRICE_RATIO = BigDecimal.valueOf(0.10); // 10% of base price minimum
     private static final BigDecimal MAX_PRICE_RATIO = BigDecimal.valueOf(10.0); // 1000% of base price maximum
-    private static final BigDecimal VOLATILITY_DAMPING = BigDecimal.valueOf(0.85); // Volatility decay factor
+    private BigDecimal volatilityDamping = BigDecimal.valueOf(0.85); // Volatility decay factor
     private static final BigDecimal MOMENTUM_FACTOR = BigDecimal.valueOf(0.3); // Momentum influence
-    private static final int TREND_ANALYSIS_HOURS = 24; // Hours for trend analysis
+    private int trendAnalysisHours = 24; // Hours for trend analysis
+
+    /**
+     * Configure calculator parameters from config.
+     * Values are clamped to safe ranges to avoid extreme behavior.
+     */
+    public void configure(double maxChangeFrac, double dampingFrac, int trendHours) {
+        // Clamp to safe ranges
+        double mc = Math.max(0.01, Math.min(0.50, maxChangeFrac)); // do not exceed ±50% per update
+        double vd = Math.max(0.10, Math.min(0.99, dampingFrac));
+        int th = Math.max(1, Math.min(168, trendHours)); // 1h–7d
+        this.maxPriceChange = BigDecimal.valueOf(mc);
+        this.volatilityDamping = BigDecimal.valueOf(vd);
+        this.trendAnalysisHours = th;
+    }
     
     /**
      * Calculate new prices based on market activity
@@ -76,7 +90,7 @@ public class PriceCalculator {
         BigDecimal totalVolume = BigDecimal.ZERO;
         
         // Filter transactions for this material within analysis period
-        LocalDateTime cutoff = LocalDateTime.now().minusHours(TREND_ANALYSIS_HOURS);
+        LocalDateTime cutoff = LocalDateTime.now().minusHours(trendAnalysisHours);
         
         for (MarketTransaction transaction : transactions) {
             if (!transaction.getMaterial().equals(material) || 
@@ -140,7 +154,7 @@ public class PriceCalculator {
         double newVolatility = (currentVolatility * 0.7) + (marketVolatility * 0.3);
         
         // Apply damping to reduce extreme volatility
-        newVolatility = newVolatility * VOLATILITY_DAMPING.doubleValue();
+        newVolatility = newVolatility * volatilityDamping.doubleValue();
         
         return BigDecimal.valueOf(Math.max(0.01, Math.min(0.5, newVolatility)));
     }
@@ -191,7 +205,7 @@ public class PriceCalculator {
         newPrice = newPrice.add(momentumChange);
         
         // Limit maximum change per update
-        BigDecimal maxChange = currentPrice.multiply(MAX_PRICE_CHANGE);
+        BigDecimal maxChange = currentPrice.multiply(maxPriceChange);
         BigDecimal change = newPrice.subtract(currentPrice);
         
         if (change.abs().compareTo(maxChange) > 0) {

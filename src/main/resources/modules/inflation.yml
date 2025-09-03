@@ -1,0 +1,47 @@
+# EcoXpert Pro - Inflation & Intelligence Policy
+# This file controls the intelligent, self‑regulating economy behavior.
+# All values are safe defaults. Adjust carefully and test on a staging server.
+
+enabled: true
+version: 1
+
+policy:
+  # Wealth Tax (selective sink for high balances)
+  wealth_tax:
+    # Percentage applied to balances ABOVE the threshold. Range: 0.000 – 0.050 (0% – 5%)
+    rate: 0.005
+    # Threshold = average player balance * multiplier (e.g., 2.0 → 2x average balance)
+    threshold_multiplier: 2.0
+
+  # Market factors during interventions (gentle, time‑limited biases)
+  market:
+    # During stagnation: lower buy prices and raise sell prices by this fraction (0.00 – 0.20)
+    stimulus_factor: 0.02
+    # During overheating: raise buy prices and lower sell prices by this fraction (0.00 – 0.20)
+    cooldown_factor: 0.02
+    # Maximum continuous bias used by the intelligence loop (0.00 – 0.20)
+    bias_max: 0.03
+
+  # Duration (in minutes) for temporary interventions (market factors, item boosts)
+  intervention:
+    minutes: 10
+
+# Targets and metrics
+targets:
+  # Target inflation (CPI growth multiplier). Example: 1.02 → 2% target
+  inflation: 1.02
+
+metrics:
+  # CPI calculation window in hours
+  cpi_window_hours: 72
+
+# Safe Mode – graceful degradation if backend is unhealthy
+safe_mode:
+  enabled: true
+  latency_ms_threshold: 500       # if median DB latency exceeds this
+  errors_per_minute_threshold: 3  # critical errors in a 1-minute window
+
+# Notes:
+# - The engine automatically decides when to stimulate or cool the economy based on health and inflation.
+# - Keep factors gentle to avoid player frustration; the system aims for a “living economy”, not whiplash.
+# - Wealth tax is progressive and only affects players far above the average balance.

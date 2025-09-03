@@ -450,6 +450,19 @@ public class DataManagerImpl implements DataManager {
             )
             """
             ,
+            // Economic events persistence
+            """
+            CREATE TABLE IF NOT EXISTS ecoxpert_economic_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id VARCHAR(100) NOT NULL,
+                type VARCHAR(50) NOT NULL,
+                status VARCHAR(20) NOT NULL,
+                parameters TEXT,
+                start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                end_time TIMESTAMP
+            )
+            """
+            ,
             // Player loans (minimal schema: one ACTIVE loan per player)
             """
             CREATE TABLE IF NOT EXISTS ecoxpert_loans (

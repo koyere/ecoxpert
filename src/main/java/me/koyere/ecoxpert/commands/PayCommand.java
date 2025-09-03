@@ -27,6 +27,15 @@ public class PayCommand extends BaseCommand {
     
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (sender instanceof Player) {
+            var plugin = me.koyere.ecoxpert.EcoXpertPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class);
+            var services = plugin.getServiceRegistry();
+            var limiter = services.getInstance(me.koyere.ecoxpert.core.safety.RateLimitManager.class);
+            if (limiter != null && !limiter.allow(((Player) sender).getUniqueId(), "pay")) {
+                sendMessage(sender, "errors.command-error");
+                return true;
+            }
+        }
         if (!hasPermission(sender, "ecoxpert.economy.pay")) {
             return true;
         }
