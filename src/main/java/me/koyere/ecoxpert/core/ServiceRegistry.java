@@ -34,6 +34,12 @@ import me.koyere.ecoxpert.modules.loans.LoanManagerImpl;
 import me.koyere.ecoxpert.core.safety.SafeModeManager;
 import me.koyere.ecoxpert.core.safety.SafeModeManagerImpl;
 import me.koyere.ecoxpert.core.safety.RateLimitManager;
+import me.koyere.ecoxpert.modules.integrations.IntegrationsManager;
+import me.koyere.ecoxpert.modules.integrations.IntegrationsManagerImpl;
+import me.koyere.ecoxpert.modules.market.orders.MarketOrderService;
+import me.koyere.ecoxpert.modules.market.orders.MarketOrderServiceImpl;
+import me.koyere.ecoxpert.modules.professions.ProfessionsManager;
+import me.koyere.ecoxpert.modules.professions.ProfessionsManagerImpl;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -133,6 +139,13 @@ public class ServiceRegistry {
 
         // Loans module
         factoryMethods.put(LoanManager.class, this::createLoanManager);
+        
+        // Integrations (soft hooks)
+        factoryMethods.put(IntegrationsManager.class, this::createIntegrationsManager);
+        // Market order book (optional)
+        factoryMethods.put(MarketOrderService.class, this::createMarketOrderService);
+        // Professions
+        factoryMethods.put(ProfessionsManager.class, this::createProfessionsManager);
         
         // Command system
         factoryMethods.put(CommandManager.class, this::createCommandManager);
@@ -276,5 +289,26 @@ public class ServiceRegistry {
             opsPerSecond = Math.max(1, plugin.getConfig().getInt("security.anti-exploit.ops_per_second", 5));
         } catch (Exception ignored) {}
         return new RateLimitManager(opsPerSecond);
+    }
+
+    private IntegrationsManager createIntegrationsManager() {
+        return new IntegrationsManagerImpl(plugin);
+    }
+
+    private MarketOrderService createMarketOrderService() {
+        return new MarketOrderServiceImpl(
+            plugin,
+            getInstance(me.koyere.ecoxpert.core.data.DataManager.class),
+            getInstance(me.koyere.ecoxpert.economy.EconomyManager.class),
+            getInstance(me.koyere.ecoxpert.modules.market.MarketManager.class),
+            getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class)
+        );
+    }
+
+    private ProfessionsManager createProfessionsManager() {
+        return new ProfessionsManagerImpl(
+            plugin,
+            getInstance(me.koyere.ecoxpert.core.data.DataManager.class)
+        );
     }
 }

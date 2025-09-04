@@ -234,7 +234,26 @@ public final class EcoXpertPlugin extends JavaPlugin {
         } catch (Exception e) {
             getLogger().warning("Loan delinquency scheduler failed to start: " + e.getMessage());
         }
-        
+
+        // 12. PlaceholderAPI integration
+        try {
+            if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+                new me.koyere.ecoxpert.modules.integrations.PlaceholderProvider(
+                    this,
+                    economyManager,
+                    marketManager,
+                    serviceRegistry.getInstance(me.koyere.ecoxpert.modules.inflation.InflationManager.class),
+                    eventEngine,
+                    serviceRegistry.getInstance(me.koyere.ecoxpert.modules.loans.LoanManager.class),
+                    serviceRegistry.getInstance(me.koyere.ecoxpert.modules.integrations.IntegrationsManager.class),
+                    translationManager
+                ).register();
+                getLogger().info("PlaceholderAPI placeholders registered (identifier: ecox)");
+            }
+        } catch (Exception e) {
+            getLogger().warning("PlaceholderAPI registration failed: " + e.getMessage());
+        }
+
         getLogger().info("Core managers initialized successfully");
     }
     

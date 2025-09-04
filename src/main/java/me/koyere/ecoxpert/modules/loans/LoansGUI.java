@@ -18,6 +18,9 @@ public class LoansGUI extends BaseGUI {
     private final LoanManager loanManager;
     private final EconomyManager economyManager;
     private final TranslationManager tm;
+    private final java.util.Map<java.util.UUID, LoanOffer> pendingOffer = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<java.util.UUID, Integer> schedulePage = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<java.util.UUID, java.util.List<LoanPayment>> scheduleCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     public LoansGUI(EcoXpertPlugin plugin, LoanManager loanManager, EconomyManager economyManager, TranslationManager tm) {
         super(plugin);
@@ -72,12 +75,11 @@ public class LoansGUI extends BaseGUI {
         ItemStack it = e.getCurrentItem();
         if (it == null || !it.hasItemMeta() || !it.getItemMeta().hasDisplayName()) return;
         String name = it.getItemMeta().getDisplayName();
+        // Offer preview flows
         if (name.contains("+1000")) {
-            loanManager.requestLoanSmart(p.getUniqueId(), new BigDecimal("1000")).thenAccept(ok ->
-                p.sendMessage(tm.getMessage("prefix") + (ok ? tm.getMessage("loans.loan-approved", economyManager.formatMoney(new BigDecimal("1000"))) : tm.getMessage("loans.loan-denied", ""))));
+            openOfferPreview(p, new BigDecimal("1000"));
         } else if (name.contains("+5000")) {
-            loanManager.requestLoanSmart(p.getUniqueId(), new BigDecimal("5000")).thenAccept(ok ->
-                p.sendMessage(tm.getMessage("prefix") + (ok ? tm.getMessage("loans.loan-approved", economyManager.formatMoney(new BigDecimal("5000"))) : tm.getMessage("loans.loan-denied", ""))));
+            openOfferPreview(p, new BigDecimal("5000"));
         } else if (name.contains(tm.getMessage("loans.gui.status"))) {
             loanManager.getActiveLoan(p.getUniqueId()).thenAccept(opt -> {
                 if (opt.isEmpty()) p.sendMessage(tm.getMessage("prefix") + tm.getMessage("loans.no-active-loans"));
@@ -96,14 +98,103 @@ public class LoansGUI extends BaseGUI {
             loanManager.payLoan(p.getUniqueId(), new BigDecimal("1000")).thenAccept(ok ->
                 p.sendMessage(tm.getMessage("prefix") + (ok ? tm.getMessage("loans.payment-made", economyManager.formatMoney(new BigDecimal("1000"))) : tm.getMessage("loans.loan-denied", ""))));
         } else if (name.contains(tm.getMessage("loans.gui.schedule"))) {
-            loanManager.getSchedule(p.getUniqueId()).thenAccept(list -> {
-                p.sendMessage(tm.getMessage("prefix") + tm.getMessage("loans.schedule.header"));
-                int shown = 0;
-                for (var sched : list) {
-                    if (shown++ > 15) { p.sendMessage("§7..."); break; }
-                    p.sendMessage(tm.getMessage("loans.schedule.item", sched.installmentNo(), sched.dueDate(), economyManager.formatMoney(sched.amountDue()), sched.status()));
+            openScheduleGUI(p, 0);
+        } else if (e.getView().getTitle().equals(tm.getMessage("loans.gui.offer-preview.title"))) {
+            e.setCancelled(true);
+            if (name.contains(tm.getMessage("loans.gui.confirm"))) {
+                LoanOffer offer = pendingOffer.get(p.getUniqueId());
+                if (offer != null && offer.approved()) {
+                    loanManager.requestLoanSmart(p.getUniqueId(), offer.amount()).thenAccept(ok -> {
+                        p.sendMessage(tm.getMessage("prefix") + (ok ? tm.getMessage("loans.loan-approved", economyManager.formatMoney(offer.amount())) : tm.getMessage("loans.loan-denied", "")));
+                        pendingOffer.remove(p.getUniqueId());
+                        p.closeInventory();
+                    });
+                } else {
+                    p.sendMessage(tm.getMessage("prefix") + tm.getMessage("loans.loan-denied", ""));
+                    p.closeInventory();
                 }
-            });
+            } else if (name.contains(tm.getMessage("loans.gui.cancel"))) {
+                pendingOffer.remove(p.getUniqueId());
+                p.closeInventory();
+            }
+        } else if (e.getView().getTitle().equals(tm.getMessage("loans.gui.schedule.title"))) {
+            e.setCancelled(true);
+            if (it.getType() == Material.ARROW) {
+                if (name.contains("Prev")) {
+                    int page = schedulePage.getOrDefault(p.getUniqueId(), 0);
+                    if (page > 0) openScheduleGUI(p, page - 1);
+                } else {
+                    int page = schedulePage.getOrDefault(p.getUniqueId(), 0);
+                    openScheduleGUI(p, page + 1);
+                }
+            }
         }
+    }
+
+    private void openOfferPreview(Player p, BigDecimal amount) {
+        loanManager.getOffer(p.getUniqueId(), amount).thenAccept(offer -> {
+            pendingOffer.put(p.getUniqueId(), offer);
+            Inventory inv = Bukkit.createInventory(null, 27, tm.getMessage("loans.gui.offer-preview.title"));
+            ItemStack info = new ItemStack(Material.BOOK);
+            ItemMeta meta = info.getItemMeta();
+            meta.setDisplayName("§e" + tm.getMessage("loans.offer.header"));
+            java.util.List<String> lore = new java.util.ArrayList<>();
+            lore.add("§7" + tm.getMessage("loans.offer.details",
+                economyManager.formatMoney(offer.amount()),
+                offer.interestRate().multiply(new BigDecimal("100")).setScale(2) + "%",
+                offer.termDays(), offer.score()));
+            lore.add(" ");
+            lore.add(offer.approved() ? "§aApproved" : "§cDenied: " + offer.reason());
+            meta.setLore(lore);
+            info.setItemMeta(meta);
+            inv.setItem(11, info);
+
+            if (offer.approved()) {
+                inv.setItem(15, button(Material.LIME_WOOL, tm.getMessage("loans.gui.confirm")));
+            }
+            inv.setItem(22, button(Material.BARRIER, tm.getMessage("loans.gui.cancel")));
+            this.inventory = inv;
+            p.openInventory(inv);
+        });
+    }
+
+    private void openScheduleGUI(Player p, int page) {
+        loanManager.getSchedule(p.getUniqueId()).thenAccept(list -> {
+            scheduleCache.put(p.getUniqueId(), list);
+            schedulePage.put(p.getUniqueId(), page);
+            int perPage = 45;
+            int totalPages = Math.max(1, (int) Math.ceil(list.size() / (double) perPage));
+            int clamped = Math.max(0, Math.min(page, totalPages - 1));
+            Inventory inv = Bukkit.createInventory(null, 54, tm.getMessage("loans.gui.schedule.title"));
+            int start = clamped * perPage;
+            int end = Math.min(start + perPage, list.size());
+            int slot = 0;
+            for (int i = start; i < end; i++) {
+                LoanPayment s = list.get(i);
+                ItemStack paper = new ItemStack(Material.PAPER);
+                ItemMeta meta = paper.getItemMeta();
+                meta.setDisplayName("§e#" + s.installmentNo() + " - " + s.status());
+                meta.setLore(java.util.Arrays.asList(
+                    "§7Due: §e" + s.dueDate(),
+                    "§7Amount: §e" + economyManager.formatMoney(s.amountDue()),
+                    "§7Paid: §e" + economyManager.formatMoney(s.paidAmount())
+                ));
+                paper.setItemMeta(meta);
+                inv.setItem(slot++, paper);
+            }
+            // Nav arrows
+            ItemStack prev = new ItemStack(Material.ARROW);
+            ItemMeta pm = prev.getItemMeta();
+            pm.setDisplayName("§aPrev");
+            prev.setItemMeta(pm);
+            ItemStack next = new ItemStack(Material.ARROW);
+            ItemMeta nm = next.getItemMeta();
+            nm.setDisplayName("§aNext");
+            next.setItemMeta(nm);
+            inv.setItem(45, prev);
+            inv.setItem(53, next);
+            this.inventory = inv;
+            p.openInventory(inv);
+        });
     }
 }

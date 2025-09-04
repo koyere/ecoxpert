@@ -192,6 +192,9 @@ Use `/ecox` or `/ecoxpert` to avoid conflicts with EssentialsX `/eco`.
 /market sell <item> [amount]    - Sell items  
 /market prices                  - View current prices
 /market stats                   - Market statistics
+/market list <item> <qty> <unit_price> [hours] - Create a fixed-price listing (order book)
+/market orders [item]           - View open fixed-price orders
+/market buyorder <id> <qty>     - Buy from an order
 /market help                    - Market help
 ```
 
@@ -243,6 +246,23 @@ Key parameters (quick reference)
 /ecoadmin                      - Open EcoXpert Admin dashboard
 ```
 
+### Professions Commands
+```
+/profession info                 - Show your current profession and available roles
+/profession select <role>        - Select a profession
+```
+
+GUI Notes
+- Market GUI (open with `/market` without args):
+  - Category filter: cycles through categories from `modules/market.yml` (incl. ALL).
+  - Letter filter: cycles A→Z→ALL for quick search by item name.
+  - Sell-in-hand by $: opens a sub-GUI with target amounts ($100/$500/$1000/$5000) and sells the closest quantity of the item in hand based on current sell price.
+- Loans GUI:
+  - Offer preview: shows amount, rate, term, and score with Confirm/Cancel before creating the loan.
+  - Schedule pagination: view up to 45 installments per page with Prev/Next.
+- Events Admin GUI:
+  - Each event icon shows configured `weight`, `cooldown_hours`, and remaining cooldown in the lore.
+
 ### Admin Commands
 ```
 /ecoxpert admin set <player> <amount>     - Set player balance
@@ -281,6 +301,7 @@ Key parameters (quick reference)
 ### Events Settings (weights)
 - Each event in `modules/events.yml` supports `weight` to bias selection.
 - Higher weight increases probability when conditions trigger an event.
+- The Events Admin GUI shows per-type weight and cooldown status.
 
 ### Loans Settings
 - File: `modules/loans.yml`
@@ -290,7 +311,14 @@ Key parameters (quick reference)
   - `policy.max_amount.multiplier_balance/floor`: cap per balance and base floor.
   - `policy.payments.frequency_days`: schedule frequency (currently daily).
   - `policy.late.penalty_rate` and `policy.late.notify`.
+  - `policy.late.penalty_cap_fraction`: max cumulative penalty over principal (e.g., 0.50 = +50%).
+  - `policy.late.notify_cooldown_minutes`: cooldown between overdue notifications per player.
   - `scheduler.interval_minutes`: delinquency sweep interval.
+
+Loans Delinquency Scheduler
+- Overdue installments are marked LATE and a penalty is applied to the loan’s outstanding.
+- Penalty application respects `policy.late.penalty_cap_fraction` to avoid runaway growth.
+- Player overdue notifications are rate-limited using `policy.late.notify_cooldown_minutes`.
 
 ### Intelligence System Interventions
 ```
@@ -358,6 +386,12 @@ market:
 - Users: `ecoxpert.user`, `ecoxpert.economy.balance`, `ecoxpert.economy.pay`, `ecoxpert.market.*`, `ecoxpert.bank.*`, `ecoxpert.loans.request`, `ecoxpert.loans.pay`
 - Admins: `ecoxpert.admin`, `ecoxpert.admin.economy`, `ecoxpert.admin.events`, `ecoxpert.admin.bank`, `ecoxpert.admin.market`
 
+GUI Permissions
+- `/bankgui`: `ecoxpert.bank.account`
+- `/loansgui`: `ecoxpert.loans.request`
+- `/ecoevents`: `ecoxpert.admin.events`
+- `/market` (GUI with no args): `ecoxpert.market.buy` (opens GUI; trades still validate specific perms)
+
 ### Banking Configuration
 ```yaml
 banking:
@@ -399,6 +433,27 @@ Runs comprehensive tests:
 - **Database performance** tracking
 - **Transaction throughput** metrics
 
+### Placeholders (PlaceholderAPI)
+- Identifier: `ecox`
+- Global:
+  - `%ecox_economy_health%` (0–100)
+  - `%ecox_inflation_rate%` (percent 0–100)
+  - `%ecox_cycle%` (current economic cycle)
+  - `%ecox_market_activity%` (0–100)
+  - `%ecox_events_active%` (count)
+- Player:
+  - `%ecox_balance%` (formatted)
+  - `%ecox_loans_outstanding%` (formatted)
+  - `%ecox_wg_regions%` (comma-separated WorldGuard regions at player location, if WG present)
+  - `%ecox_lands_land%` (Lands land name at player location, if Lands present)
+
+### Public API (minimal)
+- `EcoXpertAPI#getServerEconomics()` → `ServerEconomySnapshot` with fields: `cycle`, `economicHealth` (0–1), `inflationRate` (fraction), `marketActivity` (0–1), `activeEvents`.
+
+### Integrations (soft hooks)
+- WorldGuard: read-only region names by location (used in placeholders).
+- Lands: read-only land name by location (used in placeholders).
+
 ---
 
 ## 🚀 **Advanced Features**
@@ -420,6 +475,11 @@ Runs comprehensive tests:
 - **Market Trends** - 6-tier trend classification system
 - **Price Forecasting** - Predictive price modeling
 - **Economic Events** - Automated economic interventions
+
+### Order Book (optional)
+- Fixed-price listings coexist with the dynamic market engine.
+- Sellers lock items upfront with `/market list <item> <qty> <unit_price> [hours]`.
+- Buyers purchase with `/market buyorder <id> <qty>`; open orders: `/market orders [item]`.
 
 ---
 
@@ -520,6 +580,14 @@ Premium SpigotMC plugin. All rights reserved.
 ---
 
 ## 📋 **Version History**
+
+### v1.0.3 - GUIs avanzadas + Scheduler + Placeholders
+- Market GUI: filtros por categoría y letra; sub‑GUI para vender ítem en mano por montos objetivo ($100/$500/$1000/$5000).
+- Loans GUI: previsualización de oferta (confirmar/cancelar) y calendario paginado.
+- Events Admin GUI: lore con `weight` y `cooldown` por tipo.
+- Scheduler de préstamos: cap de penalización (`policy.late.penalty_cap_fraction`) y cooldown de notificaciones (`policy.late.notify_cooldown_minutes`).
+- PlaceholderAPI: `%ecox_economy_health%`, `%ecox_inflation_rate%`, `%ecox_cycle%`, `%ecox_market_activity%`, `%ecox_events_active%`, `%ecox_balance%`, `%ecox_loans_outstanding%`.
+
 
 ### v1.0.2 - GUIs + UX + Stats
 - Added first-iteration GUIs: `/bankgui`, `/loansgui`, `/ecoevents`, `/ecoadmin` with informative lore.

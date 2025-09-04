@@ -77,6 +77,29 @@ public class EcoXpertAPIImpl implements EcoXpertAPI {
         // TODO: Return inflation service implementation
         return new BasicInflationService();
     }
+
+    @Override
+    public ServerEconomySnapshot getServerEconomics() {
+        try {
+            var sr = plugin.getServiceRegistry();
+            var infl = sr.getInstance(me.koyere.ecoxpert.modules.inflation.InflationManager.class);
+            var market = sr.getInstance(me.koyere.ecoxpert.modules.market.MarketManager.class);
+            var events = sr.getInstance(me.koyere.ecoxpert.modules.events.EconomicEventEngine.class);
+            double health = infl.getEconomicHealth();
+            double inflRate = infl.getInflationRate();
+            var cycle = infl.getCurrentCycle();
+            double activity = 0.0;
+            try {
+                var stats = market.getMarketStatistics().join();
+                activity = stats.getMarketActivity();
+            } catch (Exception ignored) {}
+            int activeEvents = 0;
+            try { activeEvents = events.getActiveEventsCount(); } catch (Exception ignored) {}
+            return new ServerEconomySnapshot(cycle != null ? cycle.name() : "UNKNOWN", health, inflRate, activity, activeEvents);
+        } catch (Exception e) {
+            return new ServerEconomySnapshot("UNKNOWN", 0.0, 0.0, 0.0, 0);
+        }
+    }
     
     // Basic implementation stubs for compilation
     

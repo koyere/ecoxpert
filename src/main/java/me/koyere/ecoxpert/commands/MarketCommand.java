@@ -33,12 +33,16 @@ public class MarketCommand implements TabExecutor {
     private final TranslationManager translationManager;
     private final Logger logger;
     private final MarketGUI marketGUI;
+    private final me.koyere.ecoxpert.modules.market.orders.MarketOrderService orderService;
     
     public MarketCommand(MarketManager marketManager, TranslationManager translationManager, Logger logger) {
         this.marketManager = marketManager;
         this.translationManager = translationManager;
         this.logger = logger;
         this.marketGUI = new MarketGUI(marketManager, translationManager, logger);
+        // order service via ServiceRegistry
+        this.orderService = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+            .getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.market.orders.MarketOrderService.class);
     }
     
     /**
@@ -82,12 +86,69 @@ public class MarketCommand implements TabExecutor {
                 return handlePricesCommand(player, args);
             case "stats":
                 return handleStatsCommand(player);
+            case "list":
+                return handleOrderListCreate(player, args);
+            case "orders":
+                return handleOrderListShow(player, args);
+            case "buyorder":
+                return handleOrderBuy(player, args);
             case "help":
                 return handleHelpCommand(player);
             default:
                 player.sendMessage(translationManager.getMessage("market.unknown-command", subcommand));
                 return true;
         }
+    }
+
+    private boolean handleOrderListCreate(Player player, String[] args) {
+        if (args.length < 4) {
+            player.sendMessage(translationManager.getMessage("market.order.list-usage"));
+            return true;
+        }
+        Material mat;
+        int qty;
+        java.math.BigDecimal unit;
+        int hours = 48;
+        try { mat = Material.valueOf(args[1].toUpperCase()); } catch (Exception e) { player.sendMessage(translationManager.getMessage("market.invalid-item", args[1])); return true; }
+        try { qty = Integer.parseInt(args[2]); if (qty <= 0) throw new NumberFormatException(); } catch (Exception e) { player.sendMessage(translationManager.getMessage("market.invalid-quantity")); return true; }
+        try { unit = new java.math.BigDecimal(args[3]); if (unit.signum() <= 0) throw new NumberFormatException(); } catch (Exception e) { player.sendMessage(translationManager.getMessage("market.order.invalid")); return true; }
+        if (args.length >= 5) { try { hours = Integer.parseInt(args[4]); } catch (Exception ignored) {} }
+        orderService.createListing(player, mat, qty, unit, hours).thenAccept(msg -> player.sendMessage(translationManager.getMessage("prefix") + msg));
+        return true;
+    }
+
+    private boolean handleOrderListShow(Player player, String[] args) {
+        Material filter = null;
+        if (args.length >= 2) {
+            try { filter = Material.valueOf(args[1].toUpperCase()); } catch (Exception ignored) {}
+        }
+        Material finalFilter = filter;
+        orderService.listOpenOrders(filter).thenAccept(list -> {
+            player.sendMessage(translationManager.getMessage("prefix") + translationManager.getMessage("market.orders.header", finalFilter != null ? finalFilter.name() : "ALL"));
+            for (var o : list) {
+                player.sendMessage(translationManager.getMessage("market.orders.item", o.getId(), o.getRemainingQuantity(), o.getMaterial().name(), economyFormat(o.getUnitPrice())));
+            }
+            if (list.isEmpty()) player.sendMessage(translationManager.getMessage("market.orders.none"));
+        });
+        return true;
+    }
+
+    private boolean handleOrderBuy(Player player, String[] args) {
+        if (args.length < 3) {
+            player.sendMessage(translationManager.getMessage("market.order.buy-usage"));
+            return true;
+        }
+        long id; int qty;
+        try { id = Long.parseLong(args[1]); qty = Integer.parseInt(args[2]); if (qty <= 0) throw new NumberFormatException(); }
+        catch (Exception e) { player.sendMessage(translationManager.getMessage("market.order.buy-usage")); return true; }
+        orderService.buyFromOrder(player, id, qty).thenAccept(msg -> player.sendMessage(translationManager.getMessage("prefix") + msg));
+        return true;
+    }
+
+    private String economyFormat(java.math.BigDecimal amount) {
+        var eco = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+            .getServiceRegistry().getInstance(me.koyere.ecoxpert.economy.EconomyManager.class);
+        return eco.formatMoney(amount);
     }
     
     /**

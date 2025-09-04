@@ -15,6 +15,7 @@ public class LoanDelinquencyScheduler {
     private final EcoXpertPlugin plugin;
     private final DataManager dataManager;
     private final EconomyManager economyManager;
+    private final java.util.concurrent.ConcurrentHashMap<java.util.UUID, Long> lastNotify = new java.util.concurrent.ConcurrentHashMap<>();
 
     public LoanDelinquencyScheduler(EcoXpertPlugin plugin, DataManager dataManager, EconomyManager economyManager) {
         this.plugin = plugin;
@@ -40,10 +41,12 @@ public class LoanDelinquencyScheduler {
             var cfg = plugin.getServiceRegistry().getInstance(ConfigManager.class).getModuleConfig("loans");
             double penalty = cfg.getDouble("policy.late.penalty_rate", 0.01); // 1%
             boolean notify = cfg.getBoolean("policy.late.notify", true);
+            double capFraction = cfg.getDouble("policy.late.penalty_cap_fraction", 0.50); // 50% of principal cap on penalties
+            int notifyCooldownMin = cfg.getInt("policy.late.notify_cooldown_minutes", 120);
             // Mark overdue installments to LATE
             java.util.Set<Long> penalizedLoans = new java.util.HashSet<>();
             try (QueryResult qr = dataManager.executeQuery(
-                "SELECT s.id as sid, s.loan_id as lid, l.player_uuid as pu, l.outstanding as out, s.amount_due, s.paid_amount " +
+                "SELECT s.id as sid, s.loan_id as lid, l.player_uuid as pu, l.outstanding as out, l.principal as principal, s.amount_due, s.paid_amount " +
                 "FROM ecoxpert_loan_schedules s JOIN ecoxpert_loans l ON l.id = s.loan_id " +
                 "WHERE s.status = 'PENDING' AND s.due_date < date('now')").join()) {
                 while (qr.next()) {
@@ -51,11 +54,16 @@ public class LoanDelinquencyScheduler {
                     long loanId = qr.getLong("lid");
                     String pu = qr.getString("pu");
                     BigDecimal outstanding = qr.getBigDecimal("out");
+                    BigDecimal principal = qr.getBigDecimal("principal");
                     // set status LATE
                     dataManager.executeUpdate("UPDATE ecoxpert_loan_schedules SET status='LATE' WHERE id = ?", schedId).join();
                     // apply penalty on loan outstanding
                     if (outstanding != null && penalty > 0 && !penalizedLoans.contains(loanId)) {
                         BigDecimal newOut = outstanding.multiply(BigDecimal.valueOf(1.0 + penalty));
+                        if (principal != null && capFraction > 0) {
+                            BigDecimal cap = principal.add(principal.multiply(BigDecimal.valueOf(capFraction)));
+                            if (newOut.compareTo(cap) > 0) newOut = cap;
+                        }
                         dataManager.executeUpdate("UPDATE ecoxpert_loans SET outstanding = ? WHERE id = ?", newOut, loanId).join();
                         penalizedLoans.add(loanId);
                     }
@@ -63,10 +71,15 @@ public class LoanDelinquencyScheduler {
                     if (notify && pu != null) {
                         try {
                             UUID uuid = UUID.fromString(pu);
-                            var p = Bukkit.getPlayer(uuid);
-                            if (p != null && p.isOnline()) {
-                                var tm = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
-                                p.sendMessage(tm.getMessage("prefix") + tm.getPlayerMessage(p, "loans.payment-overdue"));
+                            long now = System.currentTimeMillis();
+                            long last = lastNotify.getOrDefault(uuid, 0L);
+                            if (now - last >= notifyCooldownMin * 60_000L) {
+                                var p = Bukkit.getPlayer(uuid);
+                                if (p != null && p.isOnline()) {
+                                    var tm = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+                                    p.sendMessage(tm.getMessage("prefix") + tm.getPlayerMessage(p, "loans.overdue-summary", 1));
+                                    lastNotify.put(uuid, now);
+                                }
                             }
                         } catch (Exception ignored) {}
                     }

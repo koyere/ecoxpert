@@ -106,6 +106,9 @@ market:
     sell: "&e/market sell <item> [amount] &7- Sell items to the market"
     prices: "&e/market prices [item] &7- View market prices"
     stats: "&e/market stats &7- View market statistics"
+    list: "&e/market list <item> <qty> <unit_price> [hours] &7- List order (order book)"
+    orders: "&e/market orders [item] &7- Show open fixed-price orders"
+    buyorder: "&e/market buyorder <id> <qty> &7- Buy from an order"
     gui: "&e/market &7- Open market GUI (coming soon)"
     footer: "&7Tip: Use tab completion for item names!"
   
@@ -122,6 +125,24 @@ market:
     price-changed: "&cThe price has changed since you started this transaction."
     system-error: "&cA system error occurred. Please contact an administrator."
     safe-mode: "&eMarket operations are temporarily paused (Safe Mode)."
+
+  order:
+    list-usage: "&cUsage: &e/market list <item> <qty> <unit_price> [hours]"
+    buy-usage: "&cUsage: &e/market buyorder <id> <qty>"
+    created: "&aListed &e{0}x {1} &aat &e{2} &a(id &e{3}&a)"
+    invalid: "&cInvalid quantity or price"
+    insufficient-items: "&cYou don't have enough {0} to list"
+    not-found: "&cOrder not found: &e{0}"
+    closed: "&cOrder is closed: &e{0}"
+    expired: "&cOrder expired: &e{0}"
+    insufficient-remaining: "&cNot enough remaining. Left: &e{0}"
+    buy:
+      success: "&aBought &e{0}x {1} &afor &e{2} &afrom order &e{3}"
+
+  orders:
+    header: "&6=== Open Orders ({0}) ==="
+    item: "&7ID &e{0} &7- &e{1}x {2} &7@ &e{3}"
+    none: "&7No open orders found"
   
   # GUI messages
   gui:
@@ -137,6 +158,18 @@ market:
       page: "Page: {0}/{1}"
       help1: "Click to buy 1 item"
       help2: "Shift-click to sell all"
+    category-label: "Category: {0}"
+    category-help: "Click to cycle categories"
+    letter-label: "Filter: {0}"
+    letter-help: "Click to cycle first-letter filter"
+    sell-hand-label: "Sell Hand by $"
+    sell-hand:
+      title: "Sell Item in Hand"
+      help1: "Sell items in hand approximating amount"
+      help2: "Picks quantity closest to target"
+      amount: "Sell for {0}"
+      lore1: "Approximates quantity to target"
+      lore2: "Uses current sell price"
     
     item:
       header: "Market Item"
@@ -196,6 +229,7 @@ loans:
     header: "&6=== Personalized Loan Offer ==="
     summary: "&7Amount: &e{0} &7| Rate: &e{1} &7| Term: &e{2} &7days | Score: &e{3}"
     details: "&7Amount: &e{0} &7| Rate: &e{1} &7| Term: &e{2} &7days | Score: &e{3}"
+    preview: "Preview"
   schedule:
     header: "&6=== Repayment Schedule ==="
     item: "&7#{0} &7Due: &e{1} &7Amount: &e{2} &7Status: &e{3}"
@@ -205,6 +239,12 @@ loans:
     status: "Loan Status"
     pay: "Pay {0}"
     schedule: "Schedule"
+    offer-preview:
+      title: "Loan Offer Preview"
+    confirm: "Confirm"
+    cancel: "Cancel"
+    schedule:
+      title: "Repayment Schedule"
   
 # Economic Events
 events:
@@ -317,6 +357,8 @@ professions:
   bonus-earned: "&aYou earned a profession bonus of &e{0}"
   level-up: "&aYour &e{0} &alevel increased to &e{1}"
   max-level: "&eYou have reached the maximum level for &e{0}"
+  current: "Your current profession: {0}"
+  available: "Available: {0}"
   
 # Admin Commands
 admin:

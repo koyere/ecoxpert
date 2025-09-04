@@ -1,6 +1,7 @@
 package me.koyere.ecoxpert.modules.market;
 
 import me.koyere.ecoxpert.core.translation.TranslationManager;
+import me.koyere.ecoxpert.core.config.ConfigManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -28,6 +29,7 @@ public class MarketGUI implements Listener {
     
     private final MarketManager marketManager;
     private final TranslationManager translationManager;
+    private final ConfigManager configManager;
     private final Logger logger;
     
     // GUI tracking
@@ -43,11 +45,42 @@ public class MarketGUI implements Listener {
     private static final int NEXT_PAGE_SLOT = 53;
     private static final int INFO_SLOT = 49;
     private static final int CLOSE_SLOT = 50;
+    private static final int CATEGORY_SLOT = 46;
+    private static final int LETTER_SLOT = 47;
+    private static final int SELL_HAND_SLOT = 51;
+
+    // Category cache
+    private final java.util.List<String> categoryOrder = new java.util.ArrayList<>();
+    private final java.util.Map<String, java.util.Set<Material>> categories = new java.util.HashMap<>();
     
     public MarketGUI(MarketManager marketManager, TranslationManager translationManager, Logger logger) {
         this.marketManager = marketManager;
         this.translationManager = translationManager;
         this.logger = logger;
+        this.configManager = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+            .getServiceRegistry().getInstance(ConfigManager.class);
+        loadCategories();
+    }
+
+    private void loadCategories() {
+        try {
+            var marketCfg = configManager.getModuleConfig("market");
+            var section = marketCfg.getConfigurationSection("categories");
+            categoryOrder.clear();
+            categories.clear();
+            categoryOrder.add("ALL");
+            if (section != null) {
+                for (String key : section.getKeys(false)) {
+                    java.util.List<String> mats = marketCfg.getStringList("categories." + key + ".materials");
+                    java.util.Set<Material> set = new java.util.HashSet<>();
+                    for (String m : mats) {
+                        try { set.add(Material.valueOf(m.toUpperCase())); } catch (Exception ignored) {}
+                    }
+                    categories.put(key.toUpperCase(), set);
+                    categoryOrder.add(key.toUpperCase());
+                }
+            }
+        } catch (Exception ignored) {}
     }
     
     /**
@@ -94,20 +127,39 @@ public class MarketGUI implements Listener {
         
         List<MarketItem> items = marketInv.getItems();
         int page = marketInv.getCurrentPage();
+        // Apply filters
+        java.util.List<MarketItem> filtered = applyFilters(items, marketInv);
         int startIndex = page * ITEMS_PER_PAGE;
-        int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, items.size());
+        int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filtered.size());
         
         // Add market items
         for (int i = startIndex; i < endIndex; i++) {
-            MarketItem item = items.get(i);
+            MarketItem item = filtered.get(i);
             ItemStack displayItem = createMarketItemStack(item);
             gui.setItem(i - startIndex, displayItem);
         }
         
         // Add navigation and control items
-        addNavigationItems(gui, page, items.size());
-        
+        addNavigationItems(gui, page, filtered.size(), marketInv);
+
         return gui;
+    }
+
+    private java.util.List<MarketItem> applyFilters(java.util.List<MarketItem> items, MarketInventory inv) {
+        String cat = inv.getSelectedCategory();
+        Character letter = inv.getFilterLetter();
+        return items.stream()
+            .filter(mi -> {
+                if (cat != null && !"ALL".equals(cat)) {
+                    java.util.Set<Material> set = categories.getOrDefault(cat, java.util.Collections.emptySet());
+                    if (!set.contains(mi.getMaterial())) return false;
+                }
+                if (letter != null) {
+                    return mi.getMaterial().name().startsWith(String.valueOf(letter));
+                }
+                return true;
+            })
+            .toList();
     }
     
     /**
@@ -169,7 +221,7 @@ public class MarketGUI implements Listener {
     /**
      * Add navigation items to GUI
      */
-    private void addNavigationItems(Inventory gui, int currentPage, int totalItems) {
+    private void addNavigationItems(Inventory gui, int currentPage, int totalItems, MarketInventory inv) {
         int totalPages = (int) Math.ceil((double) totalItems / ITEMS_PER_PAGE);
         
         // Previous page button
@@ -224,6 +276,46 @@ public class MarketGUI implements Listener {
             close.setItemMeta(closeMeta);
         }
         gui.setItem(CLOSE_SLOT, close);
+
+        // Category filter button
+        ItemStack catBtn = new ItemStack(Material.CHEST);
+        ItemMeta catMeta = catBtn.getItemMeta();
+        if (catMeta != null) {
+            String cat = inv.getSelectedCategory();
+            if (cat == null) cat = "ALL";
+            catMeta.setDisplayName("§b" + translationManager.getMessage("market.gui.category-label", cat));
+            java.util.List<String> lore = new java.util.ArrayList<>();
+            lore.add("§7" + translationManager.getMessage("market.gui.category-help"));
+            catMeta.setLore(lore);
+            catBtn.setItemMeta(catMeta);
+        }
+        gui.setItem(CATEGORY_SLOT, catBtn);
+
+        // Letter filter button
+        ItemStack letterBtn = new ItemStack(Material.NAME_TAG);
+        ItemMeta letterMeta = letterBtn.getItemMeta();
+        if (letterMeta != null) {
+            String label = inv.getFilterLetter() == null ? "ALL" : inv.getFilterLetter().toString();
+            letterMeta.setDisplayName("§b" + translationManager.getMessage("market.gui.letter-label", label));
+            java.util.List<String> lore = new java.util.ArrayList<>();
+            lore.add("§7" + translationManager.getMessage("market.gui.letter-help"));
+            letterMeta.setLore(lore);
+            letterBtn.setItemMeta(letterMeta);
+        }
+        gui.setItem(LETTER_SLOT, letterBtn);
+
+        // Sell item in hand
+        ItemStack sellHand = new ItemStack(Material.GOLD_INGOT);
+        ItemMeta sellMeta = sellHand.getItemMeta();
+        if (sellMeta != null) {
+            sellMeta.setDisplayName("§6" + translationManager.getMessage("market.gui.sell-hand-label"));
+            sellMeta.setLore(java.util.Arrays.asList(
+                "§7" + translationManager.getMessage("market.gui.sell-hand.help1"),
+                "§7" + translationManager.getMessage("market.gui.sell-hand.help2")
+            ));
+            sellHand.setItemMeta(sellMeta);
+        }
+        gui.setItem(SELL_HAND_SLOT, sellHand);
     }
     
     /**
@@ -235,7 +327,61 @@ public class MarketGUI implements Listener {
         
         MarketInventory marketInv = openGUIs.get(player.getUniqueId());
         if (marketInv == null) return;
-        
+
+        // Handle Sell Hand sub-GUI
+        String sellTitle = translationManager.getMessage("market.gui.sell-hand.title");
+        if (event.getView().getTitle().equals(sellTitle)) {
+            event.setCancelled(true);
+            int slot = event.getSlot();
+            int idx = switch (slot) {
+                case 10 -> 0;
+                case 11 -> 1;
+                case 12 -> 2;
+                case 13 -> 3;
+                default -> -1;
+            };
+            if (idx == -1) return;
+
+            java.util.List<BigDecimal> amounts = java.util.Arrays.asList(
+                new BigDecimal("100"), new BigDecimal("500"), new BigDecimal("1000"), new BigDecimal("5000")
+            );
+            BigDecimal target = amounts.get(idx);
+            ItemStack inHand = player.getInventory().getItemInMainHand();
+            Material mat = inHand.getType();
+            // Validate sellable and compute quantity
+            marketManager.getItem(mat).whenComplete((opt, thr) -> {
+                if (thr != null || opt.isEmpty() || !opt.get().isSellable()) {
+                    player.sendMessage(translationManager.getMessage("market.item-not-sellable"));
+                    return;
+                }
+                marketManager.getSellPrice(mat).whenComplete((price, t2) -> {
+                    if (t2 != null || price == null || price.signum() <= 0) {
+                        player.sendMessage(translationManager.getMessage("market.system-error"));
+                        return;
+                    }
+                    int qty = target.divide(price, 0, java.math.RoundingMode.DOWN).intValue();
+                    if (qty < 1) qty = 1;
+                    int inHandCount = inHand.getAmount();
+                    qty = Math.min(qty, inHandCount);
+                    if (qty <= 0) {
+                        player.sendMessage(translationManager.getMessage("market.no-items-to-sell", mat.name().toLowerCase()));
+                        return;
+                    }
+                    final int sellQty = qty;
+                    marketManager.sellItem(player, mat, sellQty).whenComplete((result, t3) -> {
+                        if (t3 != null) {
+                            logger.log(Level.SEVERE, "Error in GUI sell-hand transaction", t3);
+                            player.sendMessage(translationManager.getMessage("market.system-error"));
+                            return;
+                        }
+                        player.sendMessage(translationManager.getMessage("prefix") + result.getMessage());
+                        Bukkit.getScheduler().runTask(player.getServer().getPluginManager().getPlugin("EcoXpert"), player::closeInventory);
+                    });
+                });
+            });
+            return;
+        }
+
         event.setCancelled(true); // Prevent item movement
         
         ItemStack clickedItem = event.getCurrentItem();
@@ -258,9 +404,40 @@ public class MarketGUI implements Listener {
             }
             return;
         }
-        
+
         if (slot == CLOSE_SLOT) {
             player.closeInventory();
+            return;
+        }
+
+        if (slot == CATEGORY_SLOT) {
+            // Cycle category
+            String current = marketInv.getSelectedCategory();
+            int idx = categoryOrder.indexOf(current == null ? "ALL" : current);
+            idx = (idx + 1) % categoryOrder.size();
+            marketInv.setSelectedCategory(categoryOrder.get(idx));
+            marketInv.setCurrentPage(0);
+            updateGUI(player, marketInv);
+            return;
+        }
+
+        if (slot == LETTER_SLOT) {
+            // Cycle letter A-Z then ALL
+            Character c = marketInv.getFilterLetter();
+            if (c == null) {
+                marketInv.setFilterLetter('A');
+            } else if (c == 'Z') {
+                marketInv.setFilterLetter(null);
+            } else {
+                marketInv.setFilterLetter((char) (c + 1));
+            }
+            marketInv.setCurrentPage(0);
+            updateGUI(player, marketInv);
+            return;
+        }
+
+        if (slot == SELL_HAND_SLOT) {
+            openSellHandGUI(player);
             return;
         }
         
@@ -344,6 +521,44 @@ public class MarketGUI implements Listener {
         Inventory newGui = createMarketPage(marketInv);
         player.getOpenInventory().getTopInventory().setContents(newGui.getContents());
     }
+
+    private void openSellHandGUI(Player player) {
+        ItemStack inHand = player.getInventory().getItemInMainHand();
+        if (inHand == null || inHand.getType() == Material.AIR) {
+            player.sendMessage(translationManager.getMessage("market.no-items-to-sell", "hand"));
+            return;
+        }
+        String title = translationManager.getMessage("market.gui.sell-hand.title");
+        Inventory gui = Bukkit.createInventory(null, 27, title);
+
+        java.util.List<BigDecimal> amounts = java.util.Arrays.asList(
+            new BigDecimal("100"), new BigDecimal("500"), new BigDecimal("1000"), new BigDecimal("5000")
+        );
+        int[] slots = {10, 11, 12, 13};
+        for (int i = 0; i < amounts.size(); i++) {
+            ItemStack it = new ItemStack(Material.GOLD_NUGGET);
+            ItemMeta meta = it.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName("§6" + translationManager.getMessage("market.gui.sell-hand.amount", formatPrice(amounts.get(i))));
+                meta.setLore(java.util.Arrays.asList(
+                    "§7" + translationManager.getMessage("market.gui.sell-hand.lore1"),
+                    "§7" + translationManager.getMessage("market.gui.sell-hand.lore2")
+                ));
+                it.setItemMeta(meta);
+            }
+            gui.setItem(slots[i], it);
+        }
+
+        ItemStack close = new ItemStack(Material.BARRIER);
+        ItemMeta cmeta = close.getItemMeta();
+        if (cmeta != null) {
+            cmeta.setDisplayName("§c" + translationManager.getMessage("market.gui.close"));
+            close.setItemMeta(cmeta);
+        }
+        gui.setItem(22, close);
+
+        player.openInventory(gui);
+    }
     
     /**
      * Get color for trend direction
@@ -402,6 +617,8 @@ public class MarketGUI implements Listener {
         private final Player player;
         private final List<MarketItem> items;
         private int currentPage;
+        private String selectedCategory = "ALL";
+        private Character filterLetter = null;
         
         public MarketInventory(Player player, List<MarketItem> items, int currentPage) {
             this.player = player;
@@ -413,5 +630,9 @@ public class MarketGUI implements Listener {
         public List<MarketItem> getItems() { return items; }
         public int getCurrentPage() { return currentPage; }
         public void setCurrentPage(int page) { this.currentPage = page; }
+        public String getSelectedCategory() { return selectedCategory; }
+        public void setSelectedCategory(String cat) { this.selectedCategory = cat; }
+        public Character getFilterLetter() { return filterLetter; }
+        public void setFilterLetter(Character c) { this.filterLetter = c; }
     }
 }

@@ -491,6 +491,30 @@ public class DataManagerImpl implements DataManager {
                 UNIQUE(loan_id, installment_no)
             )
             """
+            ,
+            // Player professions (economic roles)
+            """
+            CREATE TABLE IF NOT EXISTS ecoxpert_professions (
+                player_uuid VARCHAR(36) PRIMARY KEY,
+                role VARCHAR(40) NOT NULL,
+                level INTEGER NOT NULL DEFAULT 1,
+                selected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+            ,
+            // Order book (optional feature): fixed-price listings
+            """
+            CREATE TABLE IF NOT EXISTS ecoxpert_market_orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                seller_uuid VARCHAR(36) NOT NULL,
+                material VARCHAR(64) NOT NULL,
+                unit_price DECIMAL(20,2) NOT NULL,
+                remaining_quantity INTEGER NOT NULL,
+                status VARCHAR(16) NOT NULL DEFAULT 'OPEN',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP
+            )
+            """
         };
         
         try (Connection conn = dataSource.getConnection()) {

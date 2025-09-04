@@ -133,7 +133,10 @@ market:
     sell: "&e/market sell <ítem> [cantidad] &7- Vender ítems al mercado"
     prices: "&e/market prices [ítem] &7- Ver precios del mercado"
     stats: "&e/market stats &7- Ver estadísticas del mercado"
-    gui: "&e/market &7- Abrir GUI del mercado (próximamente)"
+    list: "&e/market list <ítem> <cant> <precio_unit> [horas] &7- Publicar orden (order book)"
+    orders: "&e/market orders [ítem] &7- Ver órdenes abiertas"
+    buyorder: "&e/market buyorder <id> <cant> &7- Comprar de una orden"
+    gui: "&e/market &7- Abrir GUI del mercado"
     footer: "&7Consejo: ¡Usa autocompletar con Tab para nombres de ítems!"
   
   # Error messages
@@ -148,6 +151,24 @@ market:
     invalid-quantity: "&cCantidad inválida especificada."
     price-changed: "&cEl precio ha cambiado desde que iniciaste esta transacción."
     system-error: "&cOcurrió un error del sistema. Por favor contacta un administrador."
+
+  order:
+    list-usage: "&cUso: &e/market list <ítem> <cant> <precio_unit> [horas]"
+    buy-usage: "&cUso: &e/market buyorder <id> <cant>"
+    created: "&aPublicaste &e{0}x {1} &aa &e{2} &a(id &e{3}&a)"
+    invalid: "&cCantidad o precio inválidos"
+    insufficient-items: "&cNo tienes suficientes {0} para publicar"
+    not-found: "&cOrden no encontrada: &e{0}"
+    closed: "&cOrden cerrada: &e{0}"
+    expired: "&cOrden expirada: &e{0}"
+    insufficient-remaining: "&cNo hay suficiente disponible. Restan: &e{0}"
+    buy:
+      success: "&aCompraste &e{0}x {1} &apor &e{2} &ade la orden &e{3}"
+
+  orders:
+    header: "&6=== Órdenes Abiertas ({0}) ==="
+    item: "&7ID &e{0} &7- &e{1}x {2} &7@ &e{3}"
+    none: "&7No hay órdenes abiertas"
   
   # GUI messages
   gui:
@@ -163,6 +184,18 @@ market:
       page: "Página: {0}/{1}"
       help1: "Click para comprar 1 ítem"
       help2: "Shift-click para vender todo"
+    category-label: "Categoría: {0}"
+    category-help: "Click para cambiar categoría"
+    letter-label: "Filtro: {0}"
+    letter-help: "Click para cambiar filtro por letra"
+    sell-hand-label: "Vender en Mano por $"
+    sell-hand:
+      title: "Vender Ítem en Mano"
+      help1: "Vende el ítem en mano por monto"
+      help2: "Aproxima la cantidad al objetivo"
+      amount: "Vender por {0}"
+      lore1: "Aproxima cantidad al monto"
+      lore2: "Usa el precio de venta actual"
     
     item:
       header: "Ítem del Mercado"
@@ -227,6 +260,12 @@ loans:
     status: "Estado del Préstamo"
     pay: "Pagar {0}"
     schedule: "Calendario"
+    offer-preview:
+      title: "Previsualización de Oferta"
+    confirm: "Confirmar"
+    cancel: "Cancelar"
+    schedule:
+      title: "Calendario de Pagos"
   
 # Economic Events
 events:
@@ -339,6 +378,8 @@ professions:
   bonus-earned: "&aGanaste un bono de profesión de &e{0}"
   level-up: "&aTu nivel de &e{0} &aaumenta a &e{1}"
   max-level: "&eHas alcanzado el nivel máximo para &e{0}"
+  current: "Tu profesión actual: {0}"
+  available: "Disponibles: {0}"
   
 # Admin Commands
 admin:

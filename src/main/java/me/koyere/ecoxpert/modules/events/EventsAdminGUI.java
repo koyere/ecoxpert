@@ -37,7 +37,21 @@ public class EventsAdminGUI extends BaseGUI {
         // Event types to trigger
         int slot = 9;
         for (EconomicEventType type : EconomicEventType.values()) {
-            inv.setItem(slot++, item(iconFor(type), pretty(type.name())));
+            ItemStack it = item(iconFor(type), pretty(type.name()));
+            // Add lore with weight and cooldown info
+            ItemMeta meta = it.getItemMeta();
+            if (meta != null) {
+                List<String> lore = new ArrayList<>();
+                double weight = engine.getConfiguredWeight(type);
+                int cooldown = engine.getEventCooldownHours(type);
+                long remaining = engine.getRemainingCooldownHours(type);
+                lore.add("§7Weight: §e" + String.format(java.util.Locale.US, "%.2f", weight));
+                lore.add("§7Cooldown: §e" + cooldown + "h");
+                if (remaining > 0) lore.add("§7Remaining: §c" + remaining + "h");
+                meta.setLore(lore);
+                it.setItemMeta(meta);
+            }
+            inv.setItem(slot++, it);
             if (slot >= 54) break;
         }
         return inv;
@@ -97,4 +111,3 @@ public class EventsAdminGUI extends BaseGUI {
         }
     }
 }
-

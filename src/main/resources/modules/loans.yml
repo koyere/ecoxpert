@@ -17,6 +17,8 @@ policy:
   late:
     penalty_rate: 0.01   # 1% added to outstanding per late mark
     notify: true         # notify player on late mark
+    penalty_cap_fraction: 0.50  # Max cumulative penalty over principal (e.g., 0.50 = +50%)
+    notify_cooldown_minutes: 120 # Cooldown between overdue notifications per player
 
 scheduler:
   interval_minutes: 60   # delinquency check every hour

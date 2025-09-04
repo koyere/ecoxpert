@@ -95,6 +95,15 @@ public class CommandManager {
                 plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.events.EconomicEventEngine.class),
                 translationManager));
         }
+        // Profession command
+        if (plugin.getCommand("profession") != null) {
+            plugin.getCommand("profession").setExecutor(new ProfessionCommand(
+                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class),
+                translationManager));
+            plugin.getCommand("profession").setTabCompleter(new ProfessionCommand(
+                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class),
+                translationManager));
+        }
         
         plugin.getLogger().info("Registered economy and market commands");
     }

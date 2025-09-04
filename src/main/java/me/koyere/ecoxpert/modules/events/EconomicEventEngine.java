@@ -333,7 +333,25 @@ public class EconomicEventEngine {
         return false;
     }
 
-    private int getEventCooldownHours(EconomicEventType type) {
+    /**
+     * Check if the event engine is active.
+     */
+    public boolean isEngineActive() {
+        return eventEngineActive;
+    }
+
+    /**
+     * Get count of active events.
+     */
+    public int getActiveEventsCount() {
+        int c = 0;
+        for (EconomicEvent ev : activeEvents.values()) {
+            if (ev.getStatus() == EconomicEvent.EventStatus.ACTIVE) c++;
+        }
+        return c;
+    }
+
+    public int getEventCooldownHours(EconomicEventType type) {
         try {
             var cfg = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class);
             var ev = cfg.getModuleConfig("events");
@@ -342,6 +360,38 @@ public class EconomicEventEngine {
             return ev.getInt(key, global);
         } catch (Exception e) {
             return 6;
+        }
+    }
+
+    /**
+     * Get configured static weight for a given event type from events.yml.
+     * Returns 1.0 if not configured or on error.
+     */
+    public double getConfiguredWeight(EconomicEventType type) {
+        try {
+            var cfg = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class);
+            var ev = cfg.getModuleConfig("events");
+            String key = (type.name().toLowerCase() + ".weight").replace(' ', '_');
+            return Math.max(0.0, ev.getDouble(key, 1.0));
+        } catch (Exception e) {
+            return 1.0;
+        }
+    }
+
+    /**
+     * Get remaining cooldown hours for the event type based on the last end time map.
+     * Returns 0 if no cooldown is active.
+     */
+    public long getRemainingCooldownHours(EconomicEventType type) {
+        try {
+            java.time.LocalDateTime lastEnd = lastEventEndTime.get(type);
+            if (lastEnd == null) return 0L;
+            int cooldown = getEventCooldownHours(type);
+            long elapsed = java.time.Duration.between(lastEnd, java.time.LocalDateTime.now()).toHours();
+            long remaining = cooldown - elapsed;
+            return Math.max(0L, remaining);
+        } catch (Exception e) {
+            return 0L;
         }
     }
 

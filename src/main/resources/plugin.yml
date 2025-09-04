@@ -204,6 +204,11 @@ commands:
     description: Open events admin GUI
     usage: /<command>
     permission: ecoxpert.admin.events
+  profession:
+    description: Manage your economic profession
+    aliases: [ professions ]
+    usage: /<command> [info|select <role>]
+    permission: ecoxpert.professions.select
   # Banking system commands (Phase 4 - not yet implemented)
   # ecobank:
   #   description: Access banking system
