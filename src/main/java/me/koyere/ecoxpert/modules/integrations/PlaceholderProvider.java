@@ -81,6 +81,28 @@ public class PlaceholderProvider extends PlaceholderExpansion {
         String key = params.toLowerCase(Locale.ROOT);
         try {
             switch (key) {
+                case "velocity": {
+                    double v = inflationManager.getVelocityOfMoney();
+                    return String.format(Locale.US, "%.2f", v);
+                }
+                case "total_money": {
+                    var snap = inflationManager.getCurrentSnapshot().join();
+                    return String.format(Locale.US, "%.0f", snap.getTotalMoney());
+                }
+                case "avg_balance": {
+                    var snap = inflationManager.getCurrentSnapshot().join();
+                    return String.format(Locale.US, "%.0f", snap.getAverageBalance());
+                }
+                case "gini": {
+                    var snap = inflationManager.getCurrentSnapshot().join();
+                    return String.format(Locale.US, "%.3f", snap.getGiniCoefficient());
+                }
+                case "has_worldguard": {
+                    return integrations != null && integrations.hasWorldGuard() ? "true" : "false";
+                }
+                case "has_lands": {
+                    return integrations != null && integrations.hasLands() ? "true" : "false";
+                }
                 case "economy_health": {
                     double h = inflationManager.getEconomicHealth();
                     return String.format(Locale.US, "%.0f", h * 100.0);
@@ -119,6 +141,21 @@ public class PlaceholderProvider extends PlaceholderExpansion {
                         return prof.map(Enum::name).orElse("");
                     } catch (Exception ignored) { return ""; }
                 }
+                case "role_level": {
+                    if (player == null) return "1";
+                    try {
+                        var pm = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class);
+                        return Integer.toString(pm.getLevel(player.getUniqueId()).join());
+                    } catch (Exception ignored) { return "1"; }
+                }
+                case "role_bonus_buy": {
+                    if (player == null) return "0";
+                    try { return roleBonus(player.getUniqueId(), true); } catch (Exception ignored) { return "0"; }
+                }
+                case "role_bonus_sell": {
+                    if (player == null) return "0";
+                    try { return roleBonus(player.getUniqueId(), false); } catch (Exception ignored) { return "0"; }
+                }
                 case "wg_regions": {
                     if (player == null) return "";
                     return integrations != null ? integrations.getWorldGuardRegions(player.getPlayer()) : "";
@@ -136,4 +173,21 @@ public class PlaceholderProvider extends PlaceholderExpansion {
     }
 
     private final me.koyere.ecoxpert.modules.integrations.IntegrationsManager integrations;
+
+    private String roleBonus(java.util.UUID uuid, boolean isBuy) {
+        try {
+            var pm = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class);
+            var roleOpt = pm.getRole(uuid).join();
+            if (roleOpt.isEmpty()) return "0";
+            var cfg = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class).getModuleConfig("professions");
+            int level = pm.getLevel(uuid).join();
+            int maxLevel = cfg.getInt("max_level", 5);
+            level = Math.max(1, Math.min(level, maxLevel));
+            double perLevel = cfg.getDouble("roles." + roleOpt.get().name().toLowerCase() + "." + (isBuy ? "buy_bonus_per_level" : "sell_bonus_per_level"), 0.0);
+            double total = perLevel * (level - 1);
+            return String.format(java.util.Locale.US, "%.3f", total);
+        } catch (Exception e) {
+            return "0";
+        }
+    }
 }

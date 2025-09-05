@@ -46,7 +46,18 @@ public class ProfessionCommand implements TabExecutor {
             });
             return true;
         }
-        p.sendMessage(tm.getMessage("prefix") + "§cUsage: /profession [info|select <role>]");
+        if (args[0].equalsIgnoreCase("level")) {
+            professionsManager.getLevel(p.getUniqueId()).thenAccept(lv ->
+                p.sendMessage(tm.getMessage("prefix") + "§7Level: §e" + lv));
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("levelup")) {
+            if (!p.hasPermission("ecoxpert.professions.levelup")) { p.sendMessage(tm.getMessage("no-permission")); return true; }
+            professionsManager.getLevel(p.getUniqueId()).thenCompose(lv -> professionsManager.setLevel(p.getUniqueId(), lv + 1))
+                .thenAccept(ok -> p.sendMessage(tm.getMessage("prefix") + (ok ? "§aLevel up!" : tm.getMessage("errors.command-error"))));
+            return true;
+        }
+        p.sendMessage(tm.getMessage("prefix") + "§cUsage: /profession [info|select <role>|level|levelup]");
         return true;
     }
 
@@ -54,11 +65,10 @@ public class ProfessionCommand implements TabExecutor {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> list = new ArrayList<>();
         if (args.length == 1) {
-            list.add("info"); list.add("select");
+            list.add("info"); list.add("select"); list.add("level"); list.add("levelup");
         } else if (args.length == 2 && args[0].equalsIgnoreCase("select")) {
             for (ProfessionRole r : ProfessionRole.values()) list.add(r.name());
         }
         return list;
     }
 }
-

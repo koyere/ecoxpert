@@ -1,0 +1,49 @@
+enabled: true
+version: 1
+
+# Role-based trade factors
+# Factors multiply on final amounts:
+#  - buy_factor < 1.0 = discount on purchases
+#  - sell_factor > 1.0 = bonus on sales
+# Keep values gentle (0.95–1.05 typical)
+
+roles:
+  saver:
+    buy_factor: 0.99
+    sell_factor: 1.00
+    buy_bonus_per_level: 0.002   # -0.2% per level on buys
+    sell_bonus_per_level: 0.000
+  spender:
+    buy_factor: 1.00
+    sell_factor: 1.00
+    buy_bonus_per_level: 0.000
+    sell_bonus_per_level: 0.000
+  trader:
+    buy_factor: 0.98
+    sell_factor: 1.02
+    buy_bonus_per_level: 0.001
+    sell_bonus_per_level: 0.002
+  investor:
+    buy_factor: 0.99
+    sell_factor: 1.01
+    buy_bonus_per_level: 0.001
+    sell_bonus_per_level: 0.001
+  speculator:
+    buy_factor: 1.00
+    sell_factor: 1.02
+    buy_bonus_per_level: 0.000
+    sell_bonus_per_level: 0.002
+  hoarder:
+    buy_factor: 1.00
+    sell_factor: 1.00
+    buy_bonus_per_level: 0.000
+    sell_bonus_per_level: 0.000
+  philanthropist:
+    buy_factor: 1.00
+    sell_factor: 1.01
+    buy_bonus_per_level: 0.000
+    sell_bonus_per_level: 0.001
+
+# Global settings
+max_level: 5
+cooldown_minutes: 1440

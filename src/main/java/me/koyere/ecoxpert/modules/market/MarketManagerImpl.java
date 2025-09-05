@@ -39,6 +39,7 @@ public class MarketManagerImpl implements MarketManager {
     private final EconomyManager economyManager;
     private final TranslationManager translationManager;
     private final ConfigManager configManager;
+    private me.koyere.ecoxpert.modules.professions.ProfessionsManager professionsManager; // lazy
     private final PriceCalculator priceCalculator;
     // Global price adjustment factors (applied to dynamic prices)
     private volatile double buyPriceFactor = 1.0;  // multiplier for buy prices
@@ -374,6 +375,9 @@ public class MarketManagerImpl implements MarketManager {
                 MarketItem item = itemOpt.get();
                 BigDecimal unitPrice = item.getCurrentBuyPrice();
                 BigDecimal totalCost = unitPrice.multiply(BigDecimal.valueOf(quantity));
+                // Apply profession buy factor (discounts) if any
+                totalCost = totalCost.multiply(BigDecimal.valueOf(getProfessionFactor(player.getUniqueId(), true)))
+                    .setScale(2, BigDecimal.ROUND_HALF_UP);
                 
                 // Check if player can afford
                 if (!canAfford(player, totalCost)) {
@@ -437,6 +441,9 @@ public class MarketManagerImpl implements MarketManager {
                 
                 BigDecimal unitPrice = item.getCurrentSellPrice();
                 BigDecimal totalEarning = unitPrice.multiply(BigDecimal.valueOf(quantity));
+                // Apply profession sell factor (bonuses) if any
+                totalEarning = totalEarning.multiply(BigDecimal.valueOf(getProfessionFactor(player.getUniqueId(), false)))
+                    .setScale(2, BigDecimal.ROUND_HALF_UP);
                 
                 // Remove items from inventory
                 if (!removeItemsFromInventory(player, material, quantity)) {
@@ -767,6 +774,32 @@ public class MarketManagerImpl implements MarketManager {
             itemCache.put(item.getMaterial(), item);
         }
         plugin.getLogger().info("Loaded " + items.size() + " market items into cache");
+    }
+
+    private double getProfessionFactor(java.util.UUID uuid, boolean isBuy) {
+        try {
+            if (professionsManager == null) {
+                professionsManager = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class);
+            }
+            var roleOpt = professionsManager.getRole(uuid).join();
+            if (roleOpt.isEmpty()) return 1.0;
+            String key = "roles." + roleOpt.get().name().toLowerCase() + "." + (isBuy ? "buy_factor" : "sell_factor");
+            var profCfg = configManager.getModuleConfig("professions");
+            double v = profCfg.getDouble(key, 1.0);
+            // level bonuses
+            int level = professionsManager.getLevel(uuid).join();
+            int maxLevel = profCfg.getInt("max_level", 5);
+            level = Math.max(1, Math.min(level, maxLevel));
+            double perLevel = profCfg.getDouble("roles." + roleOpt.get().name().toLowerCase() + "." + (isBuy ? "buy_bonus_per_level" : "sell_bonus_per_level"), 0.0);
+            if (isBuy) {
+                v = v * (1.0 - (perLevel * (level - 1))); // more discount with level
+            } else {
+                v = v * (1.0 + (perLevel * (level - 1))); // more bonus with level
+            }
+            // clamp reasonable range
+            if (v < 0.5) v = 0.5; if (v > 1.5) v = 1.5;
+            return v;
+        } catch (Exception ignored) { return 1.0; }
     }
 
     private void seedDefaultMarketItems() {

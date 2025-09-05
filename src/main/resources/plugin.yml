@@ -142,6 +142,9 @@ permissions:
   ecoxpert.professions.select:
     description: Select economic profession
     default: true
+  ecoxpert.professions.levelup:
+    description: Level up profession (admin/testing)
+    default: op
     
   ecoxpert.professions.info:
     description: View profession information
@@ -204,6 +207,10 @@ commands:
     description: Open events admin GUI
     usage: /<command>
     permission: ecoxpert.admin.events
+  professiongui:
+    description: Open professions GUI
+    usage: /<command>
+    permission: ecoxpert.professions.select
   profession:
     description: Manage your economic profession
     aliases: [ professions ]

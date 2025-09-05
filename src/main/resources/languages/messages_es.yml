@@ -380,6 +380,8 @@ professions:
   max-level: "&eHas alcanzado el nivel máximo para &e{0}"
   current: "Tu profesión actual: {0}"
   available: "Disponibles: {0}"
+  gui:
+    title: "Profesiones"
   
 # Admin Commands
 admin:

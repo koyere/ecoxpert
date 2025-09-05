@@ -95,6 +95,12 @@ public class CommandManager {
                 plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.events.EconomicEventEngine.class),
                 translationManager));
         }
+        if (plugin.getCommand("professiongui") != null) {
+            plugin.getCommand("professiongui").setExecutor(new ProfessionGuiCommand(
+                plugin,
+                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class),
+                translationManager));
+        }
         // Profession command
         if (plugin.getCommand("profession") != null) {
             plugin.getCommand("profession").setExecutor(new ProfessionCommand(

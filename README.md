@@ -244,12 +244,15 @@ Key parameters (quick reference)
 /loansgui                      - Open Loans GUI
 /ecoevents                     - Open Events Admin GUI
 /ecoadmin                      - Open EcoXpert Admin dashboard
+/professiongui                 - Open Professions GUI
 ```
 
 ### Professions Commands
 ```
 /profession info                 - Show your current profession and available roles
 /profession select <role>        - Select a profession
+/profession level                - Show your current profession level
+/profession levelup              - Increase your profession level (requires perm)
 ```
 
 GUI Notes
@@ -441,11 +444,18 @@ Runs comprehensive tests:
   - `%ecox_cycle%` (current economic cycle)
   - `%ecox_market_activity%` (0–100)
   - `%ecox_events_active%` (count)
+  - `%ecox_velocity%` (velocity of money)
+  - `%ecox_total_money%` (total money in circulation)
+  - `%ecox_avg_balance%` (average balance)
+  - `%ecox_gini%` (wealth inequality 0–1)
+  - `%ecox_has_worldguard%` / `%ecox_has_lands%`
 - Player:
   - `%ecox_balance%` (formatted)
   - `%ecox_loans_outstanding%` (formatted)
   - `%ecox_wg_regions%` (comma-separated WorldGuard regions at player location, if WG present)
   - `%ecox_lands_land%` (Lands land name at player location, if Lands present)
+  - `%ecox_role%` (current profession role)
+  - `%ecox_role_level%`, `%ecox_role_bonus_buy%`, `%ecox_role_bonus_sell%`
 
 ### Public API (minimal)
 - `EcoXpertAPI#getServerEconomics()` → `ServerEconomySnapshot` with fields: `cycle`, `economicHealth` (0–1), `inflationRate` (fraction), `marketActivity` (0–1), `activeEvents`.

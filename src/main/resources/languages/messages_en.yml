@@ -359,6 +359,8 @@ professions:
   max-level: "&eYou have reached the maximum level for &e{0}"
   current: "Your current profession: {0}"
   available: "Available: {0}"
+  gui:
+    title: "Professions"
   
 # Admin Commands
 admin:

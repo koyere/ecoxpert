@@ -40,15 +40,54 @@ public class ProfessionsManagerImpl implements ProfessionsManager {
 
     @Override
     public CompletableFuture<Boolean> setRole(UUID player, ProfessionRole role) {
-        String sql = "INSERT INTO ecoxpert_professions (player_uuid, role, level, selected_at) VALUES (?, ?, 1, CURRENT_TIMESTAMP) " +
-                     "ON CONFLICT(player_uuid) DO UPDATE SET role = excluded.role, selected_at = CURRENT_TIMESTAMP";
-        return dataManager.executeUpdate(sql, player.toString(), role.name())
-            .thenApply(rows -> rows > 0);
+        return canChange(player).thenCompose(allowed -> {
+            if (!allowed) return CompletableFuture.completedFuture(false);
+            String sql = "INSERT INTO ecoxpert_professions (player_uuid, role, level, selected_at) VALUES (?, ?, 1, CURRENT_TIMESTAMP) " +
+                         "ON CONFLICT(player_uuid) DO UPDATE SET role = excluded.role, selected_at = CURRENT_TIMESTAMP, level = 1";
+            return dataManager.executeUpdate(sql, player.toString(), role.name())
+                .thenApply(rows -> rows > 0);
+        });
     }
 
     @Override
     public List<ProfessionRole> getAvailableRoles() {
         return Arrays.asList(ProfessionRole.values());
     }
-}
 
+    @Override
+    public CompletableFuture<Integer> getLevel(UUID player) {
+        return dataManager.executeQuery("SELECT level FROM ecoxpert_professions WHERE player_uuid = ?", player.toString())
+            .thenApply(result -> {
+                try (result) { if (result.next()) return Math.max(1, result.getInt("level")); } catch (Exception ignored) {}
+                return 1;
+            });
+    }
+
+    @Override
+    public CompletableFuture<Boolean> setLevel(UUID player, int level) {
+        int lvl = Math.max(1, level);
+        return dataManager.executeUpdate(
+            "INSERT INTO ecoxpert_professions (player_uuid, role, level, selected_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP) " +
+            "ON CONFLICT(player_uuid) DO UPDATE SET level = excluded.level",
+            player.toString(), ProfessionRole.SAVER.name(), lvl
+        ).thenApply(rows -> rows > 0);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> canChange(UUID player) {
+        return CompletableFuture.supplyAsync(() -> {
+            try (QueryResult qr = dataManager.executeQuery(
+                "SELECT selected_at FROM ecoxpert_professions WHERE player_uuid = ?",
+                player.toString()).join()) {
+                // If never selected, can change
+                if (!qr.next()) return true;
+                java.sql.Timestamp ts = qr.getTimestamp("selected_at");
+                if (ts == null) return true;
+                var cfg = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class).getModuleConfig("professions");
+                int cooldown = cfg.getInt("cooldown_minutes", 1440); // default 24h
+                long elapsedMin = java.time.Duration.between(ts.toInstant(), java.time.Instant.now()).toMinutes();
+                return elapsedMin >= cooldown;
+            } catch (Exception ignored) { return true; }
+        });
+    }
+}
