@@ -6,6 +6,9 @@
 plugin:
   # Debug mode for development
   debug: false
+  # Configuration mode: 'advanced' exposes all module options; 'simple' applies curated defaults
+  # and only a few top-level knobs are considered.
+  config_mode: "advanced"
   
   # Language for messages (ISO 639-1 codes)
   language: "en"
@@ -25,6 +28,14 @@ plugin:
     download-url: "https://github.com/koyere/ecoxpert"
     notify-admins: true
     check-interval: 21600 # 6 hours in seconds
+
+# Educational messages (player-facing context)
+education:
+  enabled: true
+  broadcasts:
+    cycle: true     # Broadcast economic cycle changes
+    events: true    # Broadcast educational line when an event starts
+    policy: true    # Notify player on policy applications (e.g., wealth tax)
 
 # Database Configuration
 database:
@@ -138,6 +149,20 @@ modules:
   integrations:
     enabled: true
     config-file: "modules/integrations.yml"
+
+# Simple mode curated defaults (used when plugin.config_mode = 'simple')
+simple:
+  # Market tuning (applies to modules/market.yml pricing)
+  market:
+    max_price_change: 0.15          # gentler daily movement
+    volatility_damping: 0.90        # smoother prices
+    trend_analysis_hours: 24
+  # Inflation policy target (fraction, e.g., 1.02 = 2%)
+  inflation:
+    target: 1.02
+  # Basic wealth tax (fraction per cycle on high balances)
+  policy:
+    wealth_tax_rate: 0.005
 
 # Performance Settings
 performance:

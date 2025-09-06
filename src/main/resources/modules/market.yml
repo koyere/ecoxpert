@@ -85,6 +85,28 @@ orders:
   # the Orders GUI will require an explicit confirmation step.
   confirm_threshold: 5000.0
 
+  # Listing (MarketGUI right-click → List Item)
+  listing:
+    # Price adjustment presets shown as percentage buttons in the List GUI.
+    # Negative values decrease price; positive values increase price.
+    # Example: [-10, -5, -1, 1, 5, 10]
+    price_adjust_presets_percent: [-10, -5, -1, 1, 5, 10]
+
+    # Allowed price bounds relative to the base sell price for the item.
+    # The final unit price in the List GUI is clamped to this range.
+    # Example: min = 0.10 (10% of base), max = 10.0 (1000% of base)
+    price_bounds_min_base_fraction: 0.10
+    price_bounds_max_base_fraction: 10.0
+
+    # Duration options (hours) for listings, shown as clickable buttons.
+    # Example: [12, 24, 48]
+    duration_hours_options: [12, 24, 48]
+
+    # Optional absolute price adjustment presets (currency units), applied on top of current
+    # unit price in the List GUI. Positive values increase, negative decrease.
+    # Example: [-100, 100, 500]
+    price_adjust_presets_absolute: []
+
 metrics:
   # Basket of items for CPI calculation (20 recommended). Names must match Bukkit Material enums.
   basket:

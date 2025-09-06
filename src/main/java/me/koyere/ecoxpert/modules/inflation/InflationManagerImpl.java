@@ -43,6 +43,7 @@ public class InflationManagerImpl implements InflationManager {
     private boolean active = false;
     private boolean initialized = false;
     private String lastInterventionDescription = "None";
+    private EconomicIntelligenceEngine.EconomicCycle lastBroadcastCycle = EconomicIntelligenceEngine.EconomicCycle.STABLE;
     
     public InflationManagerImpl(EcoXpertPlugin plugin, EconomyManager economyManager, MarketManager marketManager, ConfigManager configManager) {
         this.plugin = plugin;
@@ -80,6 +81,26 @@ public class InflationManagerImpl implements InflationManager {
                 
                 // Log current status
                 logSystemStatus();
+
+                // Schedule cycle change education broadcasts (polling)
+                try {
+                    var cfg = plugin.getServiceRegistry().getInstance(ConfigManager.class).getConfig();
+                    boolean edu = cfg.getBoolean("education.enabled", true) && cfg.getBoolean("education.broadcasts.cycle", true);
+                    if (edu) {
+                        long periodTicks = 20L * 60L * 5L; // 5 minutes
+                        org.bukkit.Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
+                            try {
+                                var current = getCurrentCycle();
+                                if (current != lastBroadcastCycle) {
+                                    me.koyere.ecoxpert.core.education.EducationNotifier.broadcastCycle(plugin,
+                                        plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class),
+                                        current);
+                                    lastBroadcastCycle = current;
+                                }
+                            } catch (Exception ignored) {}
+                        }, periodTicks, periodTicks);
+                    }
+                } catch (Exception ignored) {}
                 
             } catch (Exception e) {
                 plugin.getLogger().severe("Failed to initialize Inflation Manager: " + e.getMessage());

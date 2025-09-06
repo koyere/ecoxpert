@@ -264,6 +264,7 @@ GUI Notes
   - Open Orders: button to open the Order Book GUI.
   - Clear Filters: reset category and first-letter filters.
   - Effective price: lore includes Effective Buy/Sell (player contextual price factoring role/category/events).
+  - Right-click on an item: opens "List Item" sub‑GUI to publish a fixed-price listing with quick quantity/duration and price adjustments.
 - Loans GUI:
   - Offer preview: shows amount, rate, term, and score with Confirm/Cancel before creating the loan.
   - Schedule pagination: view up to 45 installments per page with Prev/Next.
@@ -380,6 +381,35 @@ plugin:
     download-url: "https://github.com/koyere/ecoxpert"
 ```
 
+### Configuration Mode (Simple vs Advanced)
+- `plugin.config_mode`: `advanced` (default) or `simple`.
+- Simple mode applies curated defaults and exposes only a few top-level knobs in `config.yml` under `simple.*`.
+
+Simple mode keys (top-level `config.yml`)
+```yaml
+plugin:
+  config_mode: "simple"
+simple:
+  market:
+    max_price_change: 0.15
+    volatility_damping: 0.90
+    trend_analysis_hours: 24
+  inflation:
+    target: 1.02    # 2% target
+  policy:
+    wealth_tax_rate: 0.005
+```
+Advanced mode keeps using `modules/*.yml` for full control.
+
+### Educational Messages (opt-in)
+- `education.enabled`: true/false.
+- `education.broadcasts`: `cycle|events|policy` toggles.
+- Messages are localized (EN/ES) under `education.*` keys.
+- Examples:
+  - Cycle change: "The economy entered BUBBLE; sharp price increases likely."
+  - Event start: generic line with Δ Buy/Sell and category when available.
+  - Policy (wealth tax): per-player notice when applied (once per iteration).
+
 ### Market Settings
 ```yaml
 market:
@@ -472,6 +502,7 @@ Runs comprehensive tests:
 ### Integrations (soft hooks)
 - WorldGuard: read-only region names by location (used in placeholders).
 - Lands: read-only land name by location (used in placeholders).
+ - Integrations config: `modules/integrations.yml` (detect Jobs/Towny/Lands/Slimefun/McMMO). Actualmente detección‑only; futuras iteraciones podrán aplicar ajustes suaves.
 
 ---
 
@@ -499,8 +530,22 @@ Runs comprehensive tests:
 - Fixed-price listings coexist with the dynamic market engine.
 - Sellers lock items upfront with `/market list <item> <qty> <unit_price> [hours]`.
 - Buyers purchase with `/market buyorder <id> <qty>`; open orders: `/market orders [item]`.
- - Orders GUI: paginated with sorting (price/remaining/expires asc/desc), quick quantity selector (1/8/16/32/MAX) and confirmation when total exceeds threshold.
- - Confirmation threshold: `modules/market.yml` → `orders.confirm_threshold` (default 5000.0).
+- Orders GUI: paginated with sorting (price/remaining/expires asc/desc), quick quantity selector (1/8/16/32/MAX) and confirmation when total exceeds threshold.
+- Confirmation threshold: `modules/market.yml` → `orders.confirm_threshold` (default 5000.0).
+- Listing UX (MarketGUI → right‑click on item): price adjustment presets, quantities, and duration buttons configurable in `modules/market.yml` under `orders.listing`.
+ - Absolute presets supported: configure `orders.listing.price_adjust_presets_absolute` (e.g., `[-100, 100, 500]`), rendered alongside percent buttons.
+
+Example configuration (modules/market.yml)
+```yaml
+orders:
+  confirm_threshold: 5000.0
+  listing:
+    price_adjust_presets_percent: [-10, -5, -1, 1, 5, 10]   # percent buttons
+    price_bounds_min_base_fraction: 0.10                    # min = 10% of base sell price
+    price_bounds_max_base_fraction: 10.0                    # max = 1000% of base sell price
+    duration_hours_options: [12, 24, 48]                    # listing durations (hours)
+    price_adjust_presets_absolute: [-100, 100, 500]         # absolute currency deltas
+```
 
 ---
 

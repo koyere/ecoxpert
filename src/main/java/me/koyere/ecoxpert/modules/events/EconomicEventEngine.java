@@ -508,6 +508,12 @@ public class EconomicEventEngine {
         
         // Apply immediate effects
         applyEventEffects(event);
+        // Educational broadcast (context message)
+        try {
+            me.koyere.ecoxpert.core.translation.TranslationManager tm =
+                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+            me.koyere.ecoxpert.core.education.EducationNotifier.broadcastEvent(plugin, tm, event);
+        } catch (Exception ignored) {}
         // Persist event start
         persistEvent(event, "ACTIVE");
         

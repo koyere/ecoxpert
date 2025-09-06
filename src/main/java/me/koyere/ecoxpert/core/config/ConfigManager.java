@@ -69,6 +69,11 @@ public interface ConfigManager {
      * @return true if debug mode active
      */
     boolean isDebugEnabled();
+
+    /**
+     * Returns true if plugin runs in simple configuration mode.
+     */
+    boolean isSimpleMode();
     
     /**
      * Save all configuration files

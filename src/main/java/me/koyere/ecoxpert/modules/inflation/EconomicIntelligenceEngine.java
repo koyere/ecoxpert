@@ -422,6 +422,18 @@ public class EconomicIntelligenceEngine {
             BigDecimal threshold = BigDecimal.valueOf(snapshot.getAverageBalance() * wealthTaxThresholdMultiplier)
                 .setScale(2, RoundingMode.HALF_UP);
             economyManager.applyWealthTax(rate, threshold, "Overheating liquidity reduction");
+            // Notify affected online players (educational message)
+            try {
+                var tm = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);
+                for (org.bukkit.entity.Player op : org.bukkit.Bukkit.getOnlinePlayers()) {
+                    try {
+                        java.math.BigDecimal bal = economyManager.getBalance(op.getUniqueId()).join();
+                        if (bal != null && bal.compareTo(threshold) > 0) {
+                            me.koyere.ecoxpert.core.education.EducationNotifier.notifyWealthTaxApplied(plugin, tm, op.getUniqueId(), threshold);
+                        }
+                    } catch (Exception ignored) {}
+                }
+            } catch (Exception ignored) {}
 
             // Market discouragement for a short period
             marketManager.setGlobalPriceFactors(1.0 + cooldownFactor, 1.0 - cooldownFactor);

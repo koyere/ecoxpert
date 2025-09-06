@@ -1,0 +1,16 @@
+enabled: true
+version: 1
+
+# Integrations detection and basic settings (read-only, soft hooks)
+detect:
+  jobs: true
+  towny: true
+  lands: true
+  slimefun: true
+  mcmmo: true
+
+# Notes:
+# - This file enables lightweight detection of external plugins.
+# - Future iterations may use these toggles to apply contextual adjustments.
+# - All hooks are reflection-based (no hard dependencies).
+

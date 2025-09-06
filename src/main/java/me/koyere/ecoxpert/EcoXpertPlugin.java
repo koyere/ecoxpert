@@ -194,6 +194,23 @@ public final class EcoXpertPlugin extends JavaPlugin {
         
         // 2. Configuration system
         configManager.initialize();
+        // Simple mode banner (usability demo)
+        try {
+            if (configManager.isSimpleMode()) {
+                var root = configManager.getConfig();
+                double mc = root.getDouble("simple.market.max_price_change", 0.15);
+                double vd = root.getDouble("simple.market.volatility_damping", 0.90);
+                int th = root.getInt("simple.market.trend_analysis_hours", 24);
+                double infl = root.getDouble("simple.inflation.target", 1.02);
+                double wtax = root.getDouble("simple.policy.wealth_tax_rate", 0.005);
+                getLogger().info("================ SIMPLE MODE ================");
+                getLogger().info(String.format("Market: max_price_change=%.2f, volatility_damping=%.2f, trend_hours=%d", mc, vd, th));
+                getLogger().info(String.format("Inflation target: %.2f (multiplier)", infl));
+                getLogger().info(String.format("Wealth tax rate: %.3f", wtax));
+                getLogger().info("(Switch to advanced via plugin.config_mode=\"advanced\")");
+                getLogger().info("============================================");
+            }
+        } catch (Exception ignored) {}
         
         // 3. Translation system
         translationManager.initialize();

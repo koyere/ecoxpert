@@ -341,10 +341,20 @@ public class MarketManagerImpl implements MarketManager {
 
     private void loadPricingConfig() {
         try {
-            var marketCfg = configManager.getModuleConfig("market");
-            double maxChange = marketCfg.getDouble("pricing.max_price_change", 0.20);
-            double damping = marketCfg.getDouble("pricing.volatility_damping", 0.85);
-            int trendHours = marketCfg.getInt("pricing.trend_analysis_hours", 24);
+            double maxChange;
+            double damping;
+            int trendHours;
+            if (configManager.isSimpleMode()) {
+                var root = configManager.getConfig();
+                maxChange = root.getDouble("simple.market.max_price_change", 0.15);
+                damping = root.getDouble("simple.market.volatility_damping", 0.90);
+                trendHours = root.getInt("simple.market.trend_analysis_hours", 24);
+            } else {
+                var marketCfg = configManager.getModuleConfig("market");
+                maxChange = marketCfg.getDouble("pricing.max_price_change", 0.20);
+                damping = marketCfg.getDouble("pricing.volatility_damping", 0.85);
+                trendHours = marketCfg.getInt("pricing.trend_analysis_hours", 24);
+            }
             priceCalculator.configure(maxChange, damping, trendHours);
         } catch (Exception e) {
             // Keep defaults on error

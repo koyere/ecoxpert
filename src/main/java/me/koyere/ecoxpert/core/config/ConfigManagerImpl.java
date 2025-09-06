@@ -30,6 +30,7 @@ public class ConfigManagerImpl implements ConfigManager {
     private String databaseType = "sqlite";
     private String language = "en";
     private boolean debugEnabled = false;
+    private boolean simpleMode = false;
     
     @Inject
     public ConfigManagerImpl(EcoXpertPlugin plugin) {
@@ -101,6 +102,11 @@ public class ConfigManagerImpl implements ConfigManager {
     public boolean isDebugEnabled() {
         return debugEnabled;
     }
+
+    @Override
+    public boolean isSimpleMode() {
+        return simpleMode;
+    }
     
     @Override
     public void saveAll() {
@@ -127,6 +133,8 @@ public class ConfigManagerImpl implements ConfigManager {
             config.getString("language", "en"));
         this.debugEnabled = config.getBoolean("plugin.debug", 
             config.getBoolean("debug", false));
+        String mode = config.getString("plugin.config_mode", "advanced");
+        this.simpleMode = "simple".equalsIgnoreCase(mode);
     }
     
     /**

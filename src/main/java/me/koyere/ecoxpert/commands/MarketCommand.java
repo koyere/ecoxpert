@@ -417,11 +417,18 @@ public class MarketCommand implements TabExecutor {
             if (item.isBuyable()) {
                 player.sendMessage(translationManager.getMessage("market.item-prices.buy", 
                     formatPrice(item.getCurrentBuyPrice())));
+                // Effective price for player
+                double f = computeEffectiveFactor(player.getUniqueId(), material, true);
+                java.math.BigDecimal eff = item.getCurrentBuyPrice().multiply(java.math.BigDecimal.valueOf(f)).setScale(2, java.math.RoundingMode.HALF_UP);
+                player.sendMessage(translationManager.getMessage("market.gui.item.effective-buy", formatPrice(eff)));
             }
             
             if (item.isSellable()) {
                 player.sendMessage(translationManager.getMessage("market.item-prices.sell", 
                     formatPrice(item.getCurrentSellPrice())));
+                double f2 = computeEffectiveFactor(player.getUniqueId(), material, false);
+                java.math.BigDecimal eff2 = item.getCurrentSellPrice().multiply(java.math.BigDecimal.valueOf(f2)).setScale(2, java.math.RoundingMode.HALF_UP);
+                player.sendMessage(translationManager.getMessage("market.gui.item.effective-sell", formatPrice(eff2)));
             }
             
             // Show trading statistics
@@ -437,6 +444,48 @@ public class MarketCommand implements TabExecutor {
                 }
             });
         });
+    }
+
+    private double computeEffectiveFactor(java.util.UUID uuid, Material material, boolean isBuy) {
+        try {
+            var sr = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class).getServiceRegistry();
+            var pm = sr.getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class);
+            var roleOpt = pm.getRole(uuid).join();
+            if (roleOpt.isEmpty()) return 1.0;
+            String role = roleOpt.get().name().toLowerCase();
+            var profCfg = sr.getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class).getModuleConfig("professions");
+            int level = pm.getLevel(uuid).join();
+            int maxLevel = profCfg.getInt("max_level", 5);
+            level = Math.max(1, Math.min(level, maxLevel));
+            double base = profCfg.getDouble("roles." + role + "." + (isBuy ? "buy_factor" : "sell_factor"), 1.0);
+            double per = profCfg.getDouble("roles." + role + "." + (isBuy ? "buy_bonus_per_level" : "sell_bonus_per_level"), 0.0);
+            double v = isBuy ? (base * (1.0 - per * (level - 1))) : (base * (1.0 + per * (level - 1)));
+            // Categories from market.yml
+            var cfg = sr.getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class).getModuleConfig("market");
+            var section = cfg.getConfigurationSection("categories");
+            if (section != null) {
+                for (String key : section.getKeys(false)) {
+                    java.util.List<String> mats = cfg.getStringList("categories." + key + ".materials");
+                    for (String m : mats) {
+                        if (material.name().equalsIgnoreCase(m)) {
+                            String ck = "roles." + role + ".category_bonuses." + key.toLowerCase() + "." + (isBuy ? "buy_factor" : "sell_factor");
+                            v *= profCfg.getDouble(ck, 1.0);
+                            break;
+                        }
+                    }
+                }
+            }
+            // Events
+            var events = sr.getInstance(me.koyere.ecoxpert.modules.events.EconomicEventEngine.class);
+            if (events != null) {
+                for (var ev : events.getActiveEvents().values()) {
+                    String ek = "roles." + role + ".event_bonuses." + ev.getType().name() + "." + (isBuy ? "buy_factor" : "sell_factor");
+                    v *= profCfg.getDouble(ek, 1.0);
+                }
+            }
+            if (v < 0.5) v = 0.5; if (v > 1.5) v = 1.5;
+            return v;
+        } catch (Exception e) { return 1.0; }
     }
     
     /**

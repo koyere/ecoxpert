@@ -16,6 +16,7 @@ public class LoanDelinquencyScheduler {
     private final DataManager dataManager;
     private final EconomyManager economyManager;
     private final java.util.concurrent.ConcurrentHashMap<java.util.UUID, Long> lastNotify = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.atomic.AtomicBoolean running = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     public LoanDelinquencyScheduler(EcoXpertPlugin plugin, DataManager dataManager, EconomyManager economyManager) {
         this.plugin = plugin;
@@ -37,12 +38,24 @@ public class LoanDelinquencyScheduler {
     }
 
     private void runOnce() {
+        if (!running.compareAndSet(false, true)) {
+            plugin.getLogger().fine("Loan scheduler: previous run still active, skipping iteration");
+            return;
+        }
         try {
             var cfg = plugin.getServiceRegistry().getInstance(ConfigManager.class).getModuleConfig("loans");
             double penalty = cfg.getDouble("policy.late.penalty_rate", 0.01); // 1%
             boolean notify = cfg.getBoolean("policy.late.notify", true);
             double capFraction = cfg.getDouble("policy.late.penalty_cap_fraction", 0.50); // 50% of principal cap on penalties
             int notifyCooldownMin = cfg.getInt("policy.late.notify_cooldown_minutes", 120);
+            // Optional: skip in Safe Mode
+            try {
+                var safe = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.safety.SafeModeManager.class);
+                if (safe != null && safe.isActive()) {
+                    plugin.getLogger().fine("Loan scheduler: Safe Mode active, skipping");
+                    return;
+                }
+            } catch (Exception ignored) {}
             // Mark overdue installments to LATE
             java.util.Set<Long> penalizedLoans = new java.util.HashSet<>();
             try (QueryResult qr = dataManager.executeQuery(
@@ -87,6 +100,8 @@ public class LoanDelinquencyScheduler {
             }
         } catch (Exception e) {
             plugin.getLogger().warning("Loan scheduler error: " + e.getMessage());
+        } finally {
+            running.set(false);
         }
     }
 }

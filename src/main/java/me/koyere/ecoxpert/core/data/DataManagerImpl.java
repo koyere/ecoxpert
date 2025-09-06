@@ -523,6 +523,22 @@ public class DataManagerImpl implements DataManager {
                     stmt.executeUpdate();
                 }
             }
+
+            // Performance indexes
+            String[] indexes = {
+                // Loans: by player/status
+                "CREATE INDEX IF NOT EXISTS idx_loans_player_status ON ecoxpert_loans(player_uuid, status)",
+                // Schedules: overdue sweep and join
+                "CREATE INDEX IF NOT EXISTS idx_loan_sched_status_due ON ecoxpert_loan_schedules(status, due_date)",
+                "CREATE INDEX IF NOT EXISTS idx_loan_sched_loan ON ecoxpert_loan_schedules(loan_id)",
+                // Market orders: open listing by status/material/date
+                "CREATE INDEX IF NOT EXISTS idx_orders_status_material_created ON ecoxpert_market_orders(status, material, created_at)",
+                "CREATE INDEX IF NOT EXISTS idx_orders_status_created ON ecoxpert_market_orders(status, created_at)"
+            };
+            for (String idx : indexes) {
+                try (PreparedStatement stmt = conn.prepareStatement(idx)) { stmt.executeUpdate(); }
+                catch (Exception e) { plugin.getLogger().fine("Index creation skipped/failed: " + idx + " -> " + e.getMessage()); }
+            }
             
             // Initialize schema version
             updateSchemaVersion();

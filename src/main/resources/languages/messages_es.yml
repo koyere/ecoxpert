@@ -234,9 +234,12 @@ market:
       role-bonus: "Bono de rol: compra {0}, venta {1}"
       category-bonus: "Categoría {0}: compra {1}, venta {2}"
       event-bonus: "Eventos: compra {0}, venta {1}"
+      sort-label: "Orden: {0}"
+      sort-help: "Click en el libro para cambiar"
       help1: "Click para comprar 1 ítem"
       help2: "Shift-click para vender todo"
       help3: "Usa 'Ver Órdenes' para ver listados"
+      range: "Rango permitido: {0} – {1}"
     category-label: "Categoría: {0}"
     category-help: "Click para cambiar categoría"
     letter-label: "Filtro: {0}"
@@ -244,6 +247,8 @@ market:
     clear-filters-label: "Limpiar Filtros"
     clear-filters-help: "Restablece categoría y letra"
     sell-hand-label: "Vender en Mano por $"
+    orders-button: "Ver Órdenes"
+    orders-button-help: "Click para abrir el libro de órdenes"
     sell-hand:
       title: "Vender Ítem en Mano"
       help1: "Vende el ítem en mano por monto"
@@ -264,6 +269,38 @@ market:
       trend: "Tendencia: {0}"
       click-buy: "Click para comprar 1"
       shift-click-sell: "Shift-click para vender todo"
+      list-hint: "Click derecho para listar (ver GUI)"
+
+    list:
+      title: "Listar Ítem"
+      header: "Listado: {0}"
+      unit_price: "Precio unitario: {0}"
+      price:
+        minus: "-{0}%"
+        plus: "+{0}%"
+        reset: "Restablecer precio"
+        minus_abs: "-{0}"
+        plus_abs: "+{0}"
+      qty:
+        select: "Cantidad {0}"
+      duration: "Duración: {0}h"
+      confirm: "Confirmar"
+      cancel: "Cancelar"
+
+# Mensajes educativos
+education:
+  cycle:
+    DEPRESSION: "📉 La economía entró en DEPRESIÓN; se espera menor actividad y precios."
+    RECESSION: "↘️ La economía entró en RECESIÓN; leve desaceleración esperada."
+    STABLE: "⚖️ La economía está ESTABLE; condiciones normales."
+    GROWTH: "📈 La economía está en CRECIMIENTO; aumentan las oportunidades."
+    BOOM: "🚀 La economía está en BOOM; alta actividad en los mercados."
+    BUBBLE: "🎈 La economía entró en fase de BURBUJA; es probable un alza fuerte de precios."
+  events:
+    generic: "📢 Evento {0} iniciado. Δ Compra {1}, Δ Venta {2}."
+    generic_simple: "📢 Evento {0} iniciado."
+  policy:
+    wealth_tax_applied: "💸 Se aplicó impuesto a grandes fortunas: tu balance superó {0}"
   
 # Banking System
 bank:
@@ -508,5 +545,3 @@ numbers:
   million: "M"
   billion: "B"
   trillion: "T"
-    orders-button: "Ver Órdenes"
-    orders-button-help: "Click para abrir el libro de órdenes"

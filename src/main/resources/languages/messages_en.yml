@@ -206,9 +206,12 @@ market:
       role-bonus: "Role bonus: buy {0}, sell {1}"
       category-bonus: "Category {0}: buy {1}, sell {2}"
       event-bonus: "Events: buy {0}, sell {1}"
+      sort-label: "Sort: {0}"
+      sort-help: "Click book to cycle sorting"
       help1: "Click to buy 1 item"
       help2: "Shift-click to sell all"
       help3: "Use 'Open Orders' to view listings"
+      range: "Price range allowed: {0} – {1}"
     category-label: "Category: {0}"
     category-help: "Click to cycle categories"
     letter-label: "Filter: {0}"
@@ -216,6 +219,8 @@ market:
     clear-filters-label: "Clear Filters"
     clear-filters-help: "Resets category and letter filters"
     sell-hand-label: "Sell Hand by $"
+    orders-button: "Open Orders"
+    orders-button-help: "Click to browse order book"
     sell-hand:
       title: "Sell Item in Hand"
       help1: "Sell items in hand approximating amount"
@@ -236,6 +241,38 @@ market:
       trend: "Trend: {0}"
       click-buy: "Click to buy 1"
       shift-click-sell: "Shift-click to sell all"
+      list-hint: "Right-click to list (see List GUI)"
+
+    list:
+      title: "List Item"
+      header: "Listing: {0}"
+      unit_price: "Unit price: {0}"
+      price:
+        minus: "-{0}%"
+        plus: "+{0}%"
+        reset: "Reset price"
+        minus_abs: "-{0}"
+        plus_abs: "+{0}"
+      qty:
+        select: "Quantity {0}"
+      duration: "Duration: {0}h"
+      confirm: "Confirm"
+      cancel: "Cancel"
+
+# Educational messages
+education:
+  cycle:
+    DEPRESSION: "📉 The economy entered DEPRESSION; expect lower activity and prices."
+    RECESSION: "↘️ The economy entered RECESSION; mild slowdown expected."
+    STABLE: "⚖️ The economy is STABLE; normal conditions."
+    GROWTH: "📈 The economy is in GROWTH; opportunities are increasing."
+    BOOM: "🚀 The economy is in BOOM; high activity across markets."
+    BUBBLE: "🎈 The economy entered a BUBBLE phase; sharp price increases likely."
+  events:
+    generic: "📢 Event {0} started. Buy Δ {1}, Sell Δ {2}."
+    generic_simple: "📢 Event {0} started."
+  policy:
+    wealth_tax_applied: "💸 Wealth tax applied: your balance exceeded {0}"
   
 # Banking System
 bank:
@@ -533,5 +570,3 @@ numbers:
   million: "M"
   billion: "B"
   trillion: "T"
-    orders-button: "Open Orders"
-    orders-button-help: "Click to browse order book"
