@@ -34,6 +34,7 @@ public class MarketCommand implements TabExecutor {
     private final Logger logger;
     private final MarketGUI marketGUI;
     private final me.koyere.ecoxpert.modules.market.orders.MarketOrderService orderService;
+    private final me.koyere.ecoxpert.modules.market.orders.MarketOrdersGUI ordersGUI;
     
     public MarketCommand(MarketManager marketManager, TranslationManager translationManager, Logger logger) {
         this.marketManager = marketManager;
@@ -43,6 +44,7 @@ public class MarketCommand implements TabExecutor {
         // order service via ServiceRegistry
         this.orderService = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
             .getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.market.orders.MarketOrderService.class);
+        this.ordersGUI = new me.koyere.ecoxpert.modules.market.orders.MarketOrdersGUI(orderService, translationManager, logger);
     }
     
     /**
@@ -51,6 +53,7 @@ public class MarketCommand implements TabExecutor {
     public MarketGUI getMarketGUI() {
         return marketGUI;
     }
+    public me.koyere.ecoxpert.modules.market.orders.MarketOrdersGUI getOrdersGUI() { return ordersGUI; }
     
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -101,6 +104,10 @@ public class MarketCommand implements TabExecutor {
     }
 
     private boolean handleOrderListCreate(Player player, String[] args) {
+        if (!player.hasPermission("ecoxpert.market.list")) {
+            player.sendMessage(translationManager.getMessage("no-permission"));
+            return true;
+        }
         if (args.length < 4) {
             player.sendMessage(translationManager.getMessage("market.order.list-usage"));
             return true;
@@ -118,22 +125,24 @@ public class MarketCommand implements TabExecutor {
     }
 
     private boolean handleOrderListShow(Player player, String[] args) {
+        if (!player.hasPermission("ecoxpert.market.orders")) {
+            player.sendMessage(translationManager.getMessage("no-permission"));
+            return true;
+        }
         Material filter = null;
         if (args.length >= 2) {
             try { filter = Material.valueOf(args[1].toUpperCase()); } catch (Exception ignored) {}
         }
-        Material finalFilter = filter;
-        orderService.listOpenOrders(filter).thenAccept(list -> {
-            player.sendMessage(translationManager.getMessage("prefix") + translationManager.getMessage("market.orders.header", finalFilter != null ? finalFilter.name() : "ALL"));
-            for (var o : list) {
-                player.sendMessage(translationManager.getMessage("market.orders.item", o.getId(), o.getRemainingQuantity(), o.getMaterial().name(), economyFormat(o.getUnitPrice())));
-            }
-            if (list.isEmpty()) player.sendMessage(translationManager.getMessage("market.orders.none"));
-        });
+        // Open GUI instead of chat listing
+        ordersGUI.open(player, filter);
         return true;
     }
 
     private boolean handleOrderBuy(Player player, String[] args) {
+        if (!player.hasPermission("ecoxpert.market.buyorder")) {
+            player.sendMessage(translationManager.getMessage("no-permission"));
+            return true;
+        }
         if (args.length < 3) {
             player.sendMessage(translationManager.getMessage("market.order.buy-usage"));
             return true;
@@ -366,6 +375,9 @@ public class MarketCommand implements TabExecutor {
         player.sendMessage(translationManager.getMessage("market.help.sell"));
         player.sendMessage(translationManager.getMessage("market.help.prices"));
         player.sendMessage(translationManager.getMessage("market.help.stats"));
+        player.sendMessage(translationManager.getMessage("market.help.list"));
+        player.sendMessage(translationManager.getMessage("market.help.orders"));
+        player.sendMessage(translationManager.getMessage("market.help.buyorder"));
         player.sendMessage(translationManager.getMessage("market.help.gui"));
         player.sendMessage(translationManager.getMessage("market.help.footer"));
         return true;
@@ -504,7 +516,7 @@ public class MarketCommand implements TabExecutor {
         
         if (args.length == 1) {
             // Main subcommands
-            List<String> subcommands = Arrays.asList("buy", "sell", "prices", "stats", "help");
+            List<String> subcommands = Arrays.asList("buy", "sell", "prices", "stats", "orders", "list", "buyorder", "help");
             for (String sub : subcommands) {
                 if (sub.toLowerCase().startsWith(args[0].toLowerCase())) {
                     completions.add(sub);

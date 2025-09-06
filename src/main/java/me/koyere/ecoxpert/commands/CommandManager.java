@@ -57,8 +57,9 @@ public class CommandManager {
         plugin.getCommand("market").setExecutor(marketCommand);
         plugin.getCommand("market").setTabCompleter(marketCommand);
         
-        // Register MarketGUI events
+        // Register Market GUIs events
         plugin.getServer().getPluginManager().registerEvents(marketCommand.getMarketGUI(), plugin);
+        plugin.getServer().getPluginManager().registerEvents(marketCommand.getOrdersGUI(), plugin);
         // Register loan notifications
         plugin.getServer().getPluginManager().registerEvents(
             new me.koyere.ecoxpert.modules.loans.LoanNotificationListener(

@@ -375,8 +375,8 @@ public class MarketManagerImpl implements MarketManager {
                 MarketItem item = itemOpt.get();
                 BigDecimal unitPrice = item.getCurrentBuyPrice();
                 BigDecimal totalCost = unitPrice.multiply(BigDecimal.valueOf(quantity));
-                // Apply profession buy factor (discounts) if any
-                totalCost = totalCost.multiply(BigDecimal.valueOf(getProfessionFactor(player.getUniqueId(), true)))
+                // Apply profession buy factor (discounts) including context
+                totalCost = totalCost.multiply(BigDecimal.valueOf(getProfessionFactor(player.getUniqueId(), material, true)))
                     .setScale(2, BigDecimal.ROUND_HALF_UP);
                 
                 // Check if player can afford
@@ -441,8 +441,8 @@ public class MarketManagerImpl implements MarketManager {
                 
                 BigDecimal unitPrice = item.getCurrentSellPrice();
                 BigDecimal totalEarning = unitPrice.multiply(BigDecimal.valueOf(quantity));
-                // Apply profession sell factor (bonuses) if any
-                totalEarning = totalEarning.multiply(BigDecimal.valueOf(getProfessionFactor(player.getUniqueId(), false)))
+                // Apply profession sell factor (bonuses) including context
+                totalEarning = totalEarning.multiply(BigDecimal.valueOf(getProfessionFactor(player.getUniqueId(), material, false)))
                     .setScale(2, BigDecimal.ROUND_HALF_UP);
                 
                 // Remove items from inventory
@@ -800,6 +800,63 @@ public class MarketManagerImpl implements MarketManager {
             if (v < 0.5) v = 0.5; if (v > 1.5) v = 1.5;
             return v;
         } catch (Exception ignored) { return 1.0; }
+    }
+
+    // Overload including contextual bonuses by category and active events
+    private double getProfessionFactor(java.util.UUID uuid, org.bukkit.Material material, boolean isBuy) {
+        double v = getProfessionFactor(uuid, isBuy);
+        try {
+            if (professionsManager == null) {
+                professionsManager = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class);
+            }
+            var roleOpt = professionsManager.getRole(uuid).join();
+            if (roleOpt.isEmpty()) return v;
+            String roleKey = "roles." + roleOpt.get().name().toLowerCase();
+            var profCfg = configManager.getModuleConfig("professions");
+
+            // Category bonuses (multiply if material belongs to multiple categories)
+            for (String cat : resolveCategories(material)) {
+                String ckey = roleKey + ".category_bonuses." + cat.toLowerCase() + "." + (isBuy ? "buy_factor" : "sell_factor");
+                double cf = profCfg.getDouble(ckey, 1.0);
+                v *= cf;
+            }
+
+            // Event bonuses for active events
+            var events = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.events.EconomicEventEngine.class);
+            if (events != null) {
+                for (var ev : events.getActiveEvents().values()) {
+                    String ekey = roleKey + ".event_bonuses." + ev.getType().name() + "." + (isBuy ? "buy_factor" : "sell_factor");
+                    double ef = profCfg.getDouble(ekey, 1.0);
+                    v *= ef;
+                }
+            }
+
+            // Clamp
+            if (v < 0.5) v = 0.5; if (v > 1.5) v = 1.5;
+            return v;
+        } catch (Exception ignored) {
+            return v;
+        }
+    }
+
+    private java.util.List<String> resolveCategories(org.bukkit.Material material) {
+        java.util.List<String> list = new java.util.ArrayList<>();
+        try {
+            var marketCfg = configManager.getModuleConfig("market");
+            var section = marketCfg.getConfigurationSection("categories");
+            if (section != null) {
+                for (String key : section.getKeys(false)) {
+                    java.util.List<String> mats = marketCfg.getStringList("categories." + key + ".materials");
+                    for (String m : mats) {
+                        if (material.name().equalsIgnoreCase(m.trim())) {
+                            list.add(key.toUpperCase());
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return list;
     }
 
     private void seedDefaultMarketItems() {

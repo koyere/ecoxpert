@@ -49,6 +49,9 @@ permissions:
       ecoxpert.market.buy: true
       ecoxpert.market.sell: true
       ecoxpert.market.prices: true
+      ecoxpert.market.orders: true
+      ecoxpert.market.list: true
+      ecoxpert.market.buyorder: true
       ecoxpert.bank.account: true
       ecoxpert.bank.deposit: true
       ecoxpert.bank.withdraw: true
@@ -118,6 +121,15 @@ permissions:
   ecoxpert.market.prices:
     description: View market prices
     default: true
+  ecoxpert.market.orders:
+    description: View and use order book GUI
+    default: true
+  ecoxpert.market.list:
+    description: Create fixed-price listings (order book)
+    default: true
+  ecoxpert.market.buyorder:
+    description: Buy from a fixed-price order
+    default: true
     
   ecoxpert.bank.account:
     description: Access bank account
@@ -173,7 +185,7 @@ commands:
   market:
     description: Access market system
     aliases: [ shop, store ]
-    usage: /<command> [buy|sell|prices|stats]
+    usage: /<command> [buy|sell|prices|stats|orders|list|buyorder]
     permission: ecoxpert.market.buy
 
   bank:

@@ -80,6 +80,11 @@ categories:
       - ROTTEN_FLESH
       - ENDER_PEARL
 
+orders:
+  # If the total purchase (unit_price * qty) exceeds this amount,
+  # the Orders GUI will require an explicit confirmation step.
+  confirm_threshold: 5000.0
+
 metrics:
   # Basket of items for CPI calculation (20 recommended). Names must match Bukkit Material enums.
   basket:

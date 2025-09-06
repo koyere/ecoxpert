@@ -13,6 +13,12 @@ roles:
     sell_factor: 1.00
     buy_bonus_per_level: 0.002   # -0.2% per level on buys
     sell_bonus_per_level: 0.000
+    # Contextual bonuses (optional, gentle)
+    category_bonuses:
+      basics: { buy_factor: 0.995, sell_factor: 1.005 }
+      minerals: { buy_factor: 0.995, sell_factor: 1.005 }
+    event_bonuses:
+      TRADE_BOOM: { buy_factor: 1.000, sell_factor: 1.010 }
   spender:
     buy_factor: 1.00
     sell_factor: 1.00
@@ -23,11 +29,21 @@ roles:
     sell_factor: 1.02
     buy_bonus_per_level: 0.001
     sell_bonus_per_level: 0.002
+    category_bonuses:
+      luxury: { buy_factor: 0.990, sell_factor: 1.015 }
+      redstone: { buy_factor: 0.992, sell_factor: 1.010 }
+    event_bonuses:
+      LUXURY_DEMAND: { buy_factor: 0.990, sell_factor: 1.020 }
+      MARKET_DISCOVERY: { buy_factor: 0.995, sell_factor: 1.010 }
   investor:
     buy_factor: 0.99
     sell_factor: 1.01
     buy_bonus_per_level: 0.001
     sell_bonus_per_level: 0.001
+    category_bonuses:
+      minerals: { buy_factor: 0.993, sell_factor: 1.008 }
+    event_bonuses:
+      INVESTMENT_OPPORTUNITY: { buy_factor: 0.990, sell_factor: 1.015 }
   speculator:
     buy_factor: 1.00
     sell_factor: 1.02

@@ -245,6 +245,7 @@ Key parameters (quick reference)
 /ecoevents                     - Open Events Admin GUI
 /ecoadmin                      - Open EcoXpert Admin dashboard
 /professiongui                 - Open Professions GUI
+/market                        - Open Market GUI (with filters and shortcuts)
 ```
 
 ### Professions Commands
@@ -260,6 +261,9 @@ GUI Notes
   - Category filter: cycles through categories from `modules/market.yml` (incl. ALL).
   - Letter filter: cycles A→Z→ALL for quick search by item name.
   - Sell-in-hand by $: opens a sub-GUI with target amounts ($100/$500/$1000/$5000) and sells the closest quantity of the item in hand based on current sell price.
+  - Open Orders: button to open the Order Book GUI.
+  - Clear Filters: reset category and first-letter filters.
+  - Effective price: lore includes Effective Buy/Sell (player contextual price factoring role/category/events).
 - Loans GUI:
   - Offer preview: shows amount, rate, term, and score with Confirm/Cancel before creating the loan.
   - Schedule pagination: view up to 45 installments per page with Prev/Next.
@@ -395,6 +399,11 @@ GUI Permissions
 - `/ecoevents`: `ecoxpert.admin.events`
 - `/market` (GUI with no args): `ecoxpert.market.buy` (opens GUI; trades still validate specific perms)
 
+Market Order Book permissions
+- `ecoxpert.market.orders` — open/use Orders GUI
+- `ecoxpert.market.list` — create fixed-price listings
+- `ecoxpert.market.buyorder` — buy from a listing
+
 ### Banking Configuration
 ```yaml
 banking:
@@ -490,6 +499,8 @@ Runs comprehensive tests:
 - Fixed-price listings coexist with the dynamic market engine.
 - Sellers lock items upfront with `/market list <item> <qty> <unit_price> [hours]`.
 - Buyers purchase with `/market buyorder <id> <qty>`; open orders: `/market orders [item]`.
+ - Orders GUI: paginated with sorting (price/remaining/expires asc/desc), quick quantity selector (1/8/16/32/MAX) and confirmation when total exceeds threshold.
+ - Confirmation threshold: `modules/market.yml` → `orders.confirm_threshold` (default 5000.0).
 
 ---
 
@@ -590,6 +601,11 @@ Premium SpigotMC plugin. All rights reserved.
 ---
 
 ## 📋 **Version History**
+
+### v1.0.4 - Market UX polish + Professions context
+- Market GUI: buttons for Open Orders and Clear Filters; lore shows Effective Buy/Sell (contextual price by role/category/events).
+- Orders GUI: paginated with sorting (price/remaining/expires), quick quantity selector (1/8/16/32/MAX) and confirmation when total exceeds `orders.confirm_threshold`.
+- Professions v2 (contextual bonuses): applied factors by item category and active events in final buy/sell amounts.
 
 ### v1.0.3 - GUIs avanzadas + Scheduler + Placeholders
 - Market GUI: filtros por categoría y letra; sub‑GUI para vender ítem en mano por montos objetivo ($100/$500/$1000/$5000).

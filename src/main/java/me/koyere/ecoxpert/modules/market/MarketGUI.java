@@ -48,6 +48,8 @@ public class MarketGUI implements Listener {
     private static final int CATEGORY_SLOT = 46;
     private static final int LETTER_SLOT = 47;
     private static final int SELL_HAND_SLOT = 51;
+    private static final int ORDERS_SLOT = 52;
+    private static final int CLEAR_FILTERS_SLOT = 48;
 
     // Category cache
     private final java.util.List<String> categoryOrder = new java.util.ArrayList<>();
@@ -183,6 +185,13 @@ public class MarketGUI implements Listener {
             if (item.isBuyable()) {
                 lore.add("§a" + translationManager.getMessage("market.gui.item.buy-price", 
                     formatPrice(item.getCurrentBuyPrice())));
+                // Effective price for this player (role/category/events)
+                try {
+                    double f = computeEffectiveFactorForItem(getCurrentViewer(), item.getMaterial(), true);
+                    java.math.BigDecimal eff = item.getCurrentBuyPrice().multiply(java.math.BigDecimal.valueOf(f))
+                        .setScale(2, java.math.RoundingMode.HALF_UP);
+                    lore.add("§7" + translationManager.getMessage("market.gui.item.effective-buy", formatPrice(eff)));
+                } catch (Exception ignored) {}
             } else {
                 lore.add("§c" + translationManager.getMessage("market.gui.item.not-buyable"));
             }
@@ -190,6 +199,12 @@ public class MarketGUI implements Listener {
             if (item.isSellable()) {
                 lore.add("§c" + translationManager.getMessage("market.gui.item.sell-price", 
                     formatPrice(item.getCurrentSellPrice())));
+                try {
+                    double f = computeEffectiveFactorForItem(getCurrentViewer(), item.getMaterial(), false);
+                    java.math.BigDecimal eff = item.getCurrentSellPrice().multiply(java.math.BigDecimal.valueOf(f))
+                        .setScale(2, java.math.RoundingMode.HALF_UP);
+                    lore.add("§7" + translationManager.getMessage("market.gui.item.effective-sell", formatPrice(eff)));
+                } catch (Exception ignored) {}
             } else {
                 lore.add("§7" + translationManager.getMessage("market.gui.item.not-sellable"));
             }
@@ -216,6 +231,54 @@ public class MarketGUI implements Listener {
         }
         
         return stack;
+    }
+
+    private Player getCurrentViewer() {
+        // Best-effort: this GUI is per-player; when building items we are in the context of an open GUI.
+        // We retrieve any online viewer from openGUIs map.
+        if (!openGUIs.isEmpty()) {
+            UUID any = openGUIs.keySet().iterator().next();
+            Player p = Bukkit.getPlayer(any);
+            if (p != null) return p;
+        }
+        return null;
+    }
+
+    private double computeEffectiveFactorForItem(Player player, Material material, boolean isBuy) {
+        if (player == null) return 1.0;
+        try {
+            var sr = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class).getServiceRegistry();
+            var pm = sr.getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class);
+            var roleOpt = pm.getRole(player.getUniqueId()).join();
+            if (roleOpt.isEmpty()) return 1.0;
+            String role = roleOpt.get().name().toLowerCase();
+            var profCfg = sr.getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class).getModuleConfig("professions");
+            int level = pm.getLevel(player.getUniqueId()).join();
+            int maxLevel = profCfg.getInt("max_level", 5);
+            level = Math.max(1, Math.min(level, maxLevel));
+            double base = profCfg.getDouble("roles." + role + "." + (isBuy ? "buy_factor" : "sell_factor"), 1.0);
+            double per = profCfg.getDouble("roles." + role + "." + (isBuy ? "buy_bonus_per_level" : "sell_bonus_per_level"), 0.0);
+            double v = isBuy ? (base * (1.0 - per * (level - 1))) : (base * (1.0 + per * (level - 1)));
+            // Categories: multiply all categories that include the material
+            for (var e : categories.entrySet()) {
+                if (e.getValue().contains(material)) {
+                    String ck = "roles." + role + ".category_bonuses." + e.getKey().toLowerCase() + "." + (isBuy ? "buy_factor" : "sell_factor");
+                    v *= profCfg.getDouble(ck, 1.0);
+                }
+            }
+            // Events: multiply for each active event
+            var events = sr.getInstance(me.koyere.ecoxpert.modules.events.EconomicEventEngine.class);
+            if (events != null) {
+                for (var ev : events.getActiveEvents().values()) {
+                    String ek = "roles." + role + ".event_bonuses." + ev.getType().name() + "." + (isBuy ? "buy_factor" : "sell_factor");
+                    v *= profCfg.getDouble(ek, 1.0);
+                }
+            }
+            if (v < 0.5) v = 0.5; if (v > 1.5) v = 1.5;
+            return v;
+        } catch (Exception e) {
+            return 1.0;
+        }
     }
     
     /**
@@ -257,13 +320,35 @@ public class MarketGUI implements Listener {
         ItemMeta infoMeta = info.getItemMeta();
         if (infoMeta != null) {
             infoMeta.setDisplayName("§6" + translationManager.getMessage("market.gui.info.title"));
-            infoMeta.setLore(Arrays.asList(
-                "§7" + translationManager.getMessage("market.gui.info.items", totalItems),
-                "§7" + translationManager.getMessage("market.gui.info.page", currentPage + 1, totalPages),
-                "",
-                "§e" + translationManager.getMessage("market.gui.info.help1"),
-                "§e" + translationManager.getMessage("market.gui.info.help2")
-            ));
+            java.util.List<String> lore = new java.util.ArrayList<>();
+            lore.add("§7" + translationManager.getMessage("market.gui.info.items", totalItems));
+            lore.add("§7" + translationManager.getMessage("market.gui.info.page", currentPage + 1, totalPages));
+
+            // Contextual role bonuses
+            try {
+                var player = inv.getPlayer();
+                var ctx = computeContextualBonuses(player, inv.getSelectedCategory());
+                // Role total effect (includes level)
+                lore.add("" );
+                lore.add("§b" + translationManager.getMessage("market.gui.info.role-bonus",
+                    formatPercent(ctx.roleBuy), formatPercent(ctx.roleSell)));
+                // Category (if not ALL)
+                if (inv.getSelectedCategory() != null && !"ALL".equals(inv.getSelectedCategory())) {
+                    lore.add("§9" + translationManager.getMessage("market.gui.info.category-bonus",
+                        inv.getSelectedCategory(), formatPercent(ctx.catBuy), formatPercent(ctx.catSell)));
+                }
+                // Active events aggregated
+                if (ctx.eventBuy != 1.0 || ctx.eventSell != 1.0) {
+                    lore.add("§d" + translationManager.getMessage("market.gui.info.event-bonus",
+                        formatPercent(ctx.eventBuy), formatPercent(ctx.eventSell)));
+                }
+            } catch (Exception ignored) {}
+
+            lore.add("");
+            lore.add("§e" + translationManager.getMessage("market.gui.info.help1"));
+            lore.add("§e" + translationManager.getMessage("market.gui.info.help2"));
+            lore.add("§e" + translationManager.getMessage("market.gui.info.help3"));
+            infoMeta.setLore(lore);
             info.setItemMeta(infoMeta);
         }
         gui.setItem(INFO_SLOT, info);
@@ -304,6 +389,18 @@ public class MarketGUI implements Listener {
         }
         gui.setItem(LETTER_SLOT, letterBtn);
 
+        // Clear filters (category + letter)
+        ItemStack clearFilters = new ItemStack(Material.BARRIER);
+        ItemMeta clearMeta = clearFilters.getItemMeta();
+        if (clearMeta != null) {
+            clearMeta.setDisplayName("§c" + translationManager.getMessage("market.gui.clear-filters-label"));
+            java.util.List<String> lore = new java.util.ArrayList<>();
+            lore.add("§7" + translationManager.getMessage("market.gui.clear-filters-help"));
+            clearMeta.setLore(lore);
+            clearFilters.setItemMeta(clearMeta);
+        }
+        gui.setItem(CLEAR_FILTERS_SLOT, clearFilters);
+
         // Sell item in hand
         ItemStack sellHand = new ItemStack(Material.GOLD_INGOT);
         ItemMeta sellMeta = sellHand.getItemMeta();
@@ -316,7 +413,67 @@ public class MarketGUI implements Listener {
             sellHand.setItemMeta(sellMeta);
         }
         gui.setItem(SELL_HAND_SLOT, sellHand);
+
+        // Open Orders GUI button
+        ItemStack ordersBtn = new ItemStack(Material.PAPER);
+        ItemMeta ordersMeta = ordersBtn.getItemMeta();
+        if (ordersMeta != null) {
+            ordersMeta.setDisplayName("§6" + translationManager.getMessage("market.gui.orders-button"));
+            ordersMeta.setLore(java.util.Arrays.asList(
+                "§7" + translationManager.getMessage("market.gui.orders-button-help")
+            ));
+            ordersBtn.setItemMeta(ordersMeta);
+        }
+        gui.setItem(ORDERS_SLOT, ordersBtn);
     }
+
+    private static class CtxFactors { double roleBuy=1, roleSell=1, catBuy=1, catSell=1, eventBuy=1, eventSell=1; }
+
+    private CtxFactors computeContextualBonuses(Player player, String selectedCategory) {
+        CtxFactors f = new CtxFactors();
+        try {
+            var sr = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class).getServiceRegistry();
+            var pm = sr.getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class);
+            var roleOpt = pm.getRole(player.getUniqueId()).join();
+            if (roleOpt.isEmpty()) return f;
+            String role = roleOpt.get().name().toLowerCase();
+            int level = pm.getLevel(player.getUniqueId()).join();
+            var profCfg = configManager.getModuleConfig("professions");
+            int maxLevel = profCfg.getInt("max_level", 5);
+            level = Math.max(1, Math.min(level, maxLevel));
+
+            double baseBuy = profCfg.getDouble("roles." + role + ".buy_factor", 1.0);
+            double baseSell = profCfg.getDouble("roles." + role + ".sell_factor", 1.0);
+            double perBuy = profCfg.getDouble("roles." + role + ".buy_bonus_per_level", 0.0);
+            double perSell = profCfg.getDouble("roles." + role + ".sell_bonus_per_level", 0.0);
+            f.roleBuy = clamp( baseBuy * (1.0 - perBuy * (level - 1)) );
+            f.roleSell = clamp( baseSell * (1.0 + perSell * (level - 1)) );
+
+            if (selectedCategory != null && !"ALL".equals(selectedCategory)) {
+                f.catBuy = profCfg.getDouble("roles." + role + ".category_bonuses." + selectedCategory.toLowerCase() + ".buy_factor", 1.0);
+                f.catSell = profCfg.getDouble("roles." + role + ".category_bonuses." + selectedCategory.toLowerCase() + ".sell_factor", 1.0);
+            }
+
+            var events = sr.getInstance(me.koyere.ecoxpert.modules.events.EconomicEventEngine.class);
+            if (events != null) {
+                double eb = 1.0, es = 1.0;
+                for (var ev : events.getActiveEvents().values()) {
+                    eb *= profCfg.getDouble("roles." + role + ".event_bonuses." + ev.getType().name() + ".buy_factor", 1.0);
+                    es *= profCfg.getDouble("roles." + role + ".event_bonuses." + ev.getType().name() + ".sell_factor", 1.0);
+                }
+                f.eventBuy = clamp(eb); f.eventSell = clamp(es);
+            }
+        } catch (Exception ignored) {}
+        return f;
+    }
+
+    private String formatPercent(double factor) {
+        double pct = (factor - 1.0) * 100.0;
+        String sign = pct > 0 ? "+" : ""; // minus included by default
+        return String.format(java.util.Locale.US, "%s%.1f%%", sign, pct);
+    }
+
+    private double clamp(double v) { if (v < 0.5) return 0.5; if (v > 1.5) return 1.5; return v; }
     
     /**
      * Handle GUI click events
@@ -438,6 +595,19 @@ public class MarketGUI implements Listener {
 
         if (slot == SELL_HAND_SLOT) {
             openSellHandGUI(player);
+            return;
+        }
+
+        if (slot == ORDERS_SLOT) {
+            player.performCommand("market orders");
+            return;
+        }
+
+        if (slot == CLEAR_FILTERS_SLOT) {
+            marketInv.setSelectedCategory("ALL");
+            marketInv.setFilterLetter(null);
+            marketInv.setCurrentPage(0);
+            updateGUI(player, marketInv);
             return;
         }
         
