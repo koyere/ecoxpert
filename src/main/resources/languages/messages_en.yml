@@ -180,6 +180,8 @@ market:
         amount_max: "Buy MAX"
         confirm: "Confirm"
         cancel: "Cancel"
+        button_total: "Total: {0}"
+        confirm_hint: "Requires confirm"
         info:
           title: "Order"
           unit_price: "Unit price: {0}"
@@ -208,26 +210,33 @@ market:
       event-bonus: "Events: buy {0}, sell {1}"
       sort-label: "Sort: {0}"
       sort-help: "Click book to cycle sorting"
+      sort-mode:
+        name: "Name"
+        buy-asc: "Buy ↑"
+        sell-asc: "Sell ↑"
+        sell-desc: "Sell ↓"
+        volume-asc: "Volume ↑"
+        volume-desc: "Volume ↓"
       help1: "Click to buy 1 item"
       help2: "Shift-click to sell all"
       help3: "Use 'Open Orders' to view listings"
       range: "Price range allowed: {0} – {1}"
-    category-label: "Category: {0}"
-    category-help: "Click to cycle categories"
-    letter-label: "Filter: {0}"
-    letter-help: "Click to cycle first-letter filter"
-    clear-filters-label: "Clear Filters"
-    clear-filters-help: "Resets category and letter filters"
-    sell-hand-label: "Sell Hand by $"
-    orders-button: "Open Orders"
-    orders-button-help: "Click to browse order book"
-    sell-hand:
-      title: "Sell Item in Hand"
-      help1: "Sell items in hand approximating amount"
-      help2: "Picks quantity closest to target"
-      amount: "Sell for {0}"
-      lore1: "Approximates quantity to target"
-      lore2: "Uses current sell price"
+      category-label: "Category: {0}"
+      category-help: "Click to cycle categories"
+      letter-label: "Filter: {0}"
+      letter-help: "Click to cycle first-letter filter"
+      clear-filters-label: "Clear Filters"
+      clear-filters-help: "Resets category and letter filters"
+      sell-hand-label: "Sell Hand by $"
+      orders-button: "Open Orders"
+      orders-button-help: "Click to browse order book"
+      sell-hand:
+        title: "Sell Item in Hand"
+        help1: "Sell items in hand approximating amount"
+        help2: "Picks quantity closest to target"
+        amount: "Sell for {0}"
+        lore1: "Approximates quantity to target"
+        lore2: "Uses current sell price"
     
     item:
       header: "Market Item"
@@ -453,6 +462,14 @@ professions:
   available: "Available: {0}"
   gui:
     title: "Professions"
+    lore:
+      xp: "&7XP: &e{0}&7/&e{1}"
+      progress: "&7Progress: &e{0}% &7to next"
+  xp:
+    gained:
+      buy: "&7You gained &a+{0} XP &7for buying."
+      sell: "&7You gained &a+{0} XP &7for selling."
+  levelup: "&aProfession level up! Now level &e{0}"
   
 # Admin Commands
 admin:

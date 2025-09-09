@@ -15,6 +15,14 @@ public interface IntegrationsManager {
 
     boolean hasLands();
 
+    boolean hasJobs();
+
+    boolean hasTowny();
+
+    boolean hasSlimefun();
+
+    boolean hasMcMMO();
+
     /**
      * Return a comma-separated list of WorldGuard region IDs at the player's location.
      * Empty string if not available or none.
@@ -27,4 +35,3 @@ public interface IntegrationsManager {
      */
     String getLandsLand(Player player);
 }
-

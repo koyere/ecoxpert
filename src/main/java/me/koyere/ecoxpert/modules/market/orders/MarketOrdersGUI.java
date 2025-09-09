@@ -370,11 +370,11 @@ public class MarketOrdersGUI implements Listener {
         }
         inv.setItem(4, info);
 
-        inv.setItem(10, amountItem(1, false));
-        inv.setItem(11, amountItem(8, false));
-        inv.setItem(12, amountItem(16, false));
-        inv.setItem(13, amountItem(32, false));
-        inv.setItem(14, amountItem(sv.order.getRemainingQuantity(), true));
+        inv.setItem(10, amountItem(sv, 1, false));
+        inv.setItem(11, amountItem(sv, 8, false));
+        inv.setItem(12, amountItem(sv, 16, false));
+        inv.setItem(13, amountItem(sv, 32, false));
+        inv.setItem(14, amountItem(sv, sv.order.getRemainingQuantity(), true));
 
         // Confirm/Cancel if needed after clicking amount (render now as hint)
         ItemStack cancel = new ItemStack(Material.BARRIER);
@@ -390,7 +390,7 @@ public class MarketOrdersGUI implements Listener {
         return inv;
     }
 
-    private ItemStack amountItem(int qty, boolean isMax) {
+    private ItemStack amountItem(SelectionView sv, int qty, boolean isMax) {
         ItemStack it = new ItemStack(Material.GOLD_NUGGET, Math.max(1, Math.min(64, qty)));
         ItemMeta im = it.getItemMeta();
         if (im != null) {
@@ -399,6 +399,13 @@ public class MarketOrdersGUI implements Listener {
             } else {
                 im.setDisplayName("§6" + tm.getMessage("market.gui.orders.select.amount", qty));
             }
+            java.util.List<String> lore = new java.util.ArrayList<>();
+            java.math.BigDecimal total = sv.order.getUnitPrice().multiply(new java.math.BigDecimal(qty)).setScale(2, java.math.RoundingMode.HALF_UP);
+            lore.add("§7" + tm.getMessage("market.gui.orders.select.button_total", format(total)));
+            if (total.doubleValue() > getConfirmThreshold()) {
+                lore.add("§e" + tm.getMessage("market.gui.orders.select.confirm_hint"));
+            }
+            im.setLore(lore);
             it.setItemMeta(im);
         }
         return it;

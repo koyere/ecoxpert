@@ -200,6 +200,8 @@ market:
         amount_max: "Comprar MÁX"
         confirm: "Confirmar"
         cancel: "Cancelar"
+        button_total: "Total: {0}"
+        confirm_hint: "Requiere confirmación"
         info:
           title: "Orden"
           unit_price: "Precio unitario: {0}"
@@ -236,26 +238,33 @@ market:
       event-bonus: "Eventos: compra {0}, venta {1}"
       sort-label: "Orden: {0}"
       sort-help: "Click en el libro para cambiar"
+      sort-mode:
+        name: "Nombre"
+        buy-asc: "Compra ↑"
+        sell-asc: "Venta ↑"
+        sell-desc: "Venta ↓"
+        volume-asc: "Volumen ↑"
+        volume-desc: "Volumen ↓"
       help1: "Click para comprar 1 ítem"
       help2: "Shift-click para vender todo"
       help3: "Usa 'Ver Órdenes' para ver listados"
       range: "Rango permitido: {0} – {1}"
-    category-label: "Categoría: {0}"
-    category-help: "Click para cambiar categoría"
-    letter-label: "Filtro: {0}"
-    letter-help: "Click para cambiar filtro por letra"
-    clear-filters-label: "Limpiar Filtros"
-    clear-filters-help: "Restablece categoría y letra"
-    sell-hand-label: "Vender en Mano por $"
-    orders-button: "Ver Órdenes"
-    orders-button-help: "Click para abrir el libro de órdenes"
-    sell-hand:
-      title: "Vender Ítem en Mano"
-      help1: "Vende el ítem en mano por monto"
-      help2: "Aproxima la cantidad al objetivo"
-      amount: "Vender por {0}"
-      lore1: "Aproxima cantidad al monto"
-      lore2: "Usa el precio de venta actual"
+      category-label: "Categoría: {0}"
+      category-help: "Click para cambiar categoría"
+      letter-label: "Filtro: {0}"
+      letter-help: "Click para cambiar filtro por letra"
+      clear-filters-label: "Limpiar Filtros"
+      clear-filters-help: "Restablece categoría y letra"
+      sell-hand-label: "Vender en Mano por $"
+      orders-button: "Ver Órdenes"
+      orders-button-help: "Click para abrir el libro de órdenes"
+      sell-hand:
+        title: "Vender Ítem en Mano"
+        help1: "Vende el ítem en mano por monto"
+        help2: "Aproxima la cantidad al objetivo"
+        amount: "Vender por {0}"
+        lore1: "Aproxima cantidad al monto"
+        lore2: "Usa el precio de venta actual"
     
     item:
       header: "Ítem del Mercado"
@@ -476,6 +485,14 @@ professions:
   available: "Disponibles: {0}"
   gui:
     title: "Profesiones"
+    lore:
+      xp: "&7XP: &e{0}&7/&e{1}"
+      progress: "&7Progreso: &e{0}% &7al siguiente"
+  xp:
+    gained:
+      buy: "&7Has ganado &a+{0} XP &7por comprar."
+      sell: "&7Has ganado &a+{0} XP &7por vender."
+  levelup: "&a¡Has subido de nivel de profesión! Nivel &e{0}"
   
 # Admin Commands
 admin:

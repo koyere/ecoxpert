@@ -502,6 +502,15 @@ public class DataManagerImpl implements DataManager {
             )
             """
             ,
+            // Professions XP tracking (separate table)
+            """
+            CREATE TABLE IF NOT EXISTS ecoxpert_profession_xp (
+                player_uuid VARCHAR(36) PRIMARY KEY,
+                xp INTEGER NOT NULL DEFAULT 0,
+                last_gain_at TIMESTAMP
+            )
+            """
+            ,
             // Order book (optional feature): fixed-price listings
             """
             CREATE TABLE IF NOT EXISTS ecoxpert_market_orders (
@@ -533,7 +542,9 @@ public class DataManagerImpl implements DataManager {
                 "CREATE INDEX IF NOT EXISTS idx_loan_sched_loan ON ecoxpert_loan_schedules(loan_id)",
                 // Market orders: open listing by status/material/date
                 "CREATE INDEX IF NOT EXISTS idx_orders_status_material_created ON ecoxpert_market_orders(status, material, created_at)",
-                "CREATE INDEX IF NOT EXISTS idx_orders_status_created ON ecoxpert_market_orders(status, created_at)"
+                "CREATE INDEX IF NOT EXISTS idx_orders_status_created ON ecoxpert_market_orders(status, created_at)",
+                // Professions XP
+                "CREATE INDEX IF NOT EXISTS idx_prof_xp_player ON ecoxpert_profession_xp(player_uuid)"
             };
             for (String idx : indexes) {
                 try (PreparedStatement stmt = conn.prepareStatement(idx)) { stmt.executeUpdate(); }

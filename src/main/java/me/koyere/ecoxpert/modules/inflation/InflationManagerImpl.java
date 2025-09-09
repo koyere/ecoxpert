@@ -92,9 +92,16 @@ public class InflationManagerImpl implements InflationManager {
                             try {
                                 var current = getCurrentCycle();
                                 if (current != lastBroadcastCycle) {
+                                    var old = lastBroadcastCycle;
                                     me.koyere.ecoxpert.core.education.EducationNotifier.broadcastCycle(plugin,
                                         plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class),
                                         current);
+                                    // Fire API event on main thread
+                                    org.bukkit.Bukkit.getScheduler().runTask(plugin, () ->
+                                        org.bukkit.Bukkit.getPluginManager().callEvent(
+                                            new me.koyere.ecoxpert.api.events.EconomyCycleChangeEvent(old, current, java.time.Instant.now())
+                                        )
+                                    );
                                     lastBroadcastCycle = current;
                                 }
                             } catch (Exception ignored) {}

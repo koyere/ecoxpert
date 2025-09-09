@@ -36,6 +36,10 @@ education:
     cycle: true     # Broadcast economic cycle changes
     events: true    # Broadcast educational line when an event starts
     policy: true    # Notify player on policy applications (e.g., wealth tax)
+  cooldowns:
+    cycle_minutes: 30           # Minimum minutes between cycle broadcasts
+    events_minutes: 10          # Minimum minutes between event broadcasts
+    policy_player_minutes: 60   # Per-player cooldown for policy notifications
 
 # Database Configuration
 database:

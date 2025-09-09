@@ -47,7 +47,25 @@ public class ProfessionsGUI extends BaseGUI {
         int maxLevel = cfg.getInt("max_level", 5);
         int cooldown = cfg.getInt("cooldown_minutes", 1440);
         int level = 1;
-        try { level = plugin.getServiceRegistry().getInstance(ProfessionsManager.class).getLevel(p.getUniqueId()).join(); } catch (Exception ignored) {}
+        int xp = 0;
+        try {
+            var pm = plugin.getServiceRegistry().getInstance(ProfessionsManager.class);
+            level = pm.getLevel(p.getUniqueId()).join();
+            xp = pm.getXp(p.getUniqueId()).join();
+        } catch (Exception ignored) {}
+        // Resolve next threshold and progress
+        java.util.List<Integer> thresholds = cfg.getIntegerList("xp.level_thresholds");
+        if (thresholds == null || thresholds.isEmpty()) thresholds = java.util.Arrays.asList(0, 100, 250, 500, 1000, 2000);
+        int curIdx = Math.max(0, Math.min(level - 1, thresholds.size() - 1));
+        int curBase = thresholds.get(curIdx);
+        int nextIdx = Math.min(level, thresholds.size() - 1);
+        int nextReq = level >= maxLevel ? curBase : thresholds.get(nextIdx);
+        int progress = 100;
+        if (level < maxLevel && nextReq > curBase) {
+            int num = Math.max(0, xp - curBase);
+            int den = Math.max(1, nextReq - curBase);
+            progress = (int) Math.max(0, Math.min(100, Math.floor((num * 100.0) / den)));
+        }
         double effBuy = buyF * (1.0 - (buyLvl * (level - 1)));
         double effSell = sellF * (1.0 + (sellLvl * (level - 1)));
         return new String[] {
@@ -55,6 +73,8 @@ public class ProfessionsGUI extends BaseGUI {
             "§7Sell factor: §e" + String.format(java.util.Locale.US, "%.3f", sellF) + " §7(efectivo: §e" + String.format(java.util.Locale.US, "%.3f", effSell) + ")",
             "§7Per level: §ebuy " + String.format(java.util.Locale.US, "%.3f", buyLvl) + ", sell " + String.format(java.util.Locale.US, "%.3f", sellLvl),
             "§7Level: §e" + level + "/" + maxLevel + " §7| Cooldown: §e" + cooldown + "m",
+            tm.getMessage("professions.gui.lore.xp", xp, Math.max(curBase, nextReq)),
+            tm.getMessage("professions.gui.lore.progress", progress),
             "",
             "§eClick to select"
         };

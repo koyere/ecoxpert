@@ -421,7 +421,17 @@ public class EconomicIntelligenceEngine {
             BigDecimal rate = BigDecimal.valueOf(wealthTaxRate);
             BigDecimal threshold = BigDecimal.valueOf(snapshot.getAverageBalance() * wealthTaxThresholdMultiplier)
                 .setScale(2, RoundingMode.HALF_UP);
-            economyManager.applyWealthTax(rate, threshold, "Overheating liquidity reduction");
+            String reason = "Overheating liquidity reduction";
+            economyManager.applyWealthTax(rate, threshold, reason)
+                .thenAccept(affected -> {
+                    try {
+                        org.bukkit.Bukkit.getScheduler().runTask(plugin, () ->
+                            org.bukkit.Bukkit.getPluginManager().callEvent(
+                                new me.koyere.ecoxpert.api.events.WealthTaxAppliedEvent(rate, threshold, affected, reason, java.time.Instant.now())
+                            )
+                        );
+                    } catch (Exception ignored) {}
+                });
             // Notify affected online players (educational message)
             try {
                 var tm = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.translation.TranslationManager.class);

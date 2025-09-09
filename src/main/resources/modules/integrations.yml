@@ -9,8 +9,27 @@ detect:
   slimefun: true
   mcmmo: true
 
+# Gentle dynamic adjustments (phase 1)
+adjustments:
+  enabled: true
+  # Soft factors applied when plugin is detected. Keep very gentle (0.98–1.02 typical)
+  jobs:
+    buy_factor: 1.00
+    sell_factor: 0.99
+  towny:
+    buy_factor: 1.00
+    sell_factor: 1.00
+  lands:
+    buy_factor: 1.00
+    sell_factor: 1.00
+  slimefun:
+    buy_factor: 1.01
+    sell_factor: 1.00
+  mcmmo:
+    buy_factor: 1.01
+    sell_factor: 1.00
+
 # Notes:
 # - This file enables lightweight detection of external plugins.
 # - Future iterations may use these toggles to apply contextual adjustments.
 # - All hooks are reflection-based (no hard dependencies).
-

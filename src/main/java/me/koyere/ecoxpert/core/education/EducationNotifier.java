@@ -18,6 +18,9 @@ import java.util.UUID;
  */
 public final class EducationNotifier {
     private EducationNotifier() {}
+    private static volatile long lastCycleBroadcastAt = 0L;
+    private static volatile long lastEventBroadcastAt = 0L;
+    private static final java.util.concurrent.ConcurrentMap<UUID, Long> lastPolicyNotifyAt = new java.util.concurrent.ConcurrentHashMap<>();
 
     public static void broadcastCycle(EcoXpertPlugin plugin, TranslationManager tm,
                                       EconomicIntelligenceEngine.EconomicCycle cycle) {
@@ -25,8 +28,12 @@ public final class EducationNotifier {
             ConfigManager cfg = plugin.getServiceRegistry().getInstance(ConfigManager.class);
             if (!cfg.getConfig().getBoolean("education.enabled", true)) return;
             if (!cfg.getConfig().getBoolean("education.broadcasts.cycle", true)) return;
+            int cdMin = Math.max(0, cfg.getConfig().getInt("education.cooldowns.cycle_minutes", 30));
+            long now = System.currentTimeMillis();
+            if (cdMin > 0 && (now - lastCycleBroadcastAt) < cdMin * 60_000L) return;
             String key = "education.cycle." + cycle.name();
             Bukkit.broadcastMessage(tm.getMessage("prefix") + tm.getMessage(key));
+            lastCycleBroadcastAt = now;
         } catch (Exception ignored) {}
     }
 
@@ -35,6 +42,9 @@ public final class EducationNotifier {
             ConfigManager cfg = plugin.getServiceRegistry().getInstance(ConfigManager.class);
             if (!cfg.getConfig().getBoolean("education.enabled", true)) return;
             if (!cfg.getConfig().getBoolean("education.broadcasts.events", true)) return;
+            int cdMin = Math.max(0, cfg.getConfig().getInt("education.cooldowns.events_minutes", 10));
+            long now = System.currentTimeMillis();
+            if (cdMin > 0 && (now - lastEventBroadcastAt) < cdMin * 60_000L) return;
 
             String baseKey = "education.events." + event.getType().name();
             String msg;
@@ -60,6 +70,7 @@ public final class EducationNotifier {
                 }
             }
             Bukkit.broadcastMessage(tm.getMessage("prefix") + msg);
+            lastEventBroadcastAt = now;
         } catch (Exception ignored) {}
     }
 
@@ -69,8 +80,15 @@ public final class EducationNotifier {
             ConfigManager cfg = plugin.getServiceRegistry().getInstance(ConfigManager.class);
             if (!cfg.getConfig().getBoolean("education.enabled", true)) return;
             if (!cfg.getConfig().getBoolean("education.broadcasts.policy", true)) return;
+            int cdMin = Math.max(0, cfg.getConfig().getInt("education.cooldowns.policy_player_minutes", 60));
             Player p = Bukkit.getPlayer(playerId);
             if (p == null) return;
+            if (cdMin > 0) {
+                long now = System.currentTimeMillis();
+                Long last = lastPolicyNotifyAt.get(playerId);
+                if (last != null && (now - last) < cdMin * 60_000L) return;
+                lastPolicyNotifyAt.put(playerId, now);
+            }
             p.sendMessage(tm.getMessage("prefix") + tm.getMessage("education.policy.wealth_tax_applied",
                 threshold != null ? threshold.toPlainString() : ""));
         } catch (Exception ignored) {}

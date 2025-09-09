@@ -84,6 +84,17 @@ public interface EcoXpertAPI {
      * Get a lightweight snapshot of server economics for quick dashboards.
      */
     ServerEconomySnapshot getServerEconomics();
+
+    /**
+     * Forecast the economic cycle for a given horizon using the intelligence engine
+     * and recent metrics. Returned object contains the predicted cycle and confidence.
+     */
+    CycleForecast forecastCycle(java.time.Duration horizon);
+
+    /**
+     * Get extended player economy view with risk score and wealth percentile.
+     */
+    PlayerEconomyView getPlayerEconomyView(java.util.UUID playerId);
 }
 
 /**

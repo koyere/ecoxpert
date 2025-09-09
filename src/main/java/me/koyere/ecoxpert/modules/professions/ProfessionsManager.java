@@ -10,6 +10,8 @@ public interface ProfessionsManager {
     CompletableFuture<Boolean> setRole(UUID player, ProfessionRole role);
     CompletableFuture<Integer> getLevel(UUID player);
     CompletableFuture<Boolean> setLevel(UUID player, int level);
+    CompletableFuture<Integer> getXp(UUID player);
+    CompletableFuture<Integer> addXp(UUID player, int delta);
     CompletableFuture<Boolean> canChange(UUID player);
     List<ProfessionRole> getAvailableRoles();
 }

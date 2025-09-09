@@ -131,6 +131,11 @@ metrics:
     - GUNPOWDER
     - BONE
 
+api:
+  events:
+    # Fire MarketPriceChangeEvent when a price changes more than this fraction (0.15 = 15%).
+    price_change_threshold_percent: 0.15
+
 # Notes:
 # - Categories are used by events (e.g., Luxury Demand) to apply per‑item price factors.
 # - You can add or remove materials at any time; names must match Bukkit Material enums.

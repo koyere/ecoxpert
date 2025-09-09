@@ -256,6 +256,14 @@ Key parameters (quick reference)
 /profession levelup              - Increase your profession level (requires perm)
 ```
 
+### Professions (XP & Levels)
+- Players gain XP when buying/selling items in the market.
+- Levels increase automatically based on thresholds in `modules/professions.yml` → `xp.level_thresholds`.
+- Config keys (excerpt):
+  - `xp.per_buy`, `xp.per_sell` — flat XP per transaction.
+  - `xp.per_100_money_buy`, `xp.per_100_money_sell` — extra XP per each $100 spent/earned.
+  - `max_level`, `xp.level_thresholds` — level caps and XP thresholds.
+
 GUI Notes
 - Market GUI (open with `/market` without args):
   - Category filter: cycles through categories from `modules/market.yml` (incl. ALL).
@@ -264,7 +272,9 @@ GUI Notes
   - Open Orders: button to open the Order Book GUI.
   - Clear Filters: reset category and first-letter filters.
   - Effective price: lore includes Effective Buy/Sell (player contextual price factoring role/category/events).
+  - Info panel shows sorting mode. Modes: Name, Buy ↑, Sell ↑/↓, Volume ↑/↓ (click the book to cycle).
   - Right-click on an item: opens "List Item" sub‑GUI to publish a fixed-price listing with quick quantity/duration and price adjustments.
+  - In the List GUI, the allowed price range (min/max) is displayed under the unit price based on `orders.listing.price_bounds_*`.
 - Loans GUI:
   - Offer preview: shows amount, rate, term, and score with Confirm/Cancel before creating the loan.
   - Schedule pagination: view up to 45 installments per page with Prev/Next.
@@ -404,6 +414,7 @@ Advanced mode keeps using `modules/*.yml` for full control.
 ### Educational Messages (opt-in)
 - `education.enabled`: true/false.
 - `education.broadcasts`: `cycle|events|policy` toggles.
+- `education.cooldowns`: anti‑spam cooldowns in minutes (`cycle_minutes`, `events_minutes`, `policy_player_minutes`).
 - Messages are localized (EN/ES) under `education.*` keys.
 - Examples:
   - Cycle change: "The economy entered BUBBLE; sharp price increases likely."
@@ -488,21 +499,74 @@ Runs comprehensive tests:
   - `%ecox_avg_balance%` (average balance)
   - `%ecox_gini%` (wealth inequality 0–1)
   - `%ecox_has_worldguard%` / `%ecox_has_lands%`
+  - `%ecox_has_jobs%` / `%ecox_has_towny%` / `%ecox_has_slimefun%` / `%ecox_has_mcmmo%`
 - Player:
   - `%ecox_balance%` (formatted)
   - `%ecox_loans_outstanding%` (formatted)
   - `%ecox_wg_regions%` (comma-separated WorldGuard regions at player location, if WG present)
   - `%ecox_lands_land%` (Lands land name at player location, if Lands present)
   - `%ecox_role%` (current profession role)
-  - `%ecox_role_level%`, `%ecox_role_bonus_buy%`, `%ecox_role_bonus_sell%`
+  - `%ecox_role_level%`, `%ecox_role_xp%`, `%ecox_role_progress%`, `%ecox_role_bonus_buy%`, `%ecox_role_bonus_sell%`
 
 ### Public API (minimal)
 - `EcoXpertAPI#getServerEconomics()` → `ServerEconomySnapshot` with fields: `cycle`, `economicHealth` (0–1), `inflationRate` (fraction), `marketActivity` (0–1), `activeEvents`.
+ - `EcoXpertAPI#forecastCycle(Duration)` → `CycleForecast` (predicted cycle + confidence).
+ - `EcoXpertAPI#getPlayerEconomyView(UUID)` → `PlayerEconomyView` (balance, wealthPercentile 0–1, riskScore 0–1, predictedFutureBalance).
+
+API Events (Bukkit)
+- `EconomyCycleChangeEvent` — fired on cycle transitions (e.g., GROWTH → BOOM).
+- `MarketPriceChangeEvent` — fired when an item's price changes more than `market.api.events.price_change_threshold_percent` (default 15%).
+- `WealthTaxAppliedEvent` — fired after wealth tax is applied (rate, threshold, affectedAccounts).
+
+### API Usage Examples
+
+- Get API instance and server snapshot
+```
+EcoXpertAPI api = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+  .getServiceRegistry().getInstance(me.koyere.ecoxpert.api.EcoXpertAPI.class);
+var snap = api.getServerEconomics();
+getLogger().info("Cycle=" + snap.getCycle() + ", Health=" + (int)(snap.getEconomicHealth()*100) + "%");
+```
+
+- Forecast cycle for next 24 hours
+```
+var forecast = api.forecastCycle(java.time.Duration.ofHours(24));
+getLogger().info("Forecast Cycle=" + forecast.getCycle() + ", Confidence=" + (int)(forecast.getConfidence()*100) + "%");
+```
+
+- Player economy view (percentile and risk)
+```
+java.util.UUID uuid = player.getUniqueId();
+var view = api.getPlayerEconomyView(uuid);
+getLogger().info("Percentile=" + String.format("%.0f%%", view.getWealthPercentile()*100) + 
+                 ", Risk=" + String.format("%.0f%%", view.getRiskScore()*100));
+```
+
+- Listen to API events
+```
+@org.bukkit.event.EventHandler
+public void onCycle(me.koyere.ecoxpert.api.events.EconomyCycleChangeEvent e) {
+  getLogger().info("Cycle changed: " + e.getOldCycle() + " → " + e.getNewCycle());
+}
+
+@org.bukkit.event.EventHandler
+public void onPrice(me.koyere.ecoxpert.api.events.MarketPriceChangeEvent e) {
+  getLogger().info("Price change (" + e.getMaterial() + ") oldBuy=" + e.getOldBuy() + " newBuy=" + e.getNewBuy());
+}
+
+@org.bukkit.event.EventHandler
+public void onWealthTax(me.koyere.ecoxpert.api.events.WealthTaxAppliedEvent e) {
+  getLogger().info("WealthTax: rate=" + e.getRate() + " threshold=" + e.getThreshold() + 
+                   " affected=" + e.getAffectedAccounts());
+}
+```
 
 ### Integrations (soft hooks)
 - WorldGuard: read-only region names by location (used in placeholders).
 - Lands: read-only land name by location (used in placeholders).
- - Integrations config: `modules/integrations.yml` (detect Jobs/Towny/Lands/Slimefun/McMMO). Actualmente detección‑only; futuras iteraciones podrán aplicar ajustes suaves.
+- Integrations config: `modules/integrations.yml` (detect Jobs/Towny/Lands/Slimefun/McMMO). Actualmente detección‑only; futuras iteraciones podrán aplicar ajustes suaves.
+- Startup logs include a summary line: "Integrations detected → WorldGuard=..., Lands=..., Jobs=..., Towny=..., Slimefun=..., McMMO=...".
+ - Dynamic adjustments (phase 1): gentle buy/sell factors can be enabled per integration in `modules/integrations.yml` → `adjustments.*`. Factors are very mild (±1%) and apply on final amounts (buy/sell), visible in Effective Buy/Sell.
 
 ---
 

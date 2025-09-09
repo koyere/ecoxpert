@@ -387,6 +387,7 @@ public class MarketManagerImpl implements MarketManager {
                 BigDecimal totalCost = unitPrice.multiply(BigDecimal.valueOf(quantity));
                 // Apply profession buy factor (discounts) including context
                 totalCost = totalCost.multiply(BigDecimal.valueOf(getProfessionFactor(player.getUniqueId(), material, true)))
+                    .multiply(BigDecimal.valueOf(getIntegrationsFactor(material, true)))
                     .setScale(2, BigDecimal.ROUND_HALF_UP);
                 
                 // Check if player can afford
@@ -453,6 +454,7 @@ public class MarketManagerImpl implements MarketManager {
                 BigDecimal totalEarning = unitPrice.multiply(BigDecimal.valueOf(quantity));
                 // Apply profession sell factor (bonuses) including context
                 totalEarning = totalEarning.multiply(BigDecimal.valueOf(getProfessionFactor(player.getUniqueId(), material, false)))
+                    .multiply(BigDecimal.valueOf(getIntegrationsFactor(material, false)))
                     .setScale(2, BigDecimal.ROUND_HALF_UP);
                 
                 // Remove items from inventory
@@ -849,6 +851,33 @@ public class MarketManagerImpl implements MarketManager {
         }
     }
 
+    private double getIntegrationsFactor(org.bukkit.Material material, boolean isBuy) {
+        try {
+            var sr = plugin.getServiceRegistry();
+            var integ = sr.getInstance(me.koyere.ecoxpert.modules.integrations.IntegrationsManager.class);
+            var cfg = configManager.getModuleConfig("integrations");
+            if (cfg == null || !cfg.getBoolean("adjustments.enabled", true)) return 1.0;
+            double factor = 1.0;
+            if (integ != null && integ.hasJobs()) {
+                factor *= cfg.getDouble("adjustments.jobs." + (isBuy ? "buy_factor" : "sell_factor"), 1.0);
+            }
+            if (integ != null && integ.hasTowny()) {
+                factor *= cfg.getDouble("adjustments.towny." + (isBuy ? "buy_factor" : "sell_factor"), 1.0);
+            }
+            if (integ != null && integ.hasLands()) {
+                factor *= cfg.getDouble("adjustments.lands." + (isBuy ? "buy_factor" : "sell_factor"), 1.0);
+            }
+            if (integ != null && integ.hasSlimefun()) {
+                factor *= cfg.getDouble("adjustments.slimefun." + (isBuy ? "buy_factor" : "sell_factor"), 1.0);
+            }
+            if (integ != null && integ.hasMcMMO()) {
+                factor *= cfg.getDouble("adjustments.mcmmo." + (isBuy ? "buy_factor" : "sell_factor"), 1.0);
+            }
+            if (factor < 0.9) factor = 0.9; if (factor > 1.1) factor = 1.1; // gentle clamp
+            return factor;
+        } catch (Exception ignored) { return 1.0; }
+    }
+
     private java.util.List<String> resolveCategories(org.bukkit.Material material) {
         java.util.List<String> list = new java.util.ArrayList<>();
         try {
@@ -1002,6 +1031,12 @@ public class MarketManagerImpl implements MarketManager {
                 itemFactors.remove(item.getMaterial());
             }
 
+            // Compute change percentages for API event
+            java.math.BigDecimal oldBuy = item.getCurrentBuyPrice();
+            java.math.BigDecimal oldSell = item.getCurrentSellPrice();
+            double buyDelta = safeRelativeChange(oldBuy, adjustedBuy);
+            double sellDelta = safeRelativeChange(oldSell, adjustedSell);
+
             // Update database
             String sql = """
                 UPDATE ecoxpert_market_items 
@@ -1028,6 +1063,26 @@ public class MarketManagerImpl implements MarketManager {
             
             // Record price history
             recordPriceHistory(priceUpdate);
+
+            // Fire market price change event if above threshold
+            try {
+                double threshold = 0.15; // 15% default
+                try {
+                    var cfg = configManager.getModuleConfig("market");
+                    threshold = cfg.getDouble("api.events.price_change_threshold_percent", 0.15);
+                } catch (Exception ignored) {}
+                if (Math.max(Math.abs(buyDelta), Math.abs(sellDelta)) >= threshold) {
+                    java.math.BigDecimal nb = adjustedBuy;
+                    java.math.BigDecimal ns = adjustedSell;
+                    var mat = item.getMaterial();
+                    var ts = java.time.Instant.now();
+                    org.bukkit.Bukkit.getScheduler().runTask(plugin, () ->
+                        org.bukkit.Bukkit.getPluginManager().callEvent(
+                            new me.koyere.ecoxpert.api.events.MarketPriceChangeEvent(mat, oldBuy, nb, oldSell, ns, priceUpdate.getVolatility(), ts)
+                        )
+                    );
+                }
+            } catch (Exception ignored) {}
             
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING, 
@@ -1054,6 +1109,19 @@ public class MarketManagerImpl implements MarketManager {
             plugin.getLogger().log(Level.WARNING, 
                 "Failed to record price history for " + priceUpdate.getMaterial().name(), e);
         }
+    }
+
+    private double safeRelativeChange(java.math.BigDecimal oldVal, java.math.BigDecimal newVal) {
+        try {
+            if (oldVal == null || newVal == null) return 0.0;
+            if (oldVal.compareTo(java.math.BigDecimal.ZERO) == 0) {
+                // Relative to small epsilon to avoid div by zero
+                return newVal.subtract(oldVal).doubleValue() / 0.01;
+            }
+            return newVal.subtract(oldVal)
+                .divide(oldVal.abs(), 6, java.math.RoundingMode.HALF_UP)
+                .doubleValue();
+        } catch (Exception e) { return 0.0; }
     }
     
     private MarketTransactionResult processTransaction(Player player, MarketItem item, 
@@ -1134,6 +1202,43 @@ public class MarketManagerImpl implements MarketManager {
                     economyManager.formatMoney(totalAmount)
                 );
                 
+                // Professions XP (async best-effort)
+                try {
+                    if (professionsManager == null) {
+                        professionsManager = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class);
+                    }
+                    var profCfg = configManager.getModuleConfig("professions");
+                    int perTx = type == MarketTransaction.TransactionType.BUY ?
+                        profCfg.getInt("xp.per_buy", 5) : profCfg.getInt("xp.per_sell", 6);
+                    int per100 = type == MarketTransaction.TransactionType.BUY ?
+                        profCfg.getInt("xp.per_100_money_buy", 1) : profCfg.getInt("xp.per_100_money_sell", 2);
+                    int blocks = BigDecimal.ZERO.compareTo(totalAmount) < 0 ?
+                        totalAmount.divide(new java.math.BigDecimal("100"), 0, java.math.RoundingMode.DOWN).intValue() : 0;
+                    int xpDelta = Math.max(0, perTx + (blocks * per100));
+
+                    if (xpDelta > 0) {
+                        int prevLevel = professionsManager.getLevel(player.getUniqueId()).join();
+                        professionsManager.addXp(player.getUniqueId(), xpDelta).thenAccept(newLevel -> {
+                            try {
+                                // Notify XP gain
+                                String xpKey = type == MarketTransaction.TransactionType.BUY ?
+                                    "professions.xp.gained.buy" : "professions.xp.gained.sell";
+                                plugin.getServer().getScheduler().runTask(plugin, () -> {
+                                    player.sendMessage(translationManager.getMessage("prefix") +
+                                        translationManager.getMessage(xpKey, xpDelta));
+                                });
+                                // Notify level up
+                                if (newLevel > prevLevel) {
+                                    plugin.getServer().getScheduler().runTask(plugin, () -> {
+                                        player.sendMessage(translationManager.getMessage("prefix") +
+                                            translationManager.getMessage("professions.levelup", newLevel));
+                                    });
+                                }
+                            } catch (Exception ignored) {}
+                        });
+                    }
+                } catch (Exception ignored) {}
+
                 return MarketTransactionResult.success(transaction, message);
                 
             } catch (Exception e) {

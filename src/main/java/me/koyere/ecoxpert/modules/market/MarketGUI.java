@@ -169,7 +169,9 @@ public class MarketGUI implements Listener {
         list.sort(switch (inv.getSortMode()) {
             case NAME -> java.util.Comparator.comparing(mi -> mi.getMaterial().name());
             case BUY_ASC -> java.util.Comparator.comparing(MarketItem::getCurrentBuyPrice, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()));
+            case SELL_ASC -> java.util.Comparator.comparing(MarketItem::getCurrentSellPrice, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()));
             case SELL_DESC -> java.util.Comparator.comparing(MarketItem::getCurrentSellPrice, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())).reversed();
+            case VOLUME_ASC -> java.util.Comparator.comparing(MarketItem::getTotalVolume, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()));
             case VOLUME_DESC -> java.util.Comparator.comparing(MarketItem::getTotalVolume, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())).reversed();
         });
         return list;
@@ -864,6 +866,17 @@ public class MarketGUI implements Listener {
             hm.setDisplayName("§e" + translationManager.getMessage("market.gui.list.header", st.material.name()));
             java.util.List<String> lore = new java.util.ArrayList<>();
             lore.add("§7" + translationManager.getMessage("market.gui.list.unit_price", formatPrice(st.unitPrice)));
+            // Show allowed price range based on base price
+            try {
+                var cfg = configManager.getModuleConfig("market");
+                double minFrac = cfg.getDouble("orders.listing.price_bounds_min_base_fraction", 0.10);
+                double maxFrac = cfg.getDouble("orders.listing.price_bounds_max_base_fraction", 10.0);
+                java.math.BigDecimal min = st.basePrice.multiply(new java.math.BigDecimal(String.valueOf(minFrac)))
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+                java.math.BigDecimal max = st.basePrice.multiply(new java.math.BigDecimal(String.valueOf(maxFrac)))
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+                lore.add("§7" + translationManager.getMessage("market.gui.info.range", formatPrice(min), formatPrice(max)));
+            } catch (Exception ignored) {}
             hm.setLore(lore);
             head.setItemMeta(hm);
         }
@@ -1080,17 +1093,24 @@ public class MarketGUI implements Listener {
         public void cycleSort() { this.sortMode = this.sortMode.next(); }
     }
 
-    private enum SortMode { NAME, BUY_ASC, SELL_DESC, VOLUME_DESC;
+    private enum SortMode { NAME, BUY_ASC, SELL_ASC, SELL_DESC, VOLUME_ASC, VOLUME_DESC;
         public SortMode next() {
             return switch (this) {
-                case NAME -> BUY_ASC; case BUY_ASC -> SELL_DESC; case SELL_DESC -> VOLUME_DESC; case VOLUME_DESC -> NAME;
+                case NAME -> BUY_ASC;
+                case BUY_ASC -> SELL_ASC;
+                case SELL_ASC -> SELL_DESC;
+                case SELL_DESC -> VOLUME_ASC;
+                case VOLUME_ASC -> VOLUME_DESC;
+                case VOLUME_DESC -> NAME;
             };
         }
         public String display(TranslationManager tm) {
             return switch (this) {
                 case NAME -> tm.getMessage("market.gui.sort-mode.name");
                 case BUY_ASC -> tm.getMessage("market.gui.sort-mode.buy-asc");
+                case SELL_ASC -> tm.getMessage("market.gui.sort-mode.sell-asc");
                 case SELL_DESC -> tm.getMessage("market.gui.sort-mode.sell-desc");
+                case VOLUME_ASC -> tm.getMessage("market.gui.sort-mode.volume-asc");
                 case VOLUME_DESC -> tm.getMessage("market.gui.sort-mode.volume-desc");
             };
         }

@@ -74,6 +74,55 @@ public class ProfessionsManagerImpl implements ProfessionsManager {
     }
 
     @Override
+    public CompletableFuture<Integer> getXp(UUID player) {
+        return dataManager.executeQuery("SELECT xp FROM ecoxpert_profession_xp WHERE player_uuid = ?", player.toString())
+            .thenApply(result -> {
+                try (result) { if (result.next()) return Math.max(0, result.getInt("xp")); } catch (Exception ignored) {}
+                return 0;
+            });
+    }
+
+    @Override
+    public CompletableFuture<Integer> addXp(UUID player, int delta) {
+        int d = Math.max(0, delta);
+        return getLevel(player).thenCompose(prevLevel ->
+            dataManager.executeUpdate(
+                "INSERT INTO ecoxpert_profession_xp (player_uuid, xp, last_gain_at) VALUES (?, ?, CURRENT_TIMESTAMP) " +
+                "ON CONFLICT(player_uuid) DO UPDATE SET xp = xp + excluded.xp, last_gain_at = CURRENT_TIMESTAMP",
+                player.toString(), d
+            ).thenCompose(rows -> getXp(player))
+             .thenCompose(totalXp -> {
+                 int newLevel = computeLevelFromXp(totalXp);
+                 if (newLevel > prevLevel) {
+                     // update professions table (create if absent with default role)
+                     return setLevel(player, newLevel).thenApply(ok -> newLevel);
+                 }
+                 return CompletableFuture.completedFuture(prevLevel);
+             })
+        );
+    }
+
+    private int computeLevelFromXp(int xp) {
+        try {
+            var cfg = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class).getModuleConfig("professions");
+            int maxLevel = Math.max(1, cfg.getInt("max_level", 5));
+            java.util.List<Integer> thresholds = cfg.getIntegerList("xp.level_thresholds");
+            if (thresholds == null || thresholds.isEmpty()) {
+                thresholds = java.util.Arrays.asList(0, 100, 250, 500, 1000, 2000);
+            }
+            int level = 1;
+            for (int i = 1; i <= maxLevel; i++) {
+                int idx = i - 1;
+                int t = idx < thresholds.size() ? thresholds.get(idx) : thresholds.get(thresholds.size() - 1) * 2;
+                if (xp >= t) level = i; else break;
+            }
+            if (level > maxLevel) level = maxLevel;
+            if (level < 1) level = 1;
+            return level;
+        } catch (Exception e) { return 1; }
+    }
+
+    @Override
     public CompletableFuture<Boolean> canChange(UUID player) {
         return CompletableFuture.supplyAsync(() -> {
             try (QueryResult qr = dataManager.executeQuery(
