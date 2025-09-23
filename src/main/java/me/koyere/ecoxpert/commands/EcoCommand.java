@@ -76,6 +76,8 @@ public class EcoCommand extends BaseCommand {
 
             case "economy":
                 return handleEconomy(sender, subArgs);
+            case "integrations":
+                return handleIntegrations(sender, subArgs);
 
             case "migrate":
             case "import":
@@ -86,6 +88,42 @@ public class EcoCommand extends BaseCommand {
                 sendHelpMessage(sender);
                 return true;
         }
+    }
+
+    private boolean handleIntegrations(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("ecoxpert.admin.integrations")) {
+            sendMessage(sender, "error.no_permission");
+            return true;
+        }
+        var sr = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry();
+        var integ = sr.getInstance(me.koyere.ecoxpert.modules.integrations.IntegrationsManager.class);
+        var cfg = sr.getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class).getModuleConfig("integrations");
+        boolean enabled = cfg.getBoolean("enabled", true);
+        sender.sendMessage("§6=== Integrations Status ===");
+        sender.sendMessage("§7Enabled: §e" + enabled);
+        try {
+            sender.sendMessage("§7Jobs: §e" + (integ != null && integ.hasJobs()));
+            sender.sendMessage("§7WorldGuard: §e" + (integ != null && integ.hasWorldGuard()));
+            sender.sendMessage("§7Lands: §e" + (integ != null && integ.hasLands()));
+            sender.sendMessage("§7Towny: §e" + (integ != null && integ.hasTowny()));
+            sender.sendMessage("§7Slimefun: §e" + (integ != null && integ.hasSlimefun()));
+            sender.sendMessage("§7McMMO: §e" + (integ != null && integ.hasMcMMO()));
+            // Jobs dynamic thresholds quick view
+            if (cfg.getBoolean("jobs.dynamic.enabled", true)) {
+                java.util.List<?> th = cfg.getList("jobs.dynamic.inflation.thresholds");
+                sender.sendMessage("§7Jobs dynamic thresholds: §e" + (th != null ? th.size() : 0));
+            }
+            // Territory rules quick view
+            if (cfg.getBoolean("territory.enabled", true)) {
+                var wg = cfg.getConfigurationSection("territory.worldguard.rules");
+                var ld = cfg.getConfigurationSection("territory.lands");
+                var ty = cfg.getConfigurationSection("territory.towny.rules");
+                sender.sendMessage("§7Territory WG rules: §e" + (wg != null ? wg.getKeys(false).size() : 0));
+                sender.sendMessage("§7Territory Lands entries: §e" + (ld != null ? ld.getKeys(false).size() : 0));
+                sender.sendMessage("§7Territory Towny rules: §e" + (ty != null ? ty.getKeys(false).size() : 0));
+            }
+        } catch (Exception ignored) {}
+        return true;
     }
 
     /**
@@ -121,6 +159,8 @@ public class EcoCommand extends BaseCommand {
                 return handleEventsStats(sender, args);
             case "recent":
                 return handleEventsRecent(sender);
+            case "statsdetail":
+                return handleEventsStatsDetail(sender, args);
             case "anti-stagnation":
             case "antistagnation":
                 return handleEventsAntiStagnation(sender);

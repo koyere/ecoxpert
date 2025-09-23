@@ -341,7 +341,7 @@ loans:
     offer: "&e/loans offer <cantidad> &7- Ver oferta personalizada"
     schedule: "&e/loans schedule &7- Ver calendario de pagos"
   request-sent: "&aSolicitud de préstamo por &e{0} &aha sido enviada"
-  loan-approved: "&aTu préstamo de &e{0} &aha sido aprobado"
+  loan-approved: "&aTu préstamo de &e{0} &aha sido aprobado. &7Usa &e/loans status &7para ver detalles."
   loan-denied: "&cTu solicitud de préstamo ha sido denegada: {0}"
   payment-made: "&aPago de préstamo de &e{0} &arealizado exitosamente"
   loan-paid-off: "&a¡Felicitaciones! Has pagado completamente tu préstamo"
@@ -472,6 +472,28 @@ admin:
       avg_buy_delta: "&7Delta Promedio Compra: &e{0}"
       avg_sell_delta: "&7Delta Promedio Venta: &e{0}"
       total_stimulus: "&7Estímulo Total: &e{0}"
+# Controles inferiores del Market GUI (bajo market.gui)
+market:
+  gui:
+    category-label: "Categoría: {0}"
+    category-help: "Click para cambiar categoría"
+    letter-label: "Filtro: {0}"
+    letter-help: "Click para cambiar filtro por letra"
+    clear-filters-label: "Limpiar Filtros"
+    clear-filters-help: "Restablece categoría y letra"
+    sell-hand-label: "Vender en Mano por $"
+    sell-hand:
+      help1: "Vende el ítem en mano por monto"
+      help2: "Aproxima la cantidad al objetivo"
+    orders-button: "Ver Órdenes"
+    orders-button-help: "Click para abrir el libro de órdenes"
+    sort-mode:
+      name: "Nombre"
+      buy-asc: "Compra ↑"
+      sell-asc: "Venta ↑"
+      sell-desc: "Venta ↓"
+      volume-asc: "Volumen ↑"
+      volume-desc: "Volumen ↓"
   
 # Professions System
 professions:
@@ -494,8 +516,20 @@ professions:
       sell: "&7Has ganado &a+{0} XP &7por vender."
   levelup: "&a¡Has subido de nivel de profesión! Nivel &e{0}"
   
-# Admin Commands
-admin:
+# Estadísticas detalladas (faltantes) de eventos de admin
+events:
+  admin:
+    statsdetail:
+      header: "&6=== Estadísticas de Evento: {0} (últimos {1} días) ==="
+      count: "&7Cantidad: &e{0}"
+      avg_duration: "&7Duración Promedio: &e{0} &7minutos"
+      avg_items: "&7Ítems Afectados Promedio: &e{0}"
+      avg_buy_delta: "&7Delta Promedio Compra: &e{0}"
+      avg_sell_delta: "&7Delta Promedio Venta: &e{0}"
+      total_stimulus: "&7Estímulo Total: &e{0}"
+
+# Mensajes de Admin (movidos para evitar sobreescribir admin.gui)
+admin_cmd:
   player-balance-set: "&aEstablecido saldo de {0} a &e{1}"
   player-balance-added: "&aAgregado &e{0} &aal saldo de {1}"
   player-balance-removed: "&aRemovido &e{0} &adel saldo de {1}"

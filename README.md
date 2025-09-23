@@ -208,7 +208,8 @@ Use `/ecox` or `/ecoxpert` to avoid conflicts with EssentialsX `/eco`.
 ```
 
 ### Testing
-- See `TESTING.md` for a global testing checklist (startup, economy, market, bank, loans, events, safe mode, logs).
+- See `TESTING.md` for a global testing checklist (startup, economy, market, bank, loans, events, safe mode, logs) and full integration tests (WG/Lands/Towny/Jobs/Slimefun/mcMMO).
+- Admin integration command: `/ecoxpert integrations` (perm `ecoxpert.admin.integrations`).
 
 ### Intelligent Economy Policy (overview)
 - Runtime adjustments via `/ecoxpert economy policy`:
@@ -505,8 +506,93 @@ Runs comprehensive tests:
   - `%ecox_loans_outstanding%` (formatted)
   - `%ecox_wg_regions%` (comma-separated WorldGuard regions at player location, if WG present)
   - `%ecox_lands_land%` (Lands land name at player location, if Lands present)
+  - `%ecox_towny_town%` (Towny town name at player location/residency, if Towny present)
   - `%ecox_role%` (current profession role)
   - `%ecox_role_level%`, `%ecox_role_xp%`, `%ecox_role_progress%`, `%ecox_role_bonus_buy%`, `%ecox_role_bonus_sell%`
+
+## 🔌 Integrations (Overview)
+
+EcoXpert aplica ajustes suaves y contextuales cuando detecta plugins de entorno:
+
+- WorldGuard (territory.worldguard.rules)
+  - Reglas por patrón (glob) de región: `city_*`, `market_*`, etc. con `buy_factor` / `sell_factor`.
+- Lands (territory.lands)
+  - Entradas por nombre (glob) y `default` para áreas sin land.
+- Towny (territory.towny)
+  - Reglas por town (glob) y `default`.
+  - Fase 2: escalado por población con `scaling.thresholds` (elegido el mayor umbral alcanzado).
+- Jobs Reborn (jobs.dynamic.inflation.thresholds)
+  - Reducción de pagos según umbrales de inflación (soft hook por reflexión).
+- Slimefun (slimefun.inflationary.*)
+  - Factores por materiales “inflationary”; auto-flagging por abundancia opcional (ventana/umbral/duración).
+- mcMMO
+  - Detección + ajustes globales suaves vía `adjustments.mcmmo.*`.
+
+Factores globales de detección
+- `integrations.yml → adjustments` aplica multiplicadores suaves (±1–2%) cuando se detecta cada plugin.
+
+Diagnóstico
+- `/ecoxpert integrations` muestra detecciones y conteos de reglas por sistema.
+
+### Configuration (integrations.yml excerpt)
+```yaml
+enabled: true
+detect:
+  jobs: true
+  towny: true
+  lands: true
+  slimefun: true
+  mcmmo: true
+
+adjustments:
+  enabled: true
+  jobs:     { buy_factor: 1.00, sell_factor: 0.99 }
+  towny:    { buy_factor: 1.00, sell_factor: 1.00 }
+  lands:    { buy_factor: 1.00, sell_factor: 1.00 }
+  slimefun: { buy_factor: 1.01, sell_factor: 1.00 }
+  mcmmo:    { buy_factor: 1.01, sell_factor: 1.00 }
+
+territory:
+  enabled: true
+  worldguard:
+    rules:
+      city_*:   { buy_factor: 1.00, sell_factor: 0.98 }
+      market_*: { buy_factor: 0.99, sell_factor: 1.01 }
+  lands:
+    default: { buy_factor: 1.00, sell_factor: 0.99 }
+  towny:
+    rules:
+      town_*: { buy_factor: 1.00, sell_factor: 1.00 }
+    default: { buy_factor: 1.00, sell_factor: 1.00 }
+    scaling:
+      enabled: true
+      thresholds:
+        - { residents: 10, buy_factor: 1.00, sell_factor: 1.00 }
+        - { residents: 30, buy_factor: 0.99, sell_factor: 1.01 }
+        - { residents: 60, buy_factor: 0.98, sell_factor: 1.02 }
+
+jobs:
+  dynamic:
+    enabled: true
+    inflation:
+      thresholds:
+        - { rate: 0.03, factor: 0.95 }
+        - { rate: 0.05, factor: 0.90 }
+        - { rate: 0.08, factor: 0.85 }
+
+slimefun:
+  inflationary:
+    materials: []
+    buy_factor: 1.02
+    sell_factor: 0.98
+  auto_flagging:
+    enabled: false
+    window_minutes: 10
+    sell_threshold: 256
+    flag_minutes: 30
+    flag_buy_factor: 1.02
+    flag_sell_factor: 0.98
+```
 
 ### Public API (minimal)
 - `EcoXpertAPI#getServerEconomics()` → `ServerEconomySnapshot` with fields: `cycle`, `economicHealth` (0–1), `inflationRate` (fraction), `marketActivity` (0–1), `activeEvents`.

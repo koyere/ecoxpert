@@ -109,6 +109,10 @@ public class PlaceholderProvider extends PlaceholderExpansion {
                 case "has_towny": {
                     return integrations != null && integrations.hasTowny() ? "true" : "false";
                 }
+                case "towny_town": {
+                    if (player == null) return "";
+                    return integrations != null ? integrations.getTownyTown(player.getPlayer()) : "";
+                }
                 case "has_slimefun": {
                     return integrations != null && integrations.hasSlimefun() ? "true" : "false";
                 }

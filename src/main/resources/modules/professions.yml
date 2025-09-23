@@ -66,9 +66,9 @@ cooldown_minutes: 1440
 
 # XP and level progression (v2)
 xp:
-  per_buy: 5                  # flat XP per successful buy transaction
-  per_sell: 6                 # flat XP per successful sell transaction
-  per_100_money_buy: 1        # extra XP per each $100 spent (rounded down)
-  per_100_money_sell: 2       # extra XP per each $100 earned (rounded down)
+  per_buy: 1                  # flat XP per successful buy transaction (slower progression)
+  per_sell: 2                 # flat XP per successful sell transaction
+  per_100_money_buy: 0        # extra XP per each $100 spent (rounded down)
+  per_100_money_sell: 1       # extra XP per each $100 earned (rounded down)
   # Level thresholds (XP needed to reach level i at index i-1)
-  level_thresholds: [0, 100, 250, 500, 1000, 2000]
+  level_thresholds: [0, 250, 750, 1500, 3000, 6000]

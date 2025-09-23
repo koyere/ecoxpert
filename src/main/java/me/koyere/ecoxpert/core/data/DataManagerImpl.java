@@ -259,13 +259,16 @@ public class DataManagerImpl implements DataManager {
         }
         
         File dbFile = new File(dataFolder, "ecoxpert.db");
-        config.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath());
+        // Add busy_timeout to reduce SQLITE_BUSY errors under concurrent writes
+        config.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath() + "?busy_timeout=5000");
         config.setDriverClassName("org.sqlite.JDBC");
         
         // SQLite specific settings
         config.addDataSourceProperty("cache_size", "8192");
         config.addDataSourceProperty("synchronous", "NORMAL");
         config.addDataSourceProperty("journal_mode", "WAL");
+        // Ensure every connection sets a sensible busy_timeout
+        try { config.setConnectionInitSql("PRAGMA busy_timeout=5000;"); } catch (Throwable ignored) {}
     }
     
     /**

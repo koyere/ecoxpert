@@ -39,6 +39,7 @@ permissions:
       ecoxpert.admin.events: true
       ecoxpert.admin.professions: true
       ecoxpert.admin.inflation: true
+      ecoxpert.admin.integrations: true
       
   ecoxpert.user:
     description: Basic user access to EcoXpert
@@ -99,6 +100,10 @@ permissions:
     
   ecoxpert.admin.inflation:
     description: Manage inflation control
+    default: op
+  
+  ecoxpert.admin.integrations:
+    description: View and manage integrations status
     default: op
 
 # User permissions

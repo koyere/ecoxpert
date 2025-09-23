@@ -62,6 +62,9 @@ public class MarketManagerImpl implements MarketManager {
     private final ScheduledExecutorService priceUpdateScheduler;
     private boolean marketOpen = true;
     private volatile boolean initialized = false;
+    // Slimefun auto-flagging (abundance) trackers
+    private final java.util.concurrent.ConcurrentHashMap<Material, java.util.concurrent.atomic.AtomicInteger> sellWindowCounts = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<Material, Long> slimeFlaggedUntil = new java.util.concurrent.ConcurrentHashMap<>();
     
     // Configuration
     private static final int PRICE_UPDATE_INTERVAL_MINUTES = 5;
@@ -386,8 +389,15 @@ public class MarketManagerImpl implements MarketManager {
                 BigDecimal unitPrice = item.getCurrentBuyPrice();
                 BigDecimal totalCost = unitPrice.multiply(BigDecimal.valueOf(quantity));
                 // Apply profession buy factor (discounts) including context
-                totalCost = totalCost.multiply(BigDecimal.valueOf(getProfessionFactor(player.getUniqueId(), material, true)))
-                    .multiply(BigDecimal.valueOf(getIntegrationsFactor(material, true)))
+                double profF = getProfessionFactor(player.getUniqueId(), material, true);
+                double integF = getIntegrationsFactor(material, true);
+                double terrF = getTerritoryFactor(player, material, true);
+                double slimeF = getInflationaryMaterialFactor(material, true);
+                totalCost = totalCost
+                    .multiply(BigDecimal.valueOf(profF))
+                    .multiply(BigDecimal.valueOf(integF))
+                    .multiply(BigDecimal.valueOf(terrF))
+                    .multiply(BigDecimal.valueOf(slimeF))
                     .setScale(2, BigDecimal.ROUND_HALF_UP);
                 
                 // Check if player can afford
@@ -452,9 +462,16 @@ public class MarketManagerImpl implements MarketManager {
                 
                 BigDecimal unitPrice = item.getCurrentSellPrice();
                 BigDecimal totalEarning = unitPrice.multiply(BigDecimal.valueOf(quantity));
-                // Apply profession sell factor (bonuses) including context
-                totalEarning = totalEarning.multiply(BigDecimal.valueOf(getProfessionFactor(player.getUniqueId(), material, false)))
-                    .multiply(BigDecimal.valueOf(getIntegrationsFactor(material, false)))
+                // Apply profession/integrations/territory/slimefun factors for SELL
+                double profF = getProfessionFactor(player.getUniqueId(), material, false);
+                double integF = getIntegrationsFactor(material, false);
+                double terrF = getTerritoryFactor(player, material, false);
+                double slimeF = getInflationaryMaterialFactor(material, false);
+                totalEarning = totalEarning
+                    .multiply(BigDecimal.valueOf(profF))
+                    .multiply(BigDecimal.valueOf(integF))
+                    .multiply(BigDecimal.valueOf(terrF))
+                    .multiply(BigDecimal.valueOf(slimeF))
                     .setScale(2, BigDecimal.ROUND_HALF_UP);
                 
                 // Remove items from inventory
@@ -531,10 +548,10 @@ public class MarketManagerImpl implements MarketManager {
                 String transactionSql = """
                     SELECT 
                         COUNT(*) as total_transactions,
-                        SUM(total_amount) as total_volume,
-                        AVG(unit_price) as avg_price,
+                        COALESCE(SUM(total_amount), 0) as total_volume,
+                        COALESCE(AVG(unit_price), 0) as avg_price,
                         COUNT(CASE WHEN created_at >= datetime('now', '-1 day') THEN 1 END) as daily_transactions,
-                        SUM(CASE WHEN created_at >= datetime('now', '-1 day') THEN total_amount ELSE 0 END) as daily_volume
+                        COALESCE(SUM(CASE WHEN created_at >= datetime('now', '-1 day') THEN total_amount ELSE 0 END), 0) as daily_volume
                     FROM ecoxpert_market_transactions
                     """;
                 
@@ -549,8 +566,9 @@ public class MarketManagerImpl implements MarketManager {
                     // Calculate market activity (0.0 to 1.0)
                     double activity = Math.min(1.0, dailyTransactions / 100.0);
                     
-                    // Estimate market capitalization
-                    BigDecimal marketCap = totalVolume.multiply(BigDecimal.valueOf(0.1)); // Simple estimation
+                    // Estimate market capitalization (guard against nulls)
+                    BigDecimal marketCap = (totalVolume != null ? totalVolume : BigDecimal.ZERO)
+                        .multiply(BigDecimal.valueOf(0.1)); // Simple estimation
                     
                     return new MarketStatistics(
                         totalItems, activeItems, totalTransactions, totalVolume,
@@ -878,6 +896,154 @@ public class MarketManagerImpl implements MarketManager {
         } catch (Exception ignored) { return 1.0; }
     }
 
+    private double getInflationaryMaterialFactor(org.bukkit.Material material, boolean isBuy) {
+        try {
+            var cfg = configManager.getModuleConfig("integrations");
+            var list = cfg.getStringList("slimefun.inflationary.materials");
+            if (list == null || list.isEmpty()) return 1.0;
+            for (String m : list) {
+                if (material.name().equalsIgnoreCase(m.trim())) {
+                    double bf = cfg.getDouble("slimefun.inflationary.buy_factor", 1.02);
+                    double sf = cfg.getDouble("slimefun.inflationary.sell_factor", 0.98);
+                    double f = isBuy ? bf : sf;
+                    if (f < 0.8) f = 0.8; if (f > 1.2) f = 1.2;
+                    return f;
+                }
+            }
+            return 1.0;
+        } catch (Exception e) { return 1.0; }
+    }
+
+    private double getTerritoryFactor(org.bukkit.entity.Player player, org.bukkit.Material material, boolean isBuy) {
+        try {
+            var integ = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.integrations.IntegrationsManager.class);
+            var cfg = configManager.getModuleConfig("integrations");
+            if (cfg == null || !cfg.getBoolean("territory.enabled", true)) return 1.0;
+            String region = "";
+            String land = "";
+            String town = "";
+            if (integ != null) {
+                if (integ.hasWorldGuard()) region = integ.getWorldGuardRegions(player);
+                if (integ.hasLands()) land = integ.getLandsLand(player);
+                if (integ.hasTowny()) town = integ.getTownyTown(player);
+            }
+            double factor = 1.0;
+            // WorldGuard rules
+            var rules = cfg.getConfigurationSection("territory.worldguard.rules");
+            if (rules != null && region != null && !region.isEmpty()) {
+                java.util.List<String> ids = java.util.Arrays.asList(region.split(","));
+                for (String key : rules.getKeys(false)) {
+                    String pattern = key; // use key as pattern
+                    for (String id : ids) {
+                        if (globMatches(pattern, id)) {
+                            double bf = rules.getDouble(key + ".buy_factor", 1.0);
+                            double sf = rules.getDouble(key + ".sell_factor", 1.0);
+                            factor *= isBuy ? bf : sf;
+                        }
+                    }
+                }
+            }
+            // Lands rule (single)
+            var lands = cfg.getConfigurationSection("territory.lands");
+            if (lands != null && land != null && !land.isEmpty()) {
+                for (String key : lands.getKeys(false)) {
+                    if (globMatches(key, land)) {
+                        double bf = lands.getDouble(key + ".buy_factor", 1.0);
+                        double sf = lands.getDouble(key + ".sell_factor", 1.0);
+                        factor *= isBuy ? bf : sf;
+                    }
+                }
+                // default
+                if (lands.isConfigurationSection("default") && (factor == 1.0)) {
+                    double bf = lands.getDouble("default.buy_factor", 1.0);
+                    double sf = lands.getDouble("default.sell_factor", 1.0);
+                    factor *= isBuy ? bf : sf;
+                }
+            }
+            // Towny rules (single town name) + population scaling (phase 2)
+            var towny = cfg.getConfigurationSection("territory.towny");
+            if (towny != null) {
+                var townRules = towny.getConfigurationSection("rules");
+                if (townRules != null && town != null && !town.isEmpty()) {
+                    for (String key : townRules.getKeys(false)) {
+                        if (globMatches(key, town)) {
+                            double bf = townRules.getDouble(key + ".buy_factor", 1.0);
+                            double sf = townRules.getDouble(key + ".sell_factor", 1.0);
+                            factor *= isBuy ? bf : sf;
+                        }
+                    }
+                }
+                if (towny.isConfigurationSection("default")) {
+                    double bf = towny.getDouble("default.buy_factor", 1.0);
+                    double sf = towny.getDouble("default.sell_factor", 1.0);
+                    factor *= isBuy ? bf : sf;
+                }
+                // Population scaling
+                var scaling = towny.getConfigurationSection("scaling");
+                if (scaling != null && scaling.getBoolean("enabled", false)) {
+                    int residents = getTownyResidentsCountSafe(player, town);
+                    java.util.List<?> thresholds = scaling.getList("thresholds");
+                    if (thresholds != null && !thresholds.isEmpty()) {
+                        double chosen = 1.0;
+                        for (Object o : thresholds) {
+                            if (o instanceof java.util.Map<?,?> m) {
+                                Object r = m.get("residents");
+                                int req = r instanceof Number ? ((Number) r).intValue() : Integer.parseInt(String.valueOf(r));
+                                if (residents >= req) {
+                                    Object bf = m.get("buy_factor");
+                                    Object sf = m.get("sell_factor");
+                                    double fac = isBuy
+                                        ? (bf instanceof Number ? ((Number) bf).doubleValue() : Double.parseDouble(String.valueOf(bf)))
+                                        : (sf instanceof Number ? ((Number) sf).doubleValue() : Double.parseDouble(String.valueOf(sf)));
+                                    chosen = fac; // keep last matching (highest)
+                                }
+                            }
+                        }
+                        factor *= chosen;
+                    }
+                }
+            }
+            if (factor < 0.8) factor = 0.8; if (factor > 1.2) factor = 1.2;
+            return factor;
+        } catch (Exception e) { return 1.0; }
+    }
+
+    // Best-effort Towny residents count via reflection, using player or town name
+    private int getTownyResidentsCountSafe(org.bukkit.entity.Player player, String townName) {
+        try {
+            Class<?> apiClass = Class.forName("com.palmergames.bukkit.towny.TownyAPI");
+            Object api = apiClass.getMethod("getInstance").invoke(null);
+            Object town = null;
+            // First try by player
+            try { town = apiClass.getMethod("getTown", org.bukkit.entity.Player.class).invoke(api, player); }
+            catch (NoSuchMethodException ignored) { /* try by name next */ }
+            if (town == null && townName != null && !townName.isEmpty()) {
+                try { town = apiClass.getMethod("getTown", String.class).invoke(api, townName); }
+                catch (NoSuchMethodException ignored) { /* older API? */ }
+            }
+            if (town == null) return 0;
+            // Try multiple ways to get residents count
+            try { return (int) town.getClass().getMethod("getNumResidents").invoke(town); }
+            catch (NoSuchMethodException ignored) {}
+            try { return (int) town.getClass().getMethod("getResidentsCount").invoke(town); }
+            catch (NoSuchMethodException ignored) {}
+            try {
+                Object coll = town.getClass().getMethod("getResidents").invoke(town);
+                if (coll instanceof java.util.Collection<?>) return ((java.util.Collection<?>) coll).size();
+            } catch (NoSuchMethodException ignored) {}
+            return 0;
+        } catch (Throwable ignored) {
+            return 0;
+        }
+    }
+
+    private boolean globMatches(String glob, String text) {
+        try {
+            String regex = glob.replace("*", ".*").replace("?", ".");
+            return text.matches("(?i)" + regex);
+        } catch (Exception e) { return false; }
+    }
+
     private java.util.List<String> resolveCategories(org.bukkit.Material material) {
         java.util.List<String> list = new java.util.ArrayList<>();
         try {
@@ -1123,21 +1289,92 @@ public class MarketManagerImpl implements MarketManager {
                 .doubleValue();
         } catch (Exception e) { return 0.0; }
     }
+
+    /**
+     * Apply a small immediate price adjustment after a trade to reflect demand/supply.
+     * Buys nudge buy price up and sells nudge sell price down, capped by configured max change.
+     */
+    private void immediateAdjustAfterTrade(MarketItem item, MarketTransaction.TransactionType type, int quantity) {
+        try {
+            var cfg = configManager.getModuleConfig("market");
+            double maxChange = cfg.getDouble("pricing.max_price_change", 0.20);
+            // Compute a tiny per-tx delta: 0.1% per 10 units traded, capped to half of max change
+            double baseDelta = Math.min(maxChange / 2.0, Math.max(0.0, (quantity / 10.0) * 0.001));
+            if (baseDelta <= 0.0) return;
+
+            java.math.BigDecimal newBuy = item.getCurrentBuyPrice();
+            java.math.BigDecimal newSell = item.getCurrentSellPrice();
+
+            if (type == MarketTransaction.TransactionType.BUY) {
+                newBuy = newBuy.multiply(java.math.BigDecimal.valueOf(1.0 + baseDelta))
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+            } else {
+                newSell = newSell.multiply(java.math.BigDecimal.valueOf(1.0 - baseDelta))
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+            }
+
+            // Persist and update cache
+            String sql = "UPDATE ecoxpert_market_items SET current_buy_price = ?, current_sell_price = ?, updated_at = CURRENT_TIMESTAMP WHERE material = ?";
+            dataManager.executeUpdate(sql, newBuy, newSell, item.getMaterial().name()).join();
+            itemCache.put(item.getMaterial(), item.withPrices(newBuy, newSell));
+        } catch (Exception ignored) {}
+    }
     
     private MarketTransactionResult processTransaction(Player player, MarketItem item, 
                                                      MarketTransaction.TransactionType type,
                                                      int quantity, BigDecimal unitPrice, 
                                                      BigDecimal totalAmount) {
         try {
-            // Start database transaction
-            DatabaseTransaction dbTransaction = dataManager.beginTransaction().join();
-            
-            try {
-                // Update player balance
+            // Start database transaction (auto-close to avoid leaks)
+            try (DatabaseTransaction dbTransaction = dataManager.beginTransaction().join()) {
+                // Ensure account exists and adjust balance WITHIN the same transaction for atomicity
+                String playerId = player.getUniqueId().toString();
+                BigDecimal starting = economyManager.getStartingBalance();
+
+                // Load current balance (if any)
+                BigDecimal currentBalance = BigDecimal.ZERO;
+                try (var result = dbTransaction.executeQuery(
+                        "SELECT balance FROM ecoxpert_accounts WHERE player_uuid = ?",
+                        playerId).join()) {
+                    if (result.next()) {
+                        BigDecimal b = result.getBigDecimal("balance");
+                        currentBalance = (b != null ? b : BigDecimal.ZERO);
+                    } else {
+                        // Create account if missing
+                        dbTransaction.executeUpdate(
+                            "INSERT OR IGNORE INTO ecoxpert_accounts (player_uuid, balance) VALUES (?, ?)",
+                            playerId, starting).join();
+                        currentBalance = starting;
+                    }
+                }
+
                 if (type == MarketTransaction.TransactionType.BUY) {
-                    economyManager.removeMoney(player.getUniqueId(), totalAmount, "Market purchase").join();
-                } else {
-                    economyManager.addMoney(player.getUniqueId(), totalAmount, "Market sale").join();
+                    // Check sufficient funds atomically
+                    if (currentBalance.compareTo(totalAmount) < 0) {
+                        return MarketTransactionResult.failure(
+                            MarketTransactionResult.TransactionError.INSUFFICIENT_FUNDS,
+                            translationManager.getMessage("market.insufficient-funds",
+                                economyManager.formatMoney(totalAmount),
+                                economyManager.formatMoney(currentBalance))
+                        );
+                    }
+                    // Debit balance
+                    dbTransaction.executeUpdate(
+                        "UPDATE ecoxpert_accounts SET balance = balance - ?, updated_at = CURRENT_TIMESTAMP WHERE player_uuid = ?",
+                        totalAmount, playerId).join();
+                    // Log economy transaction
+                    dbTransaction.executeUpdate(
+                        "INSERT INTO ecoxpert_transactions (from_uuid, to_uuid, amount, type, description) VALUES (?, ?, ?, ?, ?)",
+                        playerId, null, totalAmount, "WITHDRAWAL", "Market purchase").join();
+                } else { // SELL
+                    // Credit balance
+                    dbTransaction.executeUpdate(
+                        "UPDATE ecoxpert_accounts SET balance = balance + ?, updated_at = CURRENT_TIMESTAMP WHERE player_uuid = ?",
+                        totalAmount, playerId).join();
+                    // Log economy transaction
+                    dbTransaction.executeUpdate(
+                        "INSERT INTO ecoxpert_transactions (from_uuid, to_uuid, amount, type, description) VALUES (?, ?, ?, ?, ?)",
+                        null, playerId, totalAmount, "DEPOSIT", "Market sale").join();
                 }
                 
                 // Create transaction record
@@ -1187,8 +1424,8 @@ public class MarketManagerImpl implements MarketManager {
                     item.getMaterial().name()
                 );
                 
-                // Commit transaction
-                dbTransaction.commit();
+                // Commit transaction and release connection
+                dbTransaction.commit().join();
                 
                 // Update cache
                 MarketItem updatedItem = item.withUpdatedStats(soldIncrement, boughtIncrement);
@@ -1209,9 +1446,9 @@ public class MarketManagerImpl implements MarketManager {
                     }
                     var profCfg = configManager.getModuleConfig("professions");
                     int perTx = type == MarketTransaction.TransactionType.BUY ?
-                        profCfg.getInt("xp.per_buy", 5) : profCfg.getInt("xp.per_sell", 6);
+                        profCfg.getInt("xp.per_buy", 1) : profCfg.getInt("xp.per_sell", 2);
                     int per100 = type == MarketTransaction.TransactionType.BUY ?
-                        profCfg.getInt("xp.per_100_money_buy", 1) : profCfg.getInt("xp.per_100_money_sell", 2);
+                        profCfg.getInt("xp.per_100_money_buy", 0) : profCfg.getInt("xp.per_100_money_sell", 1);
                     int blocks = BigDecimal.ZERO.compareTo(totalAmount) < 0 ?
                         totalAmount.divide(new java.math.BigDecimal("100"), 0, java.math.RoundingMode.DOWN).intValue() : 0;
                     int xpDelta = Math.max(0, perTx + (blocks * per100));
@@ -1239,10 +1476,15 @@ public class MarketManagerImpl implements MarketManager {
                     }
                 } catch (Exception ignored) {}
 
+                // Immediate micro-adjustment of price based on this trade
+                try { immediateAdjustAfterTrade(updatedItem, type, quantity); } catch (Exception ignored) {}
+                // Slimefun auto-flagging for abundance (SELL-heavy)
+                try { maybeFlagSlimefunAbundance(type, item.getMaterial(), quantity); } catch (Exception ignored) {}
+
                 return MarketTransactionResult.success(transaction, message);
-                
+
             } catch (Exception e) {
-                dbTransaction.rollback();
+                // Automatic rollback will occur on close if not committed
                 throw e;
             }
             
@@ -1251,6 +1493,62 @@ public class MarketManagerImpl implements MarketManager {
             return MarketTransactionResult.failure("Transaction processing failed");
         }
     }
+
+    private void maybeFlagSlimefunAbundance(MarketTransaction.TransactionType type, Material material, int quantity) {
+        try {
+            // Only consider SELLs for abundance
+            if (type != MarketTransaction.TransactionType.SELL) return;
+            var integ = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.integrations.IntegrationsManager.class);
+            if (integ == null || !integ.hasSlimefun()) return;
+            var cfg = configManager.getModuleConfig("integrations");
+            var sec = cfg.getConfigurationSection("slimefun.auto_flagging");
+            if (sec == null || !sec.getBoolean("enabled", false)) return;
+
+            int windowMin = Math.max(1, sec.getInt("window_minutes", 10));
+            int threshold = Math.max(1, sec.getInt("sell_threshold", 256));
+            int flagMinutes = Math.max(1, sec.getInt("flag_minutes", 30));
+            double flagBuy = sec.getDouble("flag_buy_factor", 1.02);
+            double flagSell = sec.getDouble("flag_sell_factor", 0.98);
+
+            long now = System.currentTimeMillis();
+            // Windowed counter
+            java.util.concurrent.atomic.AtomicInteger counter = sellWindowCounts.computeIfAbsent(material, m -> new java.util.concurrent.atomic.AtomicInteger(0));
+            long windowStart = slimeFlaggedUntil.getOrDefault(Material.AIR, 0L); // dummy read to avoid new map; we'll track window per material via a simple scheme
+            // Simplify: reset every windowMin using modulus of current time
+            // On each call, if last reset > windowMin, reset counter. We'll store last reset in slimeFlaggedUntil map with negated key is hacky; avoid complexity: reset roughly by using a time bucket.
+            long bucket = now / (windowMin * 60_000L);
+            // Use a secondary map keyed by material name + bucket via compute logic
+            String key = material.name() + "#" + bucket;
+            // If first time in this bucket, reset counter
+            if (sellWindowCounts.putIfAbsent(material, counter) == null) {
+                // nothing; initial
+            }
+            // For simplicity, whenever bucket changes (detected by absence in slimeFlaggedUntil for this key), reset counter
+            if (!bucketKeySeen(key)) {
+                counter.set(0);
+                markBucketSeen(key);
+            }
+            int newCount = counter.addAndGet(quantity);
+
+            Long flaggedUntil = slimeFlaggedUntil.get(material);
+            boolean alreadyFlagged = flaggedUntil != null && flaggedUntil > now;
+            if (!alreadyFlagged && newCount >= threshold) {
+                // Flag material for flagMinutes using itemFactors and internal map for transactional factor
+                java.util.Map<Material, double[]> factors = new java.util.HashMap<>();
+                factors.put(material, new double[]{flagBuy, flagSell});
+                applyTemporaryItemFactors(factors, flagMinutes);
+                slimeFlaggedUntil.put(material, now + flagMinutes * 60_000L);
+                if (configManager.isDebugEnabled()) {
+                    plugin.getLogger().info("SLIMEFUN FLAG - Material " + material.name() + " flagged for " + flagMinutes + " min (sell threshold=" + threshold + ")");
+                }
+            }
+        } catch (Exception ignored) {}
+    }
+
+    // Simple seen-bucket tracking (best-effort)
+    private final java.util.Set<String> seenBuckets = java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
+    private boolean bucketKeySeen(String k) { return seenBuckets.contains(k); }
+    private void markBucketSeen(String k) { seenBuckets.add(k); }
     
     private List<MarketTransaction> getRecentTransactionsSync(int limit) {
         try {

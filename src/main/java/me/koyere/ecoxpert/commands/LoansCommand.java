@@ -82,7 +82,7 @@ public class LoansCommand extends BaseCommand {
             return loanManager.requestLoanSmart(player.getUniqueId(), amount);
         }).thenAccept(success -> {
             if (success) {
-                player.sendMessage(translationManager.getMessage("loans.request-sent", economyManager.formatMoney(amount)));
+                // Send a single concise success message
                 player.sendMessage(translationManager.getMessage("loans.loan-approved", economyManager.formatMoney(amount)));
             } else {
                 player.sendMessage(translationManager.getMessage("loans.loan-denied", "Active loan exists or invalid amount"));

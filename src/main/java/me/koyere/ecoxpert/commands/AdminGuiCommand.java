@@ -8,6 +8,8 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.HandlerList;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -57,13 +59,25 @@ public class AdminGuiCommand implements CommandExecutor, Listener {
         String name = it.getItemMeta().getDisplayName();
         if (name.contains(tm.getMessage("admin.gui.events"))) {
             p.performCommand("ecoxpert events status");
+            p.closeInventory();
         } else if (name.contains(tm.getMessage("admin.gui.market"))) {
             p.performCommand("market stats");
+            p.closeInventory();
         } else if (name.contains(tm.getMessage("admin.gui.loans"))) {
             p.performCommand("ecoxpert economy loans stats");
+            p.closeInventory();
         } else if (name.contains(tm.getMessage("admin.gui.economy"))) {
             p.performCommand("ecoxpert economy status");
+            p.closeInventory();
+        }
+    }
+
+    @EventHandler
+    public void onClose(InventoryCloseEvent e) {
+        if (inv != null && e.getInventory() != null && e.getInventory().equals(inv)) {
+            // Unregister this listener when the GUI closes to avoid duplicates
+            HandlerList.unregisterAll(this);
+            inv = null;
         }
     }
 }
-

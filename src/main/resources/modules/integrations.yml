@@ -29,6 +29,58 @@ adjustments:
     buy_factor: 1.01
     sell_factor: 1.00
 
+# Jobs dynamic payout policy (phase 1)
+jobs:
+  dynamic:
+    enabled: true
+    # Reduce Jobs payouts when inflation is high (fractions: 0.03 = 3%)
+    inflation:
+      thresholds:
+        - { rate: 0.03, factor: 0.95 }
+        - { rate: 0.05, factor: 0.90 }
+        - { rate: 0.08, factor: 0.85 }
+
+# Territory-based economy (phase 1 scaffolding)
+territory:
+  enabled: true
+  # WorldGuard region rules (pattern-based)
+  worldguard:
+    rules:
+      # Example patterns: "city_*", "market_*"
+      city_*: { buy_factor: 1.00, sell_factor: 0.98 }
+      market_*: { buy_factor: 0.99, sell_factor: 1.01 }
+  # Lands name rules
+  lands:
+    default: { buy_factor: 1.00, sell_factor: 0.99 }
+  # Towny town rules (pattern-based)
+  towny:
+    rules:
+      # Example patterns: "town_*", "capital"
+      town_*: { buy_factor: 1.00, sell_factor: 1.00 }
+    default: { buy_factor: 1.00, sell_factor: 1.00 }
+    # Population-based scaling (Phase 2)
+    scaling:
+      enabled: true
+      # Apply the factor of the highest threshold where residents >= threshold.residents
+      thresholds:
+        - { residents: 10, buy_factor: 1.00, sell_factor: 1.00 }
+        - { residents: 30, buy_factor: 0.99, sell_factor: 1.01 }
+        - { residents: 60, buy_factor: 0.98, sell_factor: 1.02 }
+
+# Slimefun inflationary materials (penalize abundance)
+slimefun:
+  inflationary:
+    materials: []   # e.g., ["IRON_INGOT","GOLD_INGOT"]
+    buy_factor: 1.02
+    sell_factor: 0.98
+  auto_flagging:
+    enabled: false
+    window_minutes: 10
+    sell_threshold: 256
+    flag_minutes: 30
+    flag_buy_factor: 1.02
+    flag_sell_factor: 0.98
+
 # Notes:
 # - This file enables lightweight detection of external plugins.
 # - Future iterations may use these toggles to apply contextual adjustments.

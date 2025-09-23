@@ -151,4 +151,40 @@ public class IntegrationsManagerImpl implements IntegrationsManager {
             return "";
         }
     }
+
+    @Override
+    public String getTownyTown(Player player) {
+        if (!hasTowny()) return "";
+        try {
+            // Try TownyAPI#getTown(Player)
+            Class<?> apiClass = Class.forName("com.palmergames.bukkit.towny.TownyAPI");
+            Object api = apiClass.getMethod("getInstance").invoke(null);
+            try {
+                Object town = apiClass.getMethod("getTown", org.bukkit.entity.Player.class).invoke(api, player);
+                if (town != null) {
+                    String name = (String) town.getClass().getMethod("getName").invoke(town);
+                    return name != null ? name : "";
+                }
+            } catch (NoSuchMethodException ignored) { /* fallthrough */ }
+
+            // Fallback: Resident path → getResident(player) → getTownOrNull()/getTown()
+            try {
+                Object resident = apiClass.getMethod("getResident", org.bukkit.entity.Player.class).invoke(api, player);
+                if (resident != null) {
+                    Object town = null;
+                    try {
+                        town = resident.getClass().getMethod("getTownOrNull").invoke(resident);
+                    } catch (NoSuchMethodException ns1) {
+                        try { town = resident.getClass().getMethod("getTown").invoke(resident); } catch (NoSuchMethodException ns2) { /* ignore */ }
+                    }
+                    if (town != null) {
+                        String name = (String) town.getClass().getMethod("getName").invoke(town);
+                        return name != null ? name : "";
+                    }
+                }
+            } catch (Throwable ignored2) { /* ignore */ }
+        } catch (Throwable ignored) {
+        }
+        return "";
+    }
 }

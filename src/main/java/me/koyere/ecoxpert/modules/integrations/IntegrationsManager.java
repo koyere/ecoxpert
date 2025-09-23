@@ -34,4 +34,10 @@ public interface IntegrationsManager {
      * Empty string if not available or none.
      */
     String getLandsLand(Player player);
+
+    /**
+     * Return the Towny town name for the player's current location/residency.
+     * Empty string if not available or none.
+     */
+    String getTownyTown(Player player);
 }

@@ -271,6 +271,21 @@ public final class EcoXpertPlugin extends JavaPlugin {
             getLogger().warning("PlaceholderAPI registration failed: " + e.getMessage());
         }
 
+        // 12.5. Integrations detection banner (ensure early detection/logging)
+        try {
+            // Force initialization so detection status is logged at startup
+            serviceRegistry.getInstance(me.koyere.ecoxpert.modules.integrations.IntegrationsManager.class);
+        } catch (Exception e) {
+            getLogger().fine("Integrations manager init skipped: " + e.getMessage());
+        }
+
+        // 13. Jobs Reborn integration (soft hook)
+        try {
+            new me.koyere.ecoxpert.modules.integrations.jobs.JobsIntegration(this).registerIfPresent();
+        } catch (Exception e) {
+            getLogger().fine("Jobs integration not available: " + e.getMessage());
+        }
+
         getLogger().info("Core managers initialized successfully");
     }
     

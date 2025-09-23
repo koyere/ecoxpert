@@ -164,7 +164,8 @@ public class MarketGUI implements Listener {
                 }
                 return true;
             });
-        java.util.List<MarketItem> list = stream.toList();
+        // Collect into a mutable list to allow in-place sorting
+        java.util.List<MarketItem> list = new java.util.ArrayList<>(stream.toList());
         // Apply sorting
         list.sort(switch (inv.getSortMode()) {
             case NAME -> java.util.Comparator.comparing(mi -> mi.getMaterial().name());
@@ -201,9 +202,11 @@ public class MarketGUI implements Listener {
                 // Effective price for this player (role/category/events)
                 try {
                     double f = computeEffectiveFactorForItem(getCurrentViewer(), item.getMaterial(), true);
-                    java.math.BigDecimal eff = item.getCurrentBuyPrice().multiply(java.math.BigDecimal.valueOf(f))
-                        .setScale(2, java.math.RoundingMode.HALF_UP);
-                    lore.add("§7" + translationManager.getMessage("market.gui.item.effective-buy", formatPrice(eff)));
+                    if (Math.abs(f - 1.0) > 1e-6) {
+                        java.math.BigDecimal eff = item.getCurrentBuyPrice().multiply(java.math.BigDecimal.valueOf(f))
+                            .setScale(2, java.math.RoundingMode.HALF_UP);
+                        lore.add("§7" + translationManager.getMessage("market.gui.item.effective-buy", formatPrice(eff)));
+                    }
                 } catch (Exception ignored) {}
             } else {
                 lore.add("§c" + translationManager.getMessage("market.gui.item.not-buyable"));
@@ -214,9 +217,11 @@ public class MarketGUI implements Listener {
                     formatPrice(item.getCurrentSellPrice())));
                 try {
                     double f = computeEffectiveFactorForItem(getCurrentViewer(), item.getMaterial(), false);
-                    java.math.BigDecimal eff = item.getCurrentSellPrice().multiply(java.math.BigDecimal.valueOf(f))
-                        .setScale(2, java.math.RoundingMode.HALF_UP);
-                    lore.add("§7" + translationManager.getMessage("market.gui.item.effective-sell", formatPrice(eff)));
+                    if (Math.abs(f - 1.0) > 1e-6) {
+                        java.math.BigDecimal eff = item.getCurrentSellPrice().multiply(java.math.BigDecimal.valueOf(f))
+                            .setScale(2, java.math.RoundingMode.HALF_UP);
+                        lore.add("§7" + translationManager.getMessage("market.gui.item.effective-sell", formatPrice(eff)));
+                    }
                 } catch (Exception ignored) {}
                 try {
                     var cfg = configManager.getModuleConfig("market");

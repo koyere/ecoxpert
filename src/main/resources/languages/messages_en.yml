@@ -315,7 +315,7 @@ loans:
     offer: "&e/loans offer <amount> &7- View a personalized loan offer"
     schedule: "&e/loans schedule &7- View your repayment schedule"
   request-sent: "&aLoan request for &e{0} &ahas been submitted"
-  loan-approved: "&aYour loan of &e{0} &ahas been approved"
+  loan-approved: "&aYour loan of &e{0} &ahas been approved. &7Use &e/loans status &7to view details."
   loan-denied: "&cYour loan request has been denied: {0}"
   payment-made: "&aLoan payment of &e{0} &amade successfully"
   loan-paid-off: "&aCongratulations! You have paid off your loan"
@@ -450,6 +450,28 @@ admin:
       avg_buy_delta: "&7Avg Buy Delta: &e{0}"
       avg_sell_delta: "&7Avg Sell Delta: &e{0}"
       total_stimulus: "&7Total Stimulus: &e{0}"
+# Market GUI bottom controls (top-level under market.gui)
+market:
+  gui:
+    category-label: "Category: {0}"
+    category-help: "Click to cycle categories"
+    letter-label: "Filter: {0}"
+    letter-help: "Click to cycle first-letter filter"
+    clear-filters-label: "Clear Filters"
+    clear-filters-help: "Resets category and letter filters"
+    sell-hand-label: "Sell Hand by $"
+    sell-hand:
+      help1: "Sell items in hand by target amount"
+      help2: "Picks quantity closest to target"
+    orders-button: "Open Orders"
+    orders-button-help: "Click to browse order book"
+    sort-mode:
+      name: "Name"
+      buy-asc: "Buy ↑"
+      sell-asc: "Sell ↑"
+      sell-desc: "Sell ↓"
+      volume-asc: "Volume ↑"
+      volume-desc: "Volume ↓"
 # Professions System
 professions:
   selected: "&aYou are now a &e{0}"
@@ -471,8 +493,20 @@ professions:
       sell: "&7You gained &a+{0} XP &7for selling."
   levelup: "&aProfession level up! Now level &e{0}"
   
-# Admin Commands
-admin:
+# Events admin detailed stats (missing keys)
+events:
+  admin:
+    statsdetail:
+      header: "&6=== Event Stats: {0} (last {1} days) ==="
+      count: "&7Count: &e{0}"
+      avg_duration: "&7Avg Duration: &e{0} &7minutes"
+      avg_items: "&7Avg Items Affected: &e{0}"
+      avg_buy_delta: "&7Avg Buy Delta: &e{0}"
+      avg_sell_delta: "&7Avg Sell Delta: &e{0}"
+      total_stimulus: "&7Total Stimulus: &e{0}"
+
+# Admin Commands (moved to avoid overriding admin.gui)
+admin_cmd:
   player-balance-set: "&aSet {0}'s balance to &e{1}"
   player-balance-added: "&aAdded &e{0} &ato {1}'s balance"
   player-balance-removed: "&aRemoved &e{0} &afrom {1}'s balance"
