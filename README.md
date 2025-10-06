@@ -1,7 +1,7 @@
-# EcoXpert Pro - Premium Minecraft Economy Plugin
+# EcoXpert - Minecraft Economy Plugin
 
 [![Java](https://img.shields.io/badge/Java-17+-orange.svg)](https://www.oracle.com/java/)
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.19.4--1.21.7+-green.svg)](https://www.spigotmc.org/)
+[![Minecraft](https://img.shields.io/badge/Minecraft-1.19.4--1.21.8+-green.svg)](https://www.spigotmc.org/)
 [![License](https://img.shields.io/badge/License-Premium-gold.svg)](https://spigotmc.org/)
 [![bStats](https://img.shields.io/badge/bStats-26446-blue.svg)](https://bstats.org/plugin/bukkit/ecoxpert/26446)
 
@@ -60,7 +60,7 @@ Traditional servers follow this pattern:
 
 ### Requirements
 - **Java 17+** (required)
-- **Spigot/Paper 1.19.4+** 
+- **Spigot/Paper 1.19.4-1.21.8+** 
 - **Vault** (dependency)
 
 ### Quick Setup
@@ -206,10 +206,6 @@ Use `/ecox` or `/ecoxpert` to avoid conflicts with EssentialsX `/eco`.
 /bank transfer <player> <amount> - Transfer to another account
 /bank help                      - Banking help
 ```
-
-### Testing
-- See `TESTING.md` for a global testing checklist (startup, economy, market, bank, loans, events, safe mode, logs) and full integration tests (WG/Lands/Towny/Jobs/Slimefun/mcMMO).
-- Admin integration command: `/ecoxpert integrations` (perm `ecoxpert.admin.integrations`).
 
 ### Intelligent Economy Policy (overview)
 - Runtime adjustments via `/ecoxpert economy policy`:
