@@ -36,10 +36,3 @@ build/
 
 ### Mac OS ###
 .DS_Store
-
-### Claude AI Assistant ###
-CLAUDE.md
-.claude/
-.gemini/
-AGENTS.md
-TESTING.md
