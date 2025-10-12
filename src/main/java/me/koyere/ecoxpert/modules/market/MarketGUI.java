@@ -239,22 +239,30 @@ public class MarketGUI implements Listener {
             }
             
             lore.add("");
-            lore.add("§7" + translationManager.getMessage("market.gui.item.volume", 
+            lore.add("§7" + translationManager.getMessage("market.gui.item.volume",
                 item.getTotalVolume()));
-            
-            // Add trend information if available
-            marketManager.getItemTrend(item.getMaterial()).whenComplete((trend, throwable) -> {
-                if (throwable == null && trend != null) {
-                    String trendColor = getTrendColor(trend.getDirection());
-                    lore.add("§7" + translationManager.getMessage("market.gui.item.trend", 
-                        trendColor + trend.getDirection().getDisplayName()));
+
+            // Add trend information synchronously (prevents ConcurrentModificationException)
+            // Note: This is safe because we're building the lore before passing it to Bukkit
+            try {
+                var trendFuture = marketManager.getItemTrend(item.getMaterial());
+                // Only wait if the future is already completed to avoid blocking
+                if (trendFuture.isDone()) {
+                    var trend = trendFuture.getNow(null);
+                    if (trend != null) {
+                        String trendColor = getTrendColor(trend.getDirection());
+                        lore.add("§7" + translationManager.getMessage("market.gui.item.trend",
+                            trendColor + trend.getDirection().getDisplayName()));
+                    }
                 }
-            });
-            
+            } catch (Exception e) {
+                // Silently ignore trend errors to prevent GUI issues
+            }
+
             lore.add("");
             lore.add("§e" + translationManager.getMessage("market.gui.item.click-buy"));
             lore.add("§e" + translationManager.getMessage("market.gui.item.shift-click-sell"));
-            
+
             meta.setLore(lore);
             stack.setItemMeta(meta);
         }
@@ -402,9 +410,9 @@ public class MarketGUI implements Listener {
         if (catMeta != null) {
             String cat = inv.getSelectedCategory();
             if (cat == null) cat = "ALL";
-            catMeta.setDisplayName("§b" + translationManager.getMessage("market.gui.category-label", cat));
+            catMeta.setDisplayName("§b" + translationManager.getMessage("market.gui.info.category-label", cat));
             java.util.List<String> lore = new java.util.ArrayList<>();
-            lore.add("§7" + translationManager.getMessage("market.gui.category-help"));
+            lore.add("§7" + translationManager.getMessage("market.gui.info.category-help"));
             catMeta.setLore(lore);
             catBtn.setItemMeta(catMeta);
         }
@@ -415,9 +423,9 @@ public class MarketGUI implements Listener {
         ItemMeta letterMeta = letterBtn.getItemMeta();
         if (letterMeta != null) {
             String label = inv.getFilterLetter() == null ? "ALL" : inv.getFilterLetter().toString();
-            letterMeta.setDisplayName("§b" + translationManager.getMessage("market.gui.letter-label", label));
+            letterMeta.setDisplayName("§b" + translationManager.getMessage("market.gui.info.letter-label", label));
             java.util.List<String> lore = new java.util.ArrayList<>();
-            lore.add("§7" + translationManager.getMessage("market.gui.letter-help"));
+            lore.add("§7" + translationManager.getMessage("market.gui.info.letter-help"));
             letterMeta.setLore(lore);
             letterBtn.setItemMeta(letterMeta);
         }
@@ -427,9 +435,9 @@ public class MarketGUI implements Listener {
         ItemStack clearFilters = new ItemStack(Material.BARRIER);
         ItemMeta clearMeta = clearFilters.getItemMeta();
         if (clearMeta != null) {
-            clearMeta.setDisplayName("§c" + translationManager.getMessage("market.gui.clear-filters-label"));
+            clearMeta.setDisplayName("§c" + translationManager.getMessage("market.gui.info.clear-filters-label"));
             java.util.List<String> lore = new java.util.ArrayList<>();
-            lore.add("§7" + translationManager.getMessage("market.gui.clear-filters-help"));
+            lore.add("§7" + translationManager.getMessage("market.gui.info.clear-filters-help"));
             clearMeta.setLore(lore);
             clearFilters.setItemMeta(clearMeta);
         }
@@ -439,10 +447,10 @@ public class MarketGUI implements Listener {
         ItemStack sellHand = new ItemStack(Material.GOLD_INGOT);
         ItemMeta sellMeta = sellHand.getItemMeta();
         if (sellMeta != null) {
-            sellMeta.setDisplayName("§6" + translationManager.getMessage("market.gui.sell-hand-label"));
+            sellMeta.setDisplayName("§6" + translationManager.getMessage("market.gui.info.sell-hand-label"));
             sellMeta.setLore(java.util.Arrays.asList(
-                "§7" + translationManager.getMessage("market.gui.sell-hand.help1"),
-                "§7" + translationManager.getMessage("market.gui.sell-hand.help2")
+                "§7" + translationManager.getMessage("market.gui.info.sell-hand.help1"),
+                "§7" + translationManager.getMessage("market.gui.info.sell-hand.help2")
             ));
             sellHand.setItemMeta(sellMeta);
         }
@@ -452,9 +460,9 @@ public class MarketGUI implements Listener {
         ItemStack ordersBtn = new ItemStack(Material.PAPER);
         ItemMeta ordersMeta = ordersBtn.getItemMeta();
         if (ordersMeta != null) {
-            ordersMeta.setDisplayName("§6" + translationManager.getMessage("market.gui.orders-button"));
+            ordersMeta.setDisplayName("§6" + translationManager.getMessage("market.gui.info.orders-button"));
             ordersMeta.setLore(java.util.Arrays.asList(
-                "§7" + translationManager.getMessage("market.gui.orders-button-help")
+                "§7" + translationManager.getMessage("market.gui.info.orders-button-help")
             ));
             ordersBtn.setItemMeta(ordersMeta);
         }
@@ -1111,12 +1119,12 @@ public class MarketGUI implements Listener {
         }
         public String display(TranslationManager tm) {
             return switch (this) {
-                case NAME -> tm.getMessage("market.gui.sort-mode.name");
-                case BUY_ASC -> tm.getMessage("market.gui.sort-mode.buy-asc");
-                case SELL_ASC -> tm.getMessage("market.gui.sort-mode.sell-asc");
-                case SELL_DESC -> tm.getMessage("market.gui.sort-mode.sell-desc");
-                case VOLUME_ASC -> tm.getMessage("market.gui.sort-mode.volume-asc");
-                case VOLUME_DESC -> tm.getMessage("market.gui.sort-mode.volume-desc");
+                case NAME -> tm.getMessage("market.gui.info.sort-mode.name");
+                case BUY_ASC -> tm.getMessage("market.gui.info.sort-mode.buy-asc");
+                case SELL_ASC -> tm.getMessage("market.gui.info.sort-mode.sell-asc");
+                case SELL_DESC -> tm.getMessage("market.gui.info.sort-mode.sell-desc");
+                case VOLUME_ASC -> tm.getMessage("market.gui.info.sort-mode.volume-asc");
+                case VOLUME_DESC -> tm.getMessage("market.gui.info.sort-mode.volume-desc");
             };
         }
     }

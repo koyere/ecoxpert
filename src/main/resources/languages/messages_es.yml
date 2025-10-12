@@ -326,6 +326,15 @@ bank:
     deposit: "Depositar"
     withdraw: "Retirar"
     balance: "Saldo"
+    deposit-lore1: "Depósita una cantidad fija en tu cuenta bancaria."
+    deposit-lore2: "Seguro, con límites diarios."
+    deposit-fast-lore1: "Atajo para depósitos mayores."
+    deposit-fast-lore2: "Afecta tus límites diarios."
+    balance-lore: "Muestra el saldo actual de tu cuenta bancaria."
+    withdraw-lore1: "Retira una cantidad fija desde tu cuenta bancaria."
+    withdraw-lore2: "Se transfiere a tu saldo general."
+    withdraw-fast-lore1: "Atajo para retiros mayores."
+    withdraw-fast-lore2: "Respeta límites y seguridad."
   
 # Loan System
 loans:
@@ -362,12 +371,32 @@ loans:
     offer: "Oferta {0}"
     status: "Estado del Préstamo"
     pay: "Pagar {0}"
-    schedule: "Calendario"
+    offer-lore1: "Solicita un préstamo inteligente."
+    offer-lore2: "Tasa y plazo se adaptan a tu score."
+    offer-large-lore1: "Solicita un préstamo mayor."
+    offer-large-lore2: "Sujeto a límites y score."
+    status-lore1: "Consulta tu préstamo activo:"
+    status-lore2: "Saldo pendiente, principal y tasa."
+    pay-lore1: "Paga la siguiente cuota o parte de ella."
+    pay-lore2: "Reducirá tu saldo pendiente."
+    pay-fast-lore1: "Pago rápido de mayor cantidad."
+    pay-fast-lore2: "Menos intereses a futuro."
+    schedule-lore1: "Muestra el calendario de pagos."
+    schedule-lore2: "Cuotas PENDING / PAID / LATE."
     offer-preview:
       title: "Previsualización de Oferta"
+      approved: "Aprobado"
+      denied: "Denegado: {0}"
+    schedule-item:
+      due: "Vence: {0}"
+      amount: "Monto: {0}"
+      paid: "Pagado: {0}"
+      prev: "Anterior"
+      next: "Siguiente"
     confirm: "Confirmar"
     cancel: "Cancelar"
     schedule:
+      button: "Calendario"
       title: "Calendario de Pagos"
   
 # Economic Events
@@ -472,29 +501,7 @@ admin:
       avg_buy_delta: "&7Delta Promedio Compra: &e{0}"
       avg_sell_delta: "&7Delta Promedio Venta: &e{0}"
       total_stimulus: "&7Estímulo Total: &e{0}"
-# Controles inferiores del Market GUI (bajo market.gui)
-market:
-  gui:
-    category-label: "Categoría: {0}"
-    category-help: "Click para cambiar categoría"
-    letter-label: "Filtro: {0}"
-    letter-help: "Click para cambiar filtro por letra"
-    clear-filters-label: "Limpiar Filtros"
-    clear-filters-help: "Restablece categoría y letra"
-    sell-hand-label: "Vender en Mano por $"
-    sell-hand:
-      help1: "Vende el ítem en mano por monto"
-      help2: "Aproxima la cantidad al objetivo"
-    orders-button: "Ver Órdenes"
-    orders-button-help: "Click para abrir el libro de órdenes"
-    sort-mode:
-      name: "Nombre"
-      buy-asc: "Compra ↑"
-      sell-asc: "Venta ↑"
-      sell-desc: "Venta ↓"
-      volume-asc: "Volumen ↑"
-      volume-desc: "Volumen ↓"
-  
+
 # Professions System
 professions:
   selected: "&aAhora eres un &e{0}"

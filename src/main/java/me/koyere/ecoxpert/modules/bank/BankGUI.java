@@ -31,15 +31,15 @@ public class BankGUI extends BaseGUI {
         String title = tm.getMessage("bank.gui.title");
         Inventory inv = Bukkit.createInventory(null, 27, title);
         inv.setItem(11, button(Material.LIME_WOOL, tm.getMessage("bank.gui.deposit") + " +100",
-            new String[]{"§7Depósita una cantidad fija en tu cuenta bancaria.", "§7Seguro, con límites diarios."}));
+            new String[]{"§7" + tm.getMessage("bank.gui.deposit-lore1"), "§7" + tm.getMessage("bank.gui.deposit-lore2")}));
         inv.setItem(12, button(Material.LIME_WOOL, tm.getMessage("bank.gui.deposit") + " +1000",
-            new String[]{"§7Atajo para depósitos mayores.", "§7Afecta tus límites diarios."}));
+            new String[]{"§7" + tm.getMessage("bank.gui.deposit-fast-lore1"), "§7" + tm.getMessage("bank.gui.deposit-fast-lore2")}));
         inv.setItem(13, button(Material.PAPER, tm.getMessage("bank.gui.balance"),
-            new String[]{"§7Muestra el saldo actual de tu cuenta bancaria."}));
+            new String[]{"§7" + tm.getMessage("bank.gui.balance-lore")}));
         inv.setItem(14, button(Material.RED_WOOL, tm.getMessage("bank.gui.withdraw") + " -100",
-            new String[]{"§7Retira una cantidad fija desde tu cuenta bancaria.", "§7Se transfiere a tu saldo general."}));
+            new String[]{"§7" + tm.getMessage("bank.gui.withdraw-lore1"), "§7" + tm.getMessage("bank.gui.withdraw-lore2")}));
         inv.setItem(15, button(Material.RED_WOOL, tm.getMessage("bank.gui.withdraw") + " -1000",
-            new String[]{"§7Atajo para retiros mayores.", "§7Respeta límites y seguridad."}));
+            new String[]{"§7" + tm.getMessage("bank.gui.withdraw-fast-lore1"), "§7" + tm.getMessage("bank.gui.withdraw-fast-lore2")}));
         return inv;
     }
 

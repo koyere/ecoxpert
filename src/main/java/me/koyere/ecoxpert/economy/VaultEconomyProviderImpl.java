@@ -247,86 +247,112 @@ public class VaultEconomyProviderImpl implements VaultEconomyProvider, Economy {
         return depositPlayer(player, amount);
     }
     
+    // ===== SHARED BANK ACCOUNTS API =====
+    // These methods will be implemented when shared/group bank accounts are added.
+    // Currently, EcoXpert only supports personal player bank accounts via BankManager.
+    //
+    // FUTURE IMPLEMENTATION NOTES:
+    // - Shared banks could be used for Factions, Guilds, Towns (Towny), Lands, etc.
+    // - Database schema will need: ecoxpert_shared_banks (id, name, balance, owner_uuid, created_at)
+    //                               ecoxpert_shared_bank_members (bank_id, player_uuid, role)
+    // - Integration with BankManager to support both personal and shared accounts
+    // - Permission system: owner, member, admin roles
+    // - Transaction logging for audit trails
+
     @Override
     public EconomyResponse createBank(String name, String player) {
-        // TODO: Implement bank creation
-        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED, 
-                                 "Banks not yet implemented");
+        // TODO [FUTURE]: Create shared bank account
+        // Implementation: Insert into ecoxpert_shared_banks with owner
+        // Validate: Check if name is unique, player exists
+        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED,
+                                 "Shared bank accounts not yet implemented - use /bank for personal accounts");
     }
-    
+
     @Override
     public EconomyResponse createBank(String name, OfflinePlayer player) {
-        // TODO: Implement bank creation
-        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED, 
-                                 "Banks not yet implemented");
+        // TODO [FUTURE]: Create shared bank account with OfflinePlayer owner
+        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED,
+                                 "Shared bank accounts not yet implemented - use /bank for personal accounts");
     }
-    
+
     @Override
     public EconomyResponse deleteBank(String name) {
-        // TODO: Implement bank deletion
-        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED, 
-                                 "Banks not yet implemented");
+        // TODO [FUTURE]: Delete shared bank account
+        // Implementation: Soft delete or hard delete with balance redistribution to owner
+        // Validate: Check permissions, handle remaining balance
+        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED,
+                                 "Shared bank accounts not yet implemented");
     }
-    
+
     @Override
     public EconomyResponse bankBalance(String name) {
-        // TODO: Implement bank balance check
-        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED, 
-                                 "Banks not yet implemented");
+        // TODO [FUTURE]: Get shared bank balance
+        // Implementation: SELECT balance FROM ecoxpert_shared_banks WHERE name = ?
+        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED,
+                                 "Shared bank accounts not yet implemented");
     }
-    
+
     @Override
     public EconomyResponse bankHas(String name, double amount) {
-        // TODO: Implement bank balance check
-        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED, 
-                                 "Banks not yet implemented");
+        // TODO [FUTURE]: Check if shared bank has sufficient balance
+        // Implementation: Compare balance >= amount
+        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED,
+                                 "Shared bank accounts not yet implemented");
     }
-    
+
     @Override
     public EconomyResponse bankWithdraw(String name, double amount) {
-        // TODO: Implement bank withdrawal
-        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED, 
-                                 "Banks not yet implemented");
+        // TODO [FUTURE]: Withdraw from shared bank
+        // Implementation: BankManager-like withdrawal with permission checks
+        // Validate: Check member permissions, sufficient balance
+        // Log: Record transaction in ecoxpert_shared_bank_transactions
+        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED,
+                                 "Shared bank accounts not yet implemented");
     }
-    
+
     @Override
     public EconomyResponse bankDeposit(String name, double amount) {
-        // TODO: Implement bank deposit
-        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED, 
-                                 "Banks not yet implemented");
+        // TODO [FUTURE]: Deposit to shared bank
+        // Implementation: BankManager-like deposit with permission checks
+        // Log: Record transaction in ecoxpert_shared_bank_transactions
+        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED,
+                                 "Shared bank accounts not yet implemented");
     }
-    
+
     @Override
     public EconomyResponse isBankOwner(String name, String playerName) {
-        // TODO: Implement bank ownership check
-        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED, 
-                                 "Banks not yet implemented");
+        // TODO [FUTURE]: Check if player is bank owner
+        // Implementation: SELECT owner_uuid FROM ecoxpert_shared_banks WHERE name = ?
+        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED,
+                                 "Shared bank accounts not yet implemented");
     }
-    
+
     @Override
     public EconomyResponse isBankOwner(String name, OfflinePlayer player) {
-        // TODO: Implement bank ownership check
-        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED, 
-                                 "Banks not yet implemented");
+        // TODO [FUTURE]: Check if OfflinePlayer is bank owner
+        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED,
+                                 "Shared bank accounts not yet implemented");
     }
-    
+
     @Override
     public EconomyResponse isBankMember(String name, String playerName) {
-        // TODO: Implement bank membership check
-        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED, 
-                                 "Banks not yet implemented");
+        // TODO [FUTURE]: Check if player is bank member
+        // Implementation: SELECT FROM ecoxpert_shared_bank_members WHERE bank_name = ? AND player_uuid = ?
+        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED,
+                                 "Shared bank accounts not yet implemented");
     }
-    
+
     @Override
     public EconomyResponse isBankMember(String name, OfflinePlayer player) {
-        // TODO: Implement bank membership check
-        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED, 
-                                 "Banks not yet implemented");
+        // TODO [FUTURE]: Check if OfflinePlayer is bank member
+        return new EconomyResponse(0, 0, EconomyResponse.ResponseType.NOT_IMPLEMENTED,
+                                 "Shared bank accounts not yet implemented");
     }
     
     @Override
     public List<String> getBanks() {
-        // TODO: Return list of banks
+        // TODO [FUTURE]: Return list of all shared bank names
+        // Implementation: SELECT name FROM ecoxpert_shared_banks
         return List.of();
     }
     

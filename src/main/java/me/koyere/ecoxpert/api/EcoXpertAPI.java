@@ -1,5 +1,6 @@
 package me.koyere.ecoxpert.api;
 
+import me.koyere.ecoxpert.api.dto.*;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -95,76 +96,4 @@ public interface EcoXpertAPI {
      * Get extended player economy view with risk score and wealth percentile.
      */
     PlayerEconomyView getPlayerEconomyView(java.util.UUID playerId);
-}
-
-/**
- * Basic economy operations service
- */
-interface EconomyService {
-    // TODO: Define economy operations
-}
-
-/**
- * Market analytics and pricing service
- */
-interface MarketService {
-    // TODO: Define market operations
-}
-
-/**
- * Banking and interest management service
- */
-interface BankingService {
-    // TODO: Define banking operations
-}
-
-/**
- * Loan and credit management service
- */
-interface LoanService {
-    // TODO: Define loan operations
-}
-
-/**
- * Economic events management service
- */
-interface EventsService {
-    // TODO: Define events operations
-}
-
-/**
- * Profession and role management service
- */
-interface ProfessionService {
-    // TODO: Define profession operations
-}
-
-/**
- * Inflation control and monitoring service
- */
-interface InflationService {
-    // TODO: Define inflation operations
-}
-
-/** Lightweight snapshot for dashboards and integrations */
-class ServerEconomySnapshot {
-    private final String cycle;
-    private final double economicHealth; // 0..1
-    private final double inflationRate;  // fraction, e.g., 0.02
-    private final double marketActivity; // 0..1
-    private final int activeEvents;
-
-    public ServerEconomySnapshot(String cycle, double economicHealth, double inflationRate, double marketActivity, int activeEvents) {
-        this.cycle = cycle;
-        this.economicHealth = Math.max(0.0, Math.min(1.0, economicHealth));
-        this.inflationRate = inflationRate;
-        this.marketActivity = Math.max(0.0, Math.min(1.0, marketActivity));
-        this.activeEvents = Math.max(0, activeEvents);
-    }
-
-    public String getCycle() { return cycle; }
-    public double getEconomicHealth() { return economicHealth; }
-    public double getInflationRate() { return inflationRate; }
-    public double getMarketActivity() { return marketActivity; }
-    public int getActiveEvents() { return activeEvents; }
 }

@@ -33,7 +33,7 @@ import java.util.logging.Level;
  * - Anti-exploitation and inflation control
  * 
  * @author Koyere
- * @version 1.0.0
+ * @version 1.1.0
  * @since 1.19.4
  */
 public final class EcoXpertPlugin extends JavaPlugin {

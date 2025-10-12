@@ -298,6 +298,15 @@ bank:
     deposit: "Deposit"
     withdraw: "Withdraw"
     balance: "Balance"
+    deposit-lore1: "Deposit a fixed amount into your bank account."
+    deposit-lore2: "Secure, with daily limits."
+    deposit-fast-lore1: "Shortcut for larger deposits."
+    deposit-fast-lore2: "Affects your daily limits."
+    balance-lore: "Shows your current bank account balance."
+    withdraw-lore1: "Withdraw a fixed amount from your bank account."
+    withdraw-lore2: "Transfers to your general balance."
+    withdraw-fast-lore1: "Shortcut for larger withdrawals."
+    withdraw-fast-lore2: "Respects limits and security."
   error:
     safe-mode: "&eBank operations are temporarily paused (Safe Mode)."
   
@@ -339,12 +348,32 @@ loans:
     offer: "Offer {0}"
     status: "Loan Status"
     pay: "Pay {0}"
-    schedule: "Schedule"
+    offer-lore1: "Request a smart loan."
+    offer-lore2: "Rate and term adapt to your score."
+    offer-large-lore1: "Request a larger loan."
+    offer-large-lore2: "Subject to limits and score."
+    status-lore1: "Check your active loan:"
+    status-lore2: "Outstanding balance, principal and rate."
+    pay-lore1: "Pay the next installment or part of it."
+    pay-lore2: "Will reduce your outstanding balance."
+    pay-fast-lore1: "Fast payment of larger amount."
+    pay-fast-lore2: "Less interest in the future."
+    schedule-lore1: "Shows the payment schedule."
+    schedule-lore2: "Installments PENDING / PAID / LATE."
     offer-preview:
       title: "Loan Offer Preview"
+      approved: "Approved"
+      denied: "Denied: {0}"
+    schedule-item:
+      due: "Due: {0}"
+      amount: "Amount: {0}"
+      paid: "Paid: {0}"
+      prev: "Prev"
+      next: "Next"
     confirm: "Confirm"
     cancel: "Cancel"
     schedule:
+      button: "Schedule"
       title: "Repayment Schedule"
   
 # Economic Events
@@ -450,28 +479,7 @@ admin:
       avg_buy_delta: "&7Avg Buy Delta: &e{0}"
       avg_sell_delta: "&7Avg Sell Delta: &e{0}"
       total_stimulus: "&7Total Stimulus: &e{0}"
-# Market GUI bottom controls (top-level under market.gui)
-market:
-  gui:
-    category-label: "Category: {0}"
-    category-help: "Click to cycle categories"
-    letter-label: "Filter: {0}"
-    letter-help: "Click to cycle first-letter filter"
-    clear-filters-label: "Clear Filters"
-    clear-filters-help: "Resets category and letter filters"
-    sell-hand-label: "Sell Hand by $"
-    sell-hand:
-      help1: "Sell items in hand by target amount"
-      help2: "Picks quantity closest to target"
-    orders-button: "Open Orders"
-    orders-button-help: "Click to browse order book"
-    sort-mode:
-      name: "Name"
-      buy-asc: "Buy ↑"
-      sell-asc: "Sell ↑"
-      sell-desc: "Sell ↓"
-      volume-asc: "Volume ↑"
-      volume-desc: "Volume ↓"
+
 # Professions System
 professions:
   selected: "&aYou are now a &e{0}"

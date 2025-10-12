@@ -1,0 +1,8 @@
+package me.koyere.ecoxpert.api.dto;
+
+/** Event type enum */
+public enum EventType {
+    MARKET_CRASH, TECHNOLOGICAL_ADVANCEMENT, INVESTMENT_OPPORTUNITY,
+    LUXURY_DEMAND, RESOURCE_SCARCITY, SEASONAL_DEMAND,
+    BLACK_SWAN, GOVERNMENT_STIMULUS, TRADE_BOOM
+}

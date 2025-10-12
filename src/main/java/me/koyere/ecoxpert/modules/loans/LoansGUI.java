@@ -33,28 +33,28 @@ public class LoansGUI extends BaseGUI {
     protected Inventory create(Player player) {
         Inventory inv = Bukkit.createInventory(null, 27, tm.getMessage("loans.gui.title"));
         inv.setItem(10, button(Material.EMERALD, tm.getMessage("loans.gui.offer", "+1000"), new String[]{
-            "§7Solicita un préstamo inteligente.",
-            "§7Tasa y plazo se adaptan a tu score."
+            "§7" + tm.getMessage("loans.gui.offer-lore1"),
+            "§7" + tm.getMessage("loans.gui.offer-lore2")
         }));
         inv.setItem(11, button(Material.EMERALD, tm.getMessage("loans.gui.offer", "+5000"), new String[]{
-            "§7Solicita un préstamo mayor.",
-            "§7Sujeto a límites y score."
+            "§7" + tm.getMessage("loans.gui.offer-large-lore1"),
+            "§7" + tm.getMessage("loans.gui.offer-large-lore2")
         }));
         inv.setItem(13, button(Material.PAPER, tm.getMessage("loans.gui.status"), new String[]{
-            "§7Consulta tu préstamo activo:",
-            "§7Saldo pendiente, principal y tasa."
+            "§7" + tm.getMessage("loans.gui.status-lore1"),
+            "§7" + tm.getMessage("loans.gui.status-lore2")
         }));
         inv.setItem(15, button(Material.GOLD_INGOT, tm.getMessage("loans.gui.pay", "500"), new String[]{
-            "§7Paga la siguiente cuota o parte de ella.",
-            "§7Reducirá tu saldo pendiente."
+            "§7" + tm.getMessage("loans.gui.pay-lore1"),
+            "§7" + tm.getMessage("loans.gui.pay-lore2")
         }));
         inv.setItem(16, button(Material.GOLD_INGOT, tm.getMessage("loans.gui.pay", "1000"), new String[]{
-            "§7Pago rápido de mayor cantidad.",
-            "§7Menos intereses a futuro."
+            "§7" + tm.getMessage("loans.gui.pay-fast-lore1"),
+            "§7" + tm.getMessage("loans.gui.pay-fast-lore2")
         }));
-        inv.setItem(22, button(Material.BOOK, tm.getMessage("loans.gui.schedule"), new String[]{
-            "§7Muestra el calendario de pagos.",
-            "§7Cuotas PENDING / PAID / LATE."
+        inv.setItem(22, button(Material.BOOK, tm.getMessage("loans.gui.schedule.button"), new String[]{
+            "§7" + tm.getMessage("loans.gui.schedule-lore1"),
+            "§7" + tm.getMessage("loans.gui.schedule-lore2")
         }));
         return inv;
     }
@@ -97,7 +97,7 @@ public class LoansGUI extends BaseGUI {
         } else if (name.contains("1000")) {
             loanManager.payLoan(p.getUniqueId(), new BigDecimal("1000")).thenAccept(ok ->
                 p.sendMessage(tm.getMessage("prefix") + (ok ? tm.getMessage("loans.payment-made", economyManager.formatMoney(new BigDecimal("1000"))) : tm.getMessage("loans.loan-denied", ""))));
-        } else if (name.contains(tm.getMessage("loans.gui.schedule"))) {
+        } else if (name.contains(tm.getMessage("loans.gui.schedule.button"))) {
             openScheduleGUI(p, 0);
         } else if (e.getView().getTitle().equals(tm.getMessage("loans.gui.offer-preview.title"))) {
             e.setCancelled(true);
@@ -144,7 +144,7 @@ public class LoansGUI extends BaseGUI {
                 offer.interestRate().multiply(new BigDecimal("100")).setScale(2) + "%",
                 offer.termDays(), offer.score()));
             lore.add(" ");
-            lore.add(offer.approved() ? "§aApproved" : "§cDenied: " + offer.reason());
+            lore.add(offer.approved() ? "§a" + tm.getMessage("loans.gui.offer-preview.approved") : "§c" + tm.getMessage("loans.gui.offer-preview.denied", offer.reason()));
             meta.setLore(lore);
             info.setItemMeta(meta);
             inv.setItem(11, info);
@@ -175,9 +175,9 @@ public class LoansGUI extends BaseGUI {
                 ItemMeta meta = paper.getItemMeta();
                 meta.setDisplayName("§e#" + s.installmentNo() + " - " + s.status());
                 meta.setLore(java.util.Arrays.asList(
-                    "§7Due: §e" + s.dueDate(),
-                    "§7Amount: §e" + economyManager.formatMoney(s.amountDue()),
-                    "§7Paid: §e" + economyManager.formatMoney(s.paidAmount())
+                    "§7" + tm.getMessage("loans.gui.schedule-item.due", s.dueDate()),
+                    "§7" + tm.getMessage("loans.gui.schedule-item.amount", economyManager.formatMoney(s.amountDue())),
+                    "§7" + tm.getMessage("loans.gui.schedule-item.paid", economyManager.formatMoney(s.paidAmount()))
                 ));
                 paper.setItemMeta(meta);
                 inv.setItem(slot++, paper);
@@ -185,11 +185,11 @@ public class LoansGUI extends BaseGUI {
             // Nav arrows
             ItemStack prev = new ItemStack(Material.ARROW);
             ItemMeta pm = prev.getItemMeta();
-            pm.setDisplayName("§aPrev");
+            pm.setDisplayName("§a" + tm.getMessage("loans.gui.schedule-item.prev"));
             prev.setItemMeta(pm);
             ItemStack next = new ItemStack(Material.ARROW);
             ItemMeta nm = next.getItemMeta();
-            nm.setDisplayName("§aNext");
+            nm.setDisplayName("§a" + tm.getMessage("loans.gui.schedule-item.next"));
             next.setItemMeta(nm);
             inv.setItem(45, prev);
             inv.setItem(53, next);

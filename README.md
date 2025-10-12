@@ -52,7 +52,7 @@ Traditional servers follow this pattern:
 ### 🌐 **Cross-Platform Support**
 - **Java + Bedrock** - Full GeyserMC/FloodGate compatibility
 - **Multi-Server** - Spigot, Paper, Purpur, Folia support
-- **Version Range** - MC 1.19.4 through 1.21.7+
+- **Version Range** - MC 1.19.4 through 1.21.9+
 
 ---
 
@@ -60,7 +60,7 @@ Traditional servers follow this pattern:
 
 ### Requirements
 - **Java 17+** (required)
-- **Spigot/Paper 1.19.4-1.21.8+** 
+- **Spigot/Paper/Purpur/Folia 1.19.4-1.21.9+** 
 - **Vault** (dependency)
 
 ### Quick Setup
@@ -177,7 +177,20 @@ EcoXpert operates in different modes based on your server setup:
 
 ## 🎮 **Commands**
 
-Use `/ecox` or `/ecoxpert` to avoid conflicts with EssentialsX `/eco`.
+### ⚠️ **Command Compatibility Notice**
+
+**IMPORTANT:** EcoXpert **does NOT use `/eco`** as its main command to avoid conflicts with EssentialsX/CMI.
+
+| Plugin | Main Command | EcoXpert Compatibility |
+|--------|--------------|------------------------|
+| **EcoXpert** | `/ecoxpert`, `/ecox`, `/ex` | ✅ Primary commands |
+| **EssentialsX** | `/eco` | ✅ No conflict - different commands |
+| **CMI** | `/eco` | ✅ No conflict - different commands |
+
+**Recommended usage:**
+- Use `/ecoxpert` or `/ecox` for EcoXpert commands
+- Use `/eco` for EssentialsX/CMI commands (if installed)
+- No configuration needed - works out of the box!
 
 ### Basic Economy Commands
 ```
@@ -590,10 +603,252 @@ slimefun:
     flag_sell_factor: 0.98
 ```
 
-### Public API (minimal)
-- `EcoXpertAPI#getServerEconomics()` → `ServerEconomySnapshot` with fields: `cycle`, `economicHealth` (0–1), `inflationRate` (fraction), `marketActivity` (0–1), `activeEvents`.
- - `EcoXpertAPI#forecastCycle(Duration)` → `CycleForecast` (predicted cycle + confidence).
- - `EcoXpertAPI#getPlayerEconomyView(UUID)` → `PlayerEconomyView` (balance, wealthPercentile 0–1, riskScore 0–1, predictedFutureBalance).
+### 🔌 **Public API - Professional Integration**
+
+EcoXpert provides a comprehensive **public API** for third-party plugin developers to integrate with all economic systems.
+
+#### **Getting Started with the API**
+
+```java
+// Get the API instance
+EcoXpertAPI api = org.bukkit.plugin.java.JavaPlugin
+    .getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+    .getServiceRegistry()
+    .getInstance(me.koyere.ecoxpert.api.EcoXpertAPI.class);
+
+// Check if API is ready
+if (api.isReady()) {
+    String version = api.getAPIVersion();  // e.g., "1.0.0"
+}
+```
+
+#### **Available Services**
+
+| Service | Description | Usage |
+|---------|-------------|-------|
+| **EconomyService** | Basic economy operations | Balance, deposits, withdrawals, transfers |
+| **MarketService** | Market analytics & pricing | Prices, trends, statistics, volume |
+| **BankingService** | Banking operations | Accounts, deposits, withdrawals, interest |
+| **LoanService** | Loan management | Credit scores, loan offers, payments |
+| **EventsService** | Economic events | Active events, cooldowns, statistics |
+| **ProfessionService** | Player professions | Roles, levels, XP, bonuses |
+| **InflationService** | Economic metrics | Inflation, health, Gini coefficient |
+
+#### **Economy Service Examples**
+
+```java
+EconomyService economy = api.getEconomyService();
+
+// Get player balance
+CompletableFuture<BigDecimal> balance = economy.getBalance(playerUUID);
+balance.thenAccept(amount -> {
+    String formatted = economy.formatCurrency(amount);
+    player.sendMessage("Balance: " + formatted);
+});
+
+// Transfer money between players
+economy.transfer(fromUUID, toUUID, amount, "Payment for goods")
+    .thenAccept(result -> {
+        if (result.isSuccess()) {
+            player.sendMessage(result.getMessage());
+        }
+    });
+```
+
+#### **Market Service Examples**
+
+```java
+MarketService market = api.getMarketService();
+
+// Get current buy/sell prices
+market.getCurrentPrice(Material.DIAMOND, PriceType.BUY)
+    .thenAccept(buyPrice -> {
+        player.sendMessage("Diamond buy price: $" + buyPrice);
+    });
+
+// Get trending items
+market.getTrendingItems(10).thenAccept(items -> {
+    for (TrendingItem item : items) {
+        player.sendMessage(item.getMaterial() + " - Volume: " + item.getVolume24h());
+    }
+});
+
+// Get market statistics
+market.getMarketStatistics().thenAccept(stats -> {
+    player.sendMessage("Market Activity: " + (stats.getMarketActivity() * 100) + "%");
+});
+```
+
+#### **Banking Service Examples**
+
+```java
+BankingService banking = api.getBankingService();
+
+// Get account information
+banking.getAccount(playerUUID).thenAccept(account -> {
+    if (account != null) {
+        player.sendMessage("Bank Balance: " + account.getBalance());
+        player.sendMessage("Tier: " + account.getTier());
+        player.sendMessage("Interest Rate: " + (account.getInterestRate() * 100) + "%");
+    }
+});
+
+// Deposit money
+banking.deposit(playerUUID, new BigDecimal("1000"))
+    .thenAccept(result -> {
+        if (result.isSuccess()) {
+            player.sendMessage("Deposited! New balance: " + result.getNewBalance());
+        }
+    });
+```
+
+#### **Loan Service Examples**
+
+```java
+LoanService loans = api.getLoanService();
+
+// Get smart loan offer based on credit score
+loans.getSmartOffer(playerUUID).thenAccept(offer -> {
+    player.sendMessage("Credit Score: " + offer.getCreditScore());
+    player.sendMessage("Max Loan: " + offer.getMaxAmount());
+    player.sendMessage("Interest Rate: " + (offer.getInterestRate() * 100) + "%");
+    player.sendMessage("Term: " + offer.getTermDays() + " days");
+});
+
+// Get loan status
+loans.getStatus(playerUUID).thenAccept(status -> {
+    if (status.hasActiveLoan()) {
+        player.sendMessage("Outstanding: " + status.getOutstanding());
+        player.sendMessage("Next Payment: " + status.getNextPaymentAmount());
+        player.sendMessage("Payments Remaining: " + status.getPaymentsRemaining());
+    }
+});
+```
+
+#### **Events Service Examples**
+
+```java
+EventsService events = api.getEventsService();
+
+// Get active economic events
+List<EventInfo> activeEvents = events.getActiveEvents();
+for (EventInfo event : activeEvents) {
+    player.sendMessage(event.getName() + " - " + event.getDescription());
+}
+
+// Check if specific event is active
+if (events.isEventActive(EventType.TRADE_BOOM)) {
+    player.sendMessage("Trade Boom active - increased trading rewards!");
+}
+
+// Get event cooldowns
+Map<EventType, Long> cooldowns = events.getRemainingCooldowns();
+cooldowns.forEach((type, remainingMs) -> {
+    long hours = remainingMs / (1000 * 60 * 60);
+    player.sendMessage(type + " cooldown: " + hours + " hours");
+});
+```
+
+#### **Profession Service Examples**
+
+```java
+ProfessionService professions = api.getProfessionService();
+
+// Get player profession
+professions.getProfession(playerUUID).ifPresent(profession -> {
+    player.sendMessage("Role: " + profession.getRole());
+    player.sendMessage("Level: " + profession.getLevel());
+    player.sendMessage("XP: " + profession.getExperience() + "/" + profession.getNextLevelXP());
+});
+
+// Get available professions
+Map<ProfessionRole, ProfessionConfig> available = professions.getAvailableProfessions();
+available.forEach((role, config) -> {
+    player.sendMessage(role + " - Buy: " + config.getBuyFactor() +
+                       ", Sell: " + config.getSellFactor());
+});
+```
+
+#### **Inflation Service Examples**
+
+```java
+InflationService inflation = api.getInflationService();
+
+// Get economic metrics
+double inflationRate = inflation.getCurrentInflation();
+double health = inflation.getEconomicHealth();
+EconomicCycleInfo cycle = inflation.getCurrentCycle();
+
+player.sendMessage("Inflation: " + (inflationRate * 100) + "%");
+player.sendMessage("Economic Health: " + (health * 100) + "%");
+player.sendMessage("Cycle: " + cycle.getCycle());
+
+// Get server-wide statistics
+inflation.getTotalMoney().thenAccept(total -> {
+    player.sendMessage("Total Money in Economy: " + total);
+});
+
+inflation.getGiniCoefficient().thenAccept(gini -> {
+    player.sendMessage("Wealth Inequality (Gini): " + gini);
+});
+```
+
+#### **Advanced API Features**
+
+```java
+// Server economy snapshot
+ServerEconomySnapshot snapshot = api.getServerEconomics();
+System.out.println("Cycle: " + snapshot.getCycle());
+System.out.println("Health: " + (snapshot.getEconomicHealth() * 100) + "%");
+System.out.println("Inflation: " + (snapshot.getInflationRate() * 100) + "%");
+
+// Economic forecast
+CycleForecast forecast = api.forecastCycle(Duration.ofHours(24));
+System.out.println("Predicted Cycle: " + forecast.getPredictedCycle());
+System.out.println("Confidence: " + (forecast.getConfidence() * 100) + "%");
+
+// Player economic view
+PlayerEconomyView view = api.getPlayerEconomyView(playerUUID);
+System.out.println("Balance: " + view.getBalance());
+System.out.println("Wealth Percentile: " + (view.getWealthPercentile() * 100) + "%");
+System.out.println("Risk Score: " + (view.getRiskScore() * 100) + "%");
+```
+
+#### **Add EcoXpert as Dependency**
+
+**Maven (pom.xml):**
+```xml
+<repositories>
+    <repository>
+        <id>ecoxpert-repo</id>
+        <url>https://github.com/koyere/ecoxpert</url>
+    </repository>
+</repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>me.koyere</groupId>
+        <artifactId>ecoxpert</artifactId>
+        <version>1.0.0</version>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
+```
+
+**plugin.yml:**
+```yaml
+depend: [EcoXpert]
+# or for optional integration:
+softdepend: [EcoXpert]
+```
+
+#### **API Best Practices**
+
+1. **Always check if API is ready** before using services
+2. **Use CompletableFuture properly** - all async operations return futures
+3. **Handle null responses** - some methods may return null if data doesn't exist
+4. **Respect async operations** - avoid blocking `.join()` on main thread
+5. **Cache service instances** - get them once and reuse
 
 API Events (Bukkit)
 - `EconomyCycleChangeEvent` — fired on cycle transitions (e.g., GROWTH → BOOM).
@@ -729,7 +984,7 @@ debug:
 ## 🤝 **Support & Community**
 
 ### Getting Support
-1. **Check this README** for common solutions
+1. **Discord:** https://discord.gg/xKUjn3EJzR
 2. **Run diagnostics** with in-game commands
 3. **Check server logs** for detailed error information
 4. **Review configuration** files for proper setup
