@@ -4,6 +4,8 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import me.koyere.ecoxpert.EcoXpertPlugin;
 import me.koyere.ecoxpert.core.config.ConfigManager;
+import me.koyere.ecoxpert.core.config.DatabasePoolSettings;
+import me.koyere.ecoxpert.core.config.MySqlConfig;
 
 import java.io.File;
 import java.sql.Connection;
@@ -231,21 +233,21 @@ public class DataManagerImpl implements DataManager {
      */
     private void initializeDataSource() {
         HikariConfig config = new HikariConfig();
-        
-        if (databaseType == DatabaseType.SQLITE) {
-            configureSQLite(config);
-        } else {
-            configureMySQL(config);
-        }
-        
-        // Common configuration
+
+        // Common defaults (overridden if custom pool settings are provided)
         config.setMaximumPoolSize(10);
         config.setMinimumIdle(2);
         config.setConnectionTimeout(30000);
         config.setIdleTimeout(600000);
         config.setMaxLifetime(1800000);
         config.setLeakDetectionThreshold(60000);
-        
+
+        if (databaseType == DatabaseType.SQLITE) {
+            configureSQLite(config);
+        } else {
+            configureMySQL(config);
+        }
+
         this.dataSource = new HikariDataSource(config);
     }
     
@@ -275,13 +277,25 @@ public class DataManagerImpl implements DataManager {
      * Configure MySQL connection
      */
     private void configureMySQL(HikariConfig config) {
-        // TODO: Get MySQL config from ConfigManager
-        config.setJdbcUrl("jdbc:mysql://localhost:3306/ecoxpert");
-        config.setUsername("username");
-        config.setPassword("password");
+        MySqlConfig mySql = configManager.getMySqlConfig();
+        if (mySql == null) {
+            throw new IllegalStateException("MySQL configuration not available");
+        }
+
+        validateMySqlConfig(mySql);
+
+        String jdbcUrl = String.format("jdbc:mysql://%s:%d/%s",
+            mySql.getHost().trim(),
+            mySql.getPort(),
+            mySql.getDatabase().trim());
+
+        config.setJdbcUrl(jdbcUrl);
+        config.setUsername(mySql.getUsername());
+        config.setPassword(mySql.getPassword());
         config.setDriverClassName("com.mysql.cj.jdbc.Driver");
-        
-        // MySQL specific settings
+        config.setPoolName("EcoXpert-MySQL");
+
+        // Charset and timezone defaults to support utf8mb4 datasets.
         config.addDataSourceProperty("cachePrepStmts", "true");
         config.addDataSourceProperty("prepStmtCacheSize", "250");
         config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
@@ -291,6 +305,41 @@ public class DataManagerImpl implements DataManager {
         config.addDataSourceProperty("cacheResultSetMetadata", "true");
         config.addDataSourceProperty("cacheServerConfiguration", "true");
         config.addDataSourceProperty("maintainTimeStats", "false");
+        config.addDataSourceProperty("useUnicode", "true");
+        config.addDataSourceProperty("characterEncoding", "utf8mb4");
+        config.addDataSourceProperty("connectionCollation", "utf8mb4_unicode_ci");
+        config.addDataSourceProperty("characterSetResults", "utf8mb4");
+        config.addDataSourceProperty("serverTimezone", "UTC");
+        config.addDataSourceProperty("useSSL", Boolean.toString(mySql.isUseSsl()));
+        config.addDataSourceProperty("allowPublicKeyRetrieval", Boolean.toString(mySql.isAllowPublicKeyRetrieval()));
+
+        applyPoolOverrides(config, mySql.getPoolSettings());
+    }
+
+    private void applyPoolOverrides(HikariConfig config, DatabasePoolSettings overrides) {
+        if (overrides == null) {
+            return;
+        }
+        overrides.getMaximumPoolSize().ifPresent(config::setMaximumPoolSize);
+        overrides.getMinimumIdle().ifPresent(config::setMinimumIdle);
+        overrides.getConnectionTimeout().ifPresent(config::setConnectionTimeout);
+        overrides.getIdleTimeout().ifPresent(config::setIdleTimeout);
+        overrides.getMaxLifetime().ifPresent(config::setMaxLifetime);
+    }
+
+    private void validateMySqlConfig(MySqlConfig config) {
+        if (config.getHost().trim().isEmpty()) {
+            throw new IllegalStateException("database.mysql.host must not be empty");
+        }
+        if (config.getDatabase().trim().isEmpty()) {
+            throw new IllegalStateException("database.mysql.database must not be empty");
+        }
+        if (config.getUsername().trim().isEmpty()) {
+            throw new IllegalStateException("database.mysql.username must not be empty");
+        }
+        if (config.getPort() <= 0 || config.getPort() > 65535) {
+            throw new IllegalStateException("database.mysql.port must be a valid TCP port");
+        }
     }
     
     /**

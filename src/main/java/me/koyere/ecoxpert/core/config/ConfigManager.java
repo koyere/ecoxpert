@@ -51,10 +51,17 @@ public interface ConfigManager {
     
     /**
      * Get the configured database type
-     * 
+     *
      * @return Database type ("sqlite" or "mysql")
      */
     String getDatabaseType();
+
+    /**
+     * Get the MySQL configuration block.
+     *
+     * @return MySQL configuration details (never {@code null})
+     */
+    MySqlConfig getMySqlConfig();
     
     /**
      * Get the configured language code

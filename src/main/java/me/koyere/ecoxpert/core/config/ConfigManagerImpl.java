@@ -31,6 +31,7 @@ public class ConfigManagerImpl implements ConfigManager {
     private String language = "en";
     private boolean debugEnabled = false;
     private boolean simpleMode = false;
+    private MySqlConfig mySqlConfig;
     
     @Inject
     public ConfigManagerImpl(EcoXpertPlugin plugin) {
@@ -135,6 +136,13 @@ public class ConfigManagerImpl implements ConfigManager {
             config.getBoolean("debug", false));
         String mode = config.getString("plugin.config_mode", "advanced");
         this.simpleMode = "simple".equalsIgnoreCase(mode);
+
+        loadMySqlConfig(config);
+    }
+
+    @Override
+    public MySqlConfig getMySqlConfig() {
+        return mySqlConfig;
     }
     
     /**
@@ -152,10 +160,71 @@ public class ConfigManagerImpl implements ConfigManager {
      */
     private void loadModuleConfigs() {
         String[] modules = {"market", "bank", "loans", "events", "professions", "inflation", "integrations"};
-        
+
         for (String module : modules) {
             loadModuleConfig(module);
         }
+    }
+
+    private void loadMySqlConfig(FileConfiguration config) {
+        var mysqlSection = config.getConfigurationSection("database.mysql");
+        if (mysqlSection == null) {
+            this.mySqlConfig = new MySqlConfig(
+                "localhost",
+                3306,
+                "ecoxpert",
+                "username",
+                "password",
+                false,
+                true,
+                new DatabasePoolSettings(null, null, null, null, null)
+            );
+            return;
+        }
+
+        String host = mysqlSection.getString("host", "localhost");
+        int port = mysqlSection.getInt("port", 3306);
+        String databaseName = mysqlSection.getString("database", "ecoxpert");
+        String usernameValue = mysqlSection.getString("username", "username");
+        String passwordValue = mysqlSection.getString("password", "password");
+        boolean useSsl = mysqlSection.getBoolean("use-ssl", false);
+        boolean allowPublicKeyRetrieval = mysqlSection.getBoolean("allow-public-key-retrieval", true);
+
+        Integer maximumPoolSize = null;
+        Integer minimumIdle = null;
+        Long connectionTimeout = null;
+        Long idleTimeout = null;
+        Long maxLifetime = null;
+
+        var poolSection = mysqlSection.getConfigurationSection("pool");
+        if (poolSection != null) {
+            if (poolSection.isSet("maximum-pool-size")) {
+                maximumPoolSize = poolSection.getInt("maximum-pool-size");
+            }
+            if (poolSection.isSet("minimum-idle")) {
+                minimumIdle = poolSection.getInt("minimum-idle");
+            }
+            if (poolSection.isSet("connection-timeout")) {
+                connectionTimeout = poolSection.getLong("connection-timeout");
+            }
+            if (poolSection.isSet("idle-timeout")) {
+                idleTimeout = poolSection.getLong("idle-timeout");
+            }
+            if (poolSection.isSet("max-lifetime")) {
+                maxLifetime = poolSection.getLong("max-lifetime");
+            }
+        }
+
+        this.mySqlConfig = new MySqlConfig(
+            host,
+            port,
+            databaseName,
+            usernameValue,
+            passwordValue,
+            useSsl,
+            allowPublicKeyRetrieval,
+            new DatabasePoolSettings(maximumPoolSize, minimumIdle, connectionTimeout, idleTimeout, maxLifetime)
+        );
     }
     
     /**
