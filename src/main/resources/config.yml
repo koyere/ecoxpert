@@ -52,19 +52,68 @@ database:
     
   # MySQL settings (used when type is "mysql")
   mysql:
+    # MySQL server hostname or IP
     host: "localhost"
+    # MySQL server port (default: 3306)
     port: 3306
+    # Database name (will be created if it doesn't exist)
     database: "ecoxpert"
+    # MySQL user with CREATE/INSERT/SELECT/UPDATE privileges
     username: "username"
     password: "password"
-    
+
+    # SSL/TLS Configuration
+    use-ssl: false
+    # Allow public key retrieval for authentication (MySQL 8.0+)
+    allow-public-key-retrieval: false
+
+    # Character Encoding & Collation
+    # EcoXpert automatically handles charset compatibility:
+    # - Primary: utf8mb4_unicode_ci (supports full emoji/unicode range)
+    # - Fallback: utf8_general_ci (for older MySQL versions < 5.5.3)
+    # The plugin will auto-detect charset support and fallback if needed.
+    # Recommended MySQL versions:
+    # - MySQL 5.7.x or newer: Full utf8mb4 support
+    # - MySQL 8.0.x or newer: Recommended, best performance
+    # - MariaDB 10.2+: Full compatibility with utf8mb4
+
     # Connection pool settings
     pool:
+      # Maximum connections in pool (default: 10)
       maximum-pool-size: 10
+      # Minimum idle connections (default: 2)
       minimum-idle: 2
+      # Connection timeout (milliseconds, default: 30000)
       connection-timeout: 30000
+      # Idle timeout before connection close (milliseconds, default: 600000 = 10 min)
       idle-timeout: 600000
+      # Maximum lifetime of a connection (milliseconds, default: 1800000 = 30 min)
       max-lifetime: 1800000
+
+    # Troubleshooting MySQL Connection Issues
+    # =========================================
+    # ERROR: "Unsupported character encoding 'utf8mb4'"
+    # SOLUTION: Your MySQL server doesn't support utf8mb4 charset.
+    # Options:
+    # 1. Upgrade MySQL to 5.7.7+ or MariaDB 10.2+
+    # 2. Delete the EcoXpert database and restart the plugin
+    #    (plugin will create it with utf8 fallback automatically)
+    # 3. Manually create the database:
+    #    CREATE DATABASE ecoxpert CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    #
+    # ERROR: "Connection timeout" or "Communications link failure"
+    # SOLUTION: Check MySQL server is running and accessible
+    # - Verify host and port are correct
+    # - Check MySQL is accepting connections
+    # - Ensure firewall allows access
+    # - Test: mysql -h <host> -u <user> -p
+    #
+    # ERROR: "Access denied for user"
+    # SOLUTION: MySQL credentials are incorrect
+    # - Verify username and password
+    # - Ensure user has CREATE, SELECT, INSERT, UPDATE privileges
+    # - Grant privileges:
+    #   GRANT ALL PRIVILEGES ON ecoxpert.* TO 'username'@'localhost';
 
 # Economy Settings
 economy:

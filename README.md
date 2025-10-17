@@ -966,6 +966,54 @@ A: Market uses real supply/demand. Prices adjust based on actual trading activit
 **Q: Banking features not available**
 A: Banking system requires full database setup. Check logs for initialization errors.
 
+### MySQL Database Connection Issues
+
+**Q: Error `Failed to initialize pool: Unsupported character encoding 'utf8mb4'`**
+
+A: Your MySQL server doesn't support `utf8mb4` charset. EcoXpert automatically handles this with charset fallback:
+
+**Solution (Automatic):**
+1. Delete the `ecoxpert` database in MySQL
+2. Restart your server
+3. Plugin creates database with compatible charset automatically
+
+**Recommended MySQL Versions:**
+- MySQL 5.7.7+ (full utf8mb4 support)
+- MySQL 8.0+ (recommended, best performance)
+- MariaDB 10.2+ (full compatibility)
+
+**Manual Solution (if automatic fails):**
+```sql
+-- Option 1: Create with utf8mb4 (MySQL 5.7.7+)
+CREATE DATABASE ecoxpert CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Option 2: Create with utf8 fallback (older MySQL)
+CREATE DATABASE ecoxpert CHARACTER SET utf8 COLLATE utf8_general_ci;
+
+-- Grant privileges
+GRANT ALL PRIVILEGES ON ecoxpert.* TO 'username'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+**Q: Error `Connection timeout` or `Communications link failure`**
+
+A: MySQL server is not accessible. Verify:
+- MySQL is running and accepting connections
+- Host and port in `config.yml` are correct
+- Firewall allows connection (default port 3306)
+- Test connection: `mysql -h <host> -P 3306 -u <user> -p`
+
+**Q: Error `Access denied for user`**
+
+A: MySQL credentials are incorrect. Verify in `config.yml`:
+- Username and password are correct
+- User has `CREATE, SELECT, INSERT, UPDATE` privileges on the database
+- Re-grant privileges:
+```sql
+GRANT ALL PRIVILEGES ON ecoxpert.* TO 'username'@'localhost' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+```
+
 ### Debug Information
 Enable debug logging in `config.yml`:
 ```yaml

@@ -61,27 +61,46 @@ public class DataManagerImpl implements DataManager {
     @Override
     public void initialize() {
         plugin.getLogger().info("Initializing data management system...");
-        
+
         try {
             // Determine database type
             String dbTypeStr = configManager.getDatabaseType().toLowerCase();
             DatabaseType resolvedType = dbTypeStr.equals("mysql") ? DatabaseType.MYSQL : DatabaseType.SQLITE;
             setDialect(resolvedType);
-            
+
             plugin.getLogger().info("Database type: " + databaseType);
-            
-            // Initialize HikariCP connection pool
-            initializeDataSource();
-            
+
+            // Initialize HikariCP connection pool with charset fallback handling
+            try {
+                initializeDataSource();
+            } catch (Exception charsetError) {
+                if (databaseType == DatabaseType.MYSQL && charsetError.getMessage() != null &&
+                    charsetError.getMessage().contains("utf8mb4")) {
+
+                    plugin.getLogger().warning("MySQL charset error detected: " + charsetError.getMessage());
+                    plugin.getLogger().warning("Attempting fallback to compatible charset configuration...");
+
+                    // Fallback: retry with utf8 instead of utf8mb4
+                    try {
+                        initializeDataSourceWithFallbackCharset();
+                    } catch (Exception fallbackError) {
+                        plugin.getLogger().severe("Charset fallback also failed: " + fallbackError.getMessage());
+                        throw fallbackError;
+                    }
+                } else {
+                    throw charsetError;
+                }
+            }
+
             // Test connection
             testConnection();
-            
+
             // Create tables if needed
             createTables();
-            
+
             this.connected = true;
             plugin.getLogger().info("Data management system initialized successfully");
-            
+
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to initialize data management system: " + e.getMessage());
             throw new RuntimeException("Database initialization failed", e);
@@ -208,15 +227,15 @@ public class DataManagerImpl implements DataManager {
         // Check schema version
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(
-                 "SELECT version FROM ecoxpert_meta WHERE key = 'schema_version'")) {
-            
+                 "SELECT version FROM ecoxpert_meta WHERE `key` = 'schema_version'")) {
+
             var result = stmt.executeQuery();
             if (result.next()) {
                 int currentVersion = result.getInt("version");
                 return currentVersion < getCurrentSchemaVersion();
             }
             return true; // No version found, needs migration
-            
+
         } catch (SQLException e) {
             return true; // Error reading version, assume migration needed
         }
@@ -260,6 +279,66 @@ public class DataManagerImpl implements DataManager {
 
         this.dataSource = new HikariDataSource(config);
     }
+
+    /**
+     * Initialize HikariCP data source with fallback UTF-8 charset (for MySQL compatibility)
+     */
+    private void initializeDataSourceWithFallbackCharset() throws Exception {
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
+        }
+
+        HikariConfig config = new HikariConfig();
+        config.setMaximumPoolSize(10);
+        config.setMinimumIdle(2);
+        config.setConnectionTimeout(30000);
+        config.setIdleTimeout(600000);
+        config.setMaxLifetime(1800000);
+        config.setLeakDetectionThreshold(60000);
+
+        MySqlConfig mySql = configManager.getMySqlConfig();
+        if (mySql == null) {
+            throw new IllegalStateException("MySQL configuration not available");
+        }
+
+        validateMySqlConfig(mySql);
+
+        String jdbcUrl = String.format("jdbc:mysql://%s:%d/%s?allowMultiQueries=true&createDatabaseIfNotExist=true",
+            mySql.getHost().trim(),
+            mySql.getPort(),
+            mySql.getDatabase().trim());
+
+        config.setJdbcUrl(jdbcUrl);
+        config.setUsername(mySql.getUsername());
+        config.setPassword(mySql.getPassword());
+        config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        config.setPoolName("EcoXpert-MySQL-Fallback");
+
+        // Performance settings
+        config.addDataSourceProperty("cachePrepStmts", "true");
+        config.addDataSourceProperty("prepStmtCacheSize", "250");
+        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        config.addDataSourceProperty("useServerPrepStmts", "true");
+        config.addDataSourceProperty("useLocalSessionState", "true");
+        config.addDataSourceProperty("rewriteBatchedStatements", "true");
+        config.addDataSourceProperty("cacheResultSetMetadata", "true");
+        config.addDataSourceProperty("cacheServerConfiguration", "true");
+        config.addDataSourceProperty("maintainTimeStats", "false");
+        config.addDataSourceProperty("serverTimezone", "UTC");
+        config.addDataSourceProperty("useSSL", Boolean.toString(mySql.isUseSsl()));
+        config.addDataSourceProperty("allowPublicKeyRetrieval", Boolean.toString(mySql.isAllowPublicKeyRetrieval()));
+
+        // Character encoding fallback: UTF-8 instead of UTF-8MB4
+        config.addDataSourceProperty("useUnicode", "true");
+        config.addDataSourceProperty("characterEncoding", "utf8");
+        config.addDataSourceProperty("connectionCollation", "utf8_general_ci");
+        config.addDataSourceProperty("characterSetResults", "utf8");
+
+        applyPoolOverrides(config, mySql.getPoolSettings());
+
+        this.dataSource = new HikariDataSource(config);
+        plugin.getLogger().info("Successfully initialized MySQL with UTF-8 charset fallback");
+    }
     
     /**
      * Configure SQLite connection
@@ -284,7 +363,7 @@ public class DataManagerImpl implements DataManager {
     }
     
     /**
-     * Configure MySQL connection
+     * Configure MySQL connection with automatic charset fallback
      */
     private void configureMySQL(HikariConfig config) {
         MySqlConfig mySql = configManager.getMySqlConfig();
@@ -294,7 +373,7 @@ public class DataManagerImpl implements DataManager {
 
         validateMySqlConfig(mySql);
 
-        String jdbcUrl = String.format("jdbc:mysql://%s:%d/%s",
+        String jdbcUrl = String.format("jdbc:mysql://%s:%d/%s?allowMultiQueries=true&createDatabaseIfNotExist=true",
             mySql.getHost().trim(),
             mySql.getPort(),
             mySql.getDatabase().trim());
@@ -305,7 +384,7 @@ public class DataManagerImpl implements DataManager {
         config.setDriverClassName("com.mysql.cj.jdbc.Driver");
         config.setPoolName("EcoXpert-MySQL");
 
-        // Charset and timezone defaults to support utf8mb4 datasets.
+        // Performance and stability settings
         config.addDataSourceProperty("cachePrepStmts", "true");
         config.addDataSourceProperty("prepStmtCacheSize", "250");
         config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
@@ -315,13 +394,16 @@ public class DataManagerImpl implements DataManager {
         config.addDataSourceProperty("cacheResultSetMetadata", "true");
         config.addDataSourceProperty("cacheServerConfiguration", "true");
         config.addDataSourceProperty("maintainTimeStats", "false");
+        config.addDataSourceProperty("serverTimezone", "UTC");
+        config.addDataSourceProperty("useSSL", Boolean.toString(mySql.isUseSsl()));
+        config.addDataSourceProperty("allowPublicKeyRetrieval", Boolean.toString(mySql.isAllowPublicKeyRetrieval()));
+
+        // Character encoding with automatic fallback
+        // Try utf8mb4 first, fall back to utf8 if not supported
         config.addDataSourceProperty("useUnicode", "true");
         config.addDataSourceProperty("characterEncoding", "utf8mb4");
         config.addDataSourceProperty("connectionCollation", "utf8mb4_unicode_ci");
         config.addDataSourceProperty("characterSetResults", "utf8mb4");
-        config.addDataSourceProperty("serverTimezone", "UTC");
-        config.addDataSourceProperty("useSSL", Boolean.toString(mySql.isUseSsl()));
-        config.addDataSourceProperty("allowPublicKeyRetrieval", Boolean.toString(mySql.isAllowPublicKeyRetrieval()));
 
         applyPoolOverrides(config, mySql.getPoolSettings());
     }
@@ -709,7 +791,7 @@ public class DataManagerImpl implements DataManager {
         @Override
         public void upsertSchemaVersion(Connection connection, int schemaVersion) throws SQLException {
             String sql = """
-                INSERT INTO ecoxpert_meta (key, version)
+                INSERT INTO ecoxpert_meta (`key`, version)
                 VALUES ('schema_version', ?)
                 ON DUPLICATE KEY UPDATE version = VALUES(version)
                 """;
