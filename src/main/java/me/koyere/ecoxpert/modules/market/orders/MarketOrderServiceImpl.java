@@ -71,10 +71,13 @@ public class MarketOrderServiceImpl implements MarketOrderService {
                 java.sql.Timestamp ex = qr.getTimestamp("expires_at");
                 if (ex != null && ex.toInstant().isBefore(java.time.Instant.now())) return tm.getMessage("market.order.expired", orderId);
                 int remaining = qr.getInt("remaining_quantity");
+                if (remaining <= 0) return tm.getMessage("market.order.invalid");
                 if (remaining < quantity) return tm.getMessage("market.order.insufficient-remaining", remaining);
                 Material mat = Material.valueOf(qr.getString("material"));
                 BigDecimal price = qr.getBigDecimal("unit_price").setScale(2, RoundingMode.HALF_UP);
+                if (price.compareTo(BigDecimal.ZERO) <= 0) return tm.getMessage("market.order.invalid");
                 BigDecimal total = price.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
+                if (total.compareTo(BigDecimal.ZERO) <= 0) return tm.getMessage("market.order.invalid");
 
                 UUID seller = UUID.fromString(qr.getString("seller_uuid"));
                 // Check funds
@@ -126,4 +129,3 @@ public class MarketOrderServiceImpl implements MarketOrderService {
         });
     }
 }
-

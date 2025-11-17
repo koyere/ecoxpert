@@ -42,8 +42,18 @@ public class PriceCalculator {
      */
     public MarketPriceUpdate calculatePriceUpdate(MarketItem item, List<MarketTransaction> recentTransactions) {
         BigDecimal basePrice = item.getBasePrice();
+        // Guard against corrupt data: never let base price hit zero
+        if (basePrice == null || basePrice.compareTo(BigDecimal.ZERO) <= 0) {
+            basePrice = BigDecimal.ONE;
+        }
         BigDecimal currentBuyPrice = item.getCurrentBuyPrice();
+        if (currentBuyPrice == null || currentBuyPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            currentBuyPrice = basePrice;
+        }
         BigDecimal currentSellPrice = item.getCurrentSellPrice();
+        if (currentSellPrice == null || currentSellPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            currentSellPrice = basePrice.multiply(BigDecimal.valueOf(0.8));
+        }
         
         // Analyze supply and demand
         SupplyDemandAnalysis analysis = analyzeSupplyDemand(recentTransactions, item.getMaterial());

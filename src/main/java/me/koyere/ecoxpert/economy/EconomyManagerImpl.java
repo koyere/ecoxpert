@@ -390,8 +390,8 @@ public class EconomyManagerImpl implements EconomyManager {
             throw new IllegalArgumentException("Amount cannot be null");
         }
         
-        if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Amount cannot be negative");
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
         }
         
         if (maximumBalance != null && amount.compareTo(maximumBalance) > 0) {

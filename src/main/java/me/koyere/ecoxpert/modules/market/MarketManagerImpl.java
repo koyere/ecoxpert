@@ -215,22 +215,28 @@ public class MarketManagerImpl implements MarketManager {
     public CompletableFuture<Void> addItem(Material material, BigDecimal basePrice, boolean buyable, boolean sellable) {
         return CompletableFuture.runAsync(() -> {
             try {
+                BigDecimal safeBase = basePrice;
+                if (safeBase == null || safeBase.compareTo(BigDecimal.ZERO) <= 0) {
+                    plugin.getLogger().warning("Attempted to add market item with invalid base price for " + material.name() + ", using fallback 1.00");
+                    safeBase = BigDecimal.ONE;
+                }
                 String sql = """
                     INSERT OR REPLACE INTO ecoxpert_market_items 
                     (material, base_price, current_buy_price, current_sell_price, buyable, sellable, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                     """;
                 
-                BigDecimal sellPrice = basePrice.multiply(BigDecimal.valueOf(0.8));
+                final BigDecimal fb = safeBase;
+                BigDecimal sellPrice = fb.multiply(BigDecimal.valueOf(0.8));
                 
                 dataManager.executeUpdate(sql, 
-                    material.name(), basePrice, basePrice, sellPrice, 
+                    material.name(), fb, fb, sellPrice, 
                     buyable, sellable, Timestamp.valueOf(LocalDateTime.now())
                 ).join();
                 
                 // Update cache
-                MarketItem newItem = MarketItem.builder(material, basePrice)
-                    .currentBuyPrice(basePrice)
+                MarketItem newItem = MarketItem.builder(material, fb)
+                    .currentBuyPrice(fb)
                     .currentSellPrice(sellPrice)
                     .buyable(buyable)
                     .sellable(sellable)
@@ -387,7 +393,22 @@ public class MarketManagerImpl implements MarketManager {
                 
                 MarketItem item = itemOpt.get();
                 BigDecimal unitPrice = item.getCurrentBuyPrice();
+                // Hard safety: never allow free or negative-price purchases
+                if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                    plugin.getLogger().warning("Blocked market buy with invalid price for " + material.name() + ": " + unitPrice);
+                    return MarketTransactionResult.failure(
+                        MarketTransactionResult.TransactionError.SYSTEM_ERROR,
+                        translationManager.getMessage("market.system-error")
+                    );
+                }
                 BigDecimal totalCost = unitPrice.multiply(BigDecimal.valueOf(quantity));
+                if (totalCost.compareTo(BigDecimal.ZERO) <= 0) {
+                    plugin.getLogger().warning("Blocked market buy with non-positive total for " + material.name() + ": " + totalCost);
+                    return MarketTransactionResult.failure(
+                        MarketTransactionResult.TransactionError.SYSTEM_ERROR,
+                        translationManager.getMessage("market.system-error")
+                    );
+                }
                 // Apply profession buy factor (discounts) including context
                 double profF = getProfessionFactor(player.getUniqueId(), material, true);
                 double integF = getIntegrationsFactor(material, true);
@@ -461,7 +482,21 @@ public class MarketManagerImpl implements MarketManager {
                 }
                 
                 BigDecimal unitPrice = item.getCurrentSellPrice();
+                if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                    plugin.getLogger().warning("Blocked market sell with invalid price for " + material.name() + ": " + unitPrice);
+                    return MarketTransactionResult.failure(
+                        MarketTransactionResult.TransactionError.SYSTEM_ERROR,
+                        translationManager.getMessage("market.system-error")
+                    );
+                }
                 BigDecimal totalEarning = unitPrice.multiply(BigDecimal.valueOf(quantity));
+                if (totalEarning.compareTo(BigDecimal.ZERO) <= 0) {
+                    plugin.getLogger().warning("Blocked market sell with non-positive total for " + material.name() + ": " + totalEarning);
+                    return MarketTransactionResult.failure(
+                        MarketTransactionResult.TransactionError.SYSTEM_ERROR,
+                        translationManager.getMessage("market.system-error")
+                    );
+                }
                 // Apply profession/integrations/territory/slimefun factors for SELL
                 double profF = getProfessionFactor(player.getUniqueId(), material, false);
                 double integF = getIntegrationsFactor(material, false);
@@ -1100,9 +1135,25 @@ public class MarketManagerImpl implements MarketManager {
             
             while (result.next()) {
                 Material material = Material.valueOf(result.getString("material"));
-                items.add(MarketItem.builder(material, result.getBigDecimal("base_price"))
-                    .currentBuyPrice(result.getBigDecimal("current_buy_price"))
-                    .currentSellPrice(result.getBigDecimal("current_sell_price"))
+                BigDecimal base = result.getBigDecimal("base_price");
+                BigDecimal buy = result.getBigDecimal("current_buy_price");
+                BigDecimal sell = result.getBigDecimal("current_sell_price");
+                if (base == null || base.compareTo(BigDecimal.ZERO) <= 0) {
+                    plugin.getLogger().warning("Detected invalid base price for " + material.name() + " during cache load, applying safe fallback");
+                    base = BigDecimal.ONE;
+                }
+                if (buy == null || buy.compareTo(BigDecimal.ZERO) <= 0) {
+                    plugin.getLogger().warning("Detected invalid buy price for " + material.name() + " during cache load, resetting to base");
+                    buy = base;
+                }
+                if (sell == null || sell.compareTo(BigDecimal.ZERO) <= 0) {
+                    plugin.getLogger().warning("Detected invalid sell price for " + material.name() + " during cache load, resetting to 80% of base");
+                    sell = base.multiply(BigDecimal.valueOf(0.8));
+                }
+
+                items.add(MarketItem.builder(material, base)
+                    .currentBuyPrice(buy)
+                    .currentSellPrice(sell)
                     .buyable(result.getBoolean("buyable"))
                     .sellable(result.getBoolean("sellable"))
                     .totalSold(result.getInt("total_sold"))
@@ -1127,9 +1178,27 @@ public class MarketManagerImpl implements MarketManager {
             try (QueryResult result = dataManager.executeQuery(sql, material.name()).join()) {
             
             if (result.next()) {
-                MarketItem item = MarketItem.builder(material, result.getBigDecimal("base_price"))
-                    .currentBuyPrice(result.getBigDecimal("current_buy_price"))
-                    .currentSellPrice(result.getBigDecimal("current_sell_price"))
+                BigDecimal base = result.getBigDecimal("base_price");
+                BigDecimal buy = result.getBigDecimal("current_buy_price");
+                BigDecimal sell = result.getBigDecimal("current_sell_price");
+
+                // Safety nets: never allow zero/negative prices to enter cache
+                if (base == null || base.compareTo(BigDecimal.ZERO) <= 0) {
+                    plugin.getLogger().warning("Detected invalid base price for " + material.name() + ", applying safe fallback");
+                    base = BigDecimal.ONE;
+                }
+                if (buy == null || buy.compareTo(BigDecimal.ZERO) <= 0) {
+                    plugin.getLogger().warning("Detected invalid buy price for " + material.name() + ", resetting to base");
+                    buy = base;
+                }
+                if (sell == null || sell.compareTo(BigDecimal.ZERO) <= 0) {
+                    plugin.getLogger().warning("Detected invalid sell price for " + material.name() + ", resetting to 80% of base");
+                    sell = base.multiply(BigDecimal.valueOf(0.8));
+                }
+
+                MarketItem item = MarketItem.builder(material, base)
+                    .currentBuyPrice(buy)
+                    .currentSellPrice(sell)
                     .buyable(result.getBoolean("buyable"))
                     .sellable(result.getBoolean("sellable"))
                     .totalSold(result.getInt("total_sold"))
@@ -1325,6 +1394,13 @@ public class MarketManagerImpl implements MarketManager {
                                                      int quantity, BigDecimal unitPrice, 
                                                      BigDecimal totalAmount) {
         try {
+            if (totalAmount == null || totalAmount.compareTo(BigDecimal.ZERO) <= 0 || unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                plugin.getLogger().warning("Blocked transaction with invalid amount for " + item.getMaterial().name() + " (unit=" + unitPrice + ", total=" + totalAmount + ")");
+                return MarketTransactionResult.failure(
+                    MarketTransactionResult.TransactionError.SYSTEM_ERROR,
+                    translationManager.getMessage("market.system-error")
+                );
+            }
             // Start database transaction (auto-close to avoid leaks)
             try (DatabaseTransaction dbTransaction = dataManager.beginTransaction().join()) {
                 // Ensure account exists and adjust balance WITHIN the same transaction for atomicity
