@@ -1,5 +1,6 @@
 package me.koyere.ecoxpert.commands;
 
+import me.koyere.ecoxpert.core.config.ConfigManager;
 import me.koyere.ecoxpert.core.translation.TranslationManager;
 import me.koyere.ecoxpert.economy.EconomyManager;
 import me.koyere.ecoxpert.modules.loans.Loan;
@@ -21,11 +22,11 @@ import java.util.List;
  * - ecoxpert.loans.pay for paying loans
  */
 public class LoansCommand extends BaseCommand {
-
+    
     private final LoanManager loanManager;
-
-    public LoansCommand(LoanManager loanManager, EconomyManager economyManager, TranslationManager translationManager) {
-        super(economyManager, translationManager);
+    
+    public LoansCommand(LoanManager loanManager, EconomyManager economyManager, TranslationManager translationManager, ConfigManager configManager) {
+        super(economyManager, translationManager, configManager);
         this.loanManager = loanManager;
     }
 

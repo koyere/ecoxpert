@@ -1,0 +1,24 @@
+# EcoXpert Pro - Bank Module
+# Daily limits and tier configuration
+
+tiers:
+  basic:
+    daily:
+      deposit_limit: 1000000
+      withdraw_limit: 500000
+      transfer_limit: 250000
+  silver:
+    daily:
+      deposit_limit: 5000000
+      withdraw_limit: 2500000
+      transfer_limit: 1000000
+  gold:
+    daily:
+      deposit_limit: 25000000
+      withdraw_limit: 10000000
+      transfer_limit: 5000000
+  platinum:
+    daily:
+      deposit_limit: 100000000
+      withdraw_limit: 50000000
+      transfer_limit: 25000000

@@ -44,6 +44,7 @@ public enum BankAccountTier {
     private final BigDecimal dailyWithdrawLimit;
     private final BigDecimal dailyTransferLimit;
     private final BigDecimal minimumBalance;
+    private static java.util.Map<BankAccountTier, TierLimits> overrides = java.util.Map.of();
     
     BankAccountTier(String displayName, BigDecimal annualInterestRate, 
                    BigDecimal dailyDepositLimit, BigDecimal dailyWithdrawLimit,
@@ -67,14 +68,15 @@ public enum BankAccountTier {
      * Get daily limit for transaction type
      */
     public BigDecimal getDailyLimit(BankTransactionType type) {
+        TierLimits override = overrides.get(this);
         return switch (type) {
-            case DEPOSIT -> dailyDepositLimit;
-            case WITHDRAW -> dailyWithdrawLimit;
-            case TRANSFER_OUT -> dailyTransferLimit;
+            case DEPOSIT -> override != null && override.depositLimit() != null ? override.depositLimit() : dailyDepositLimit;
+            case WITHDRAW -> override != null && override.withdrawLimit() != null ? override.withdrawLimit() : dailyWithdrawLimit;
+            case TRANSFER_OUT -> override != null && override.transferLimit() != null ? override.transferLimit() : dailyTransferLimit;
             default -> BigDecimal.ZERO;
         };
     }
-    
+
     /**
      * Check if balance qualifies for this tier
      */
@@ -108,4 +110,10 @@ public enum BankAccountTier {
     public BigDecimal getDailyWithdrawLimit() { return dailyWithdrawLimit; }
     public BigDecimal getDailyTransferLimit() { return dailyTransferLimit; }
     public BigDecimal getMinimumBalance() { return minimumBalance; }
+
+    public static void applyOverrides(java.util.Map<BankAccountTier, TierLimits> tierOverrides) {
+        overrides = tierOverrides != null ? java.util.Map.copyOf(tierOverrides) : java.util.Map.of();
+    }
+
+    public record TierLimits(BigDecimal depositLimit, BigDecimal withdrawLimit, BigDecimal transferLimit) { }
 }

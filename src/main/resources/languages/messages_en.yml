@@ -26,6 +26,40 @@ economy:
   payment-sent: "&aYou sent &e{0} &ato &e{1}"
   payment-received: "&aYou received &e{0} &afrom &e{1}"
   account-created: "&aEconomy account created successfully"
+  admin:
+    help:
+      header: "&6=== Economy Administration ==="
+      status: "&e/ecoxpert economy status &7- Show provider and DB state"
+      diagnostics: "&e/ecoxpert economy diagnostics &7- Run safe diagnostics"
+      policy: "&e/ecoxpert economy policy [show|set <param> <value>|reload] &7- View/adjust policy"
+      sync: "&e/ecoxpert economy sync [player|all|status] &7- Sync balances with fallback provider"
+    unknown: "&cUnknown economy subcommand"
+    sync:
+      started: "&7Starting sync for &e{0} &7(&f{1}&7)..."
+      completed: "&aSync completed from &e{0}&a. Pulled: &e{1}&a, Pushed: &e{2}&a, Skipped: &e{3}"
+      status: "&7Sync mode: &e{0}&7 | Provider: &e{1}&7 | State: &e{2}&7 | Tracked: &e{3}"
+      disabled: "&cSync is disabled in config (economy.sync.mode=off)"
+      no-provider: "&cNo fallback economy provider detected (EssentialsX/CMI) to sync against"
+      error: "&cSync failed: {0}"
+
+bank:
+  error:
+    daily_limit: "&cDaily {0} limit for tier {1}: limit {2}, remaining {3}. Resets daily (server time)."
+  limit:
+    type:
+      deposit: "deposit"
+      withdraw: "withdraw"
+      transfer_out: "transfer"
+  balance: "&7Bank balance: &a{0}"
+  deposit:
+    success: "&aDeposit successful: &e{0} &7| New bank balance: &a{1}"
+  withdraw:
+    success: "&aWithdrawal successful: &e{0} &7| New bank balance: &a{1}"
+  transfer:
+    success:
+      sender: "&aTransferred &e{0} &ato &e{1} &7| New bank balance: &a{2}"
+      receiver: "&aYou received &e{0} &afrom &e{1}"
+
 
 # Commands
 commands:
@@ -528,6 +562,13 @@ admin_cmd:
     error: "&cFailed to import balances: {0}"
   migration-started: "&aDatabase migration started"
   migration-completed: "&aDatabase migration completed successfully"
+
+admin:
+  migrate:
+    started: "&7Starting balance import from &e{0}&7..."
+    completed: "&aImport completed. Imported &e{0} &aaccounts"
+    none: "&7No external economy provider found via Vault"
+    error: "&cFailed to import balances: {0}"
   
 # Error Messages
 errors:

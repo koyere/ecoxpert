@@ -32,6 +32,39 @@ economy:
       status: "&e/ecoxpert economy status &7- Mostrar provider y estado DB"
       diagnostics: "&e/ecoxpert economy diagnostics &7- Ejecutar diagnóstico seguro"
       policy: "&e/ecoxpert economy policy [show|set <param> <valor>|reload] &7- Ver/ajustar política"
+      sync: "&e/ecoxpert economy sync [player|all|status] &7- Sincroniza saldos con el proveedor externo"
+    unknown: "&cSubcomando de economía desconocido"
+    sync:
+      started: "&7Iniciando sincronización para &e{0} &7(&f{1}&7)..."
+      completed: "&aSincronización desde &e{0}&a. Importados: &e{1}&a, Exportados: &e{2}&a, Omitidos: &e{3}"
+      status: "&7Modo: &e{0}&7 | Proveedor: &e{1}&7 | Estado: &e{2}&7 | Rastreados: &e{3}"
+      disabled: "&cLa sincronización está desactivada en la config (economy.sync.mode=off)"
+      no-provider: "&cNo se detectó un proveedor económico externo (EssentialsX/CMI) para sincronizar"
+      error: "&cFalló la sincronización: {0}"
+
+bank:
+  error:
+    daily_limit: "&cLímite diario de {0} para el tier {1}: límite {2}, restante {3}. Se reinicia cada día (hora del servidor)."
+  limit:
+    type:
+      deposit: "depósito"
+      withdraw: "retiro"
+      transfer_out: "transferencia"
+  balance: "&7Saldo bancario: &a{0}"
+  deposit:
+    success: "&aDepósito exitoso: &e{0} &7| Nuevo saldo bancario: &a{1}"
+  withdraw:
+    success: "&aRetiro exitoso: &e{0} &7| Nuevo saldo bancario: &a{1}"
+  transfer:
+    success:
+      sender: "&aTransferiste &e{0} &aa &e{1} &7| Nuevo saldo bancario: &a{2}"
+      receiver: "&aRecibiste &e{0} &ade &e{1}"
+  admin:
+    help:
+      header: "&6=== Administración de Economía ==="
+      status: "&e/ecoxpert economy status &7- Mostrar provider y estado DB"
+      diagnostics: "&e/ecoxpert economy diagnostics &7- Ejecutar diagnóstico seguro"
+      policy: "&e/ecoxpert economy policy [show|set <param> <valor>|reload] &7- Ver/ajustar política"
     unknown: "&cSubcomando de economía desconocido"
     policy:
       header: "&6=== Política Económica ==="
@@ -543,8 +576,20 @@ admin_cmd:
   market-price-set: "&aEstablecido precio de {0} a &e{1}"
   event-triggered: "&aEvento económico activado: &e{0}"
   database-backup: "&aRespaldo de base de datos creado exitosamente"
+  migrate:
+    started: "&7Iniciando importación de saldos desde &e{0}&7..."
+    completed: "&aImportación completada. Cuentas importadas: &e{0}"
+    none: "&7No se encontró un proveedor de economía externo vía Vault"
+    error: "&cNo se pudieron importar saldos: {0}"
   migration-started: "&aMigración de base de datos iniciada"
   migration-completed: "&aMigración de base de datos completada exitosamente"
+
+admin:
+  migrate:
+    started: "&7Iniciando importación de saldos desde &e{0}&7..."
+    completed: "&aImportación completada. Cuentas importadas: &e{0}"
+    none: "&7No se encontró un proveedor de economía externo vía Vault"
+    error: "&cNo se pudieron importar saldos: {0}"
   
 # Error Messages
 errors:

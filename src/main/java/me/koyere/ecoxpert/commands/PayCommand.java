@@ -1,5 +1,6 @@
 package me.koyere.ecoxpert.commands;
 
+import me.koyere.ecoxpert.core.config.ConfigManager;
 import me.koyere.ecoxpert.core.translation.TranslationManager;
 import me.koyere.ecoxpert.economy.EconomyManager;
 import org.bukkit.Bukkit;
@@ -21,8 +22,8 @@ import java.util.stream.Collectors;
  */
 public class PayCommand extends BaseCommand {
     
-    public PayCommand(EconomyManager economyManager, TranslationManager translationManager) {
-        super(economyManager, translationManager);
+    public PayCommand(EconomyManager economyManager, TranslationManager translationManager, ConfigManager configManager) {
+        super(economyManager, translationManager, configManager);
     }
     
     @Override

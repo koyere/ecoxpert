@@ -219,6 +219,10 @@ EcoXpert operates in different modes based on your server setup:
 /bank transfer <player> <amount> - Transfer to another account
 /bank help                      - Banking help
 ```
+- Bank daily limits per tier are configurable in `modules/bank.yml` (reset on server day).
+
+### Admin Commands
+- `/ecoxpert reload` — reloads main config, module configs, translations, and bank tier limits (permissions: `ecoxpert.admin` or `ecoxpert.admin.reload`).
 
 ### Intelligent Economy Policy (overview)
 - Runtime adjustments via `/ecoxpert economy policy`:
@@ -513,35 +517,55 @@ Runs comprehensive tests:
 - Player:
   - `%ecox_balance%` (formatted)
   - `%ecox_loans_outstanding%` (formatted)
+  - `%ecox_bank_balance%` (formatted bank balance)
+  - `%ecox_bank_tier%` (account tier enum name)
+  - `%ecox_bank_interest_rate%` (annual rate, percent)
+  - `%ecox_bank_daily_deposit_remaining%` / `%ecox_bank_daily_withdraw_remaining%` / `%ecox_bank_daily_transfer_remaining%` (remaining limits)
   - `%ecox_wg_regions%` (comma-separated WorldGuard regions at player location, if WG present)
   - `%ecox_lands_land%` (Lands land name at player location, if Lands present)
   - `%ecox_towny_town%` (Towny town name at player location/residency, if Towny present)
   - `%ecox_role%` (current profession role)
   - `%ecox_role_level%`, `%ecox_role_xp%`, `%ecox_role_progress%`, `%ecox_role_bonus_buy%`, `%ecox_role_bonus_sell%`
+  - `%ecox_loan_status%` (ACTIVE/PAID/NONE)
+  - `%ecox_loan_principal%` (formatted principal)
+  - `%ecox_loan_outstanding_raw%` (outstanding as plain number)
+  - `%ecox_loan_interest_rate%` (percent)
+  - `%ecox_loan_next_due_amount%` (formatted next installment due)
+  - `%ecox_loan_next_due_date%` (ISO date)
+  - `%ecox_loan_next_due_in_days%` (days until next due; negative if past due)
+  - `%ecox_loan_installments_left%` (pending installments count)
+- Baltop (EssentialsX-style, 1-based rank, `essentials_` prefix also accepted):
+  - `%ecox_baltop_balance_<rank>%`
+  - `%ecox_baltop_balance_commas_<rank>%`
+  - `%ecox_baltop_balance_fixed_<rank>%`
+  - `%ecox_baltop_balance_formatted_<rank>%`
+  - `%ecox_baltop_player_<rank>%`
+  - `%ecox_baltop_player_stripped_<rank>%`
+  - `%ecox_baltop_rank%` (rank of requesting player)
 
 ## 🔌 Integrations (Overview)
 
-EcoXpert aplica ajustes suaves y contextuales cuando detecta plugins de entorno:
+EcoXpert applies light, contextual adjustments when the following plugins are detected:
 
-- WorldGuard (territory.worldguard.rules)
-  - Reglas por patrón (glob) de región: `city_*`, `market_*`, etc. con `buy_factor` / `sell_factor`.
-- Lands (territory.lands)
-  - Entradas por nombre (glob) y `default` para áreas sin land.
-- Towny (territory.towny)
-  - Reglas por town (glob) y `default`.
-  - Fase 2: escalado por población con `scaling.thresholds` (elegido el mayor umbral alcanzado).
-- Jobs Reborn (jobs.dynamic.inflation.thresholds)
-  - Reducción de pagos según umbrales de inflación (soft hook por reflexión).
-- Slimefun (slimefun.inflationary.*)
-  - Factores por materiales “inflationary”; auto-flagging por abundancia opcional (ventana/umbral/duración).
+- WorldGuard (`territory.worldguard.rules`)
+  - Region glob rules like `city_*`, `market_*`, etc. with `buy_factor` / `sell_factor`.
+- Lands (`territory.lands`)
+  - Name glob entries plus `default` for areas without land.
+- Towny (`territory.towny`)
+  - Town glob rules and `default`.
+  - Phase 2: population-based scaling via `scaling.thresholds` (highest reached threshold wins).
+- Jobs Reborn (`jobs.dynamic.inflation.thresholds`)
+  - Reduces payouts when inflation crosses configured thresholds (soft hook via reflection).
+- Slimefun (`slimefun.inflationary.*`)
+  - Per-material factors for “inflationary” items; optional auto-flagging by abundance (window/threshold/duration).
 - mcMMO
-  - Detección + ajustes globales suaves vía `adjustments.mcmmo.*`.
+  - Detection plus gentle global adjustments via `adjustments.mcmmo.*`.
 
-Factores globales de detección
-- `integrations.yml → adjustments` aplica multiplicadores suaves (±1–2%) cuando se detecta cada plugin.
+Global detection factors
+- `integrations.yml → adjustments` applies soft multipliers (≈±1–2%) when each plugin is present.
 
-Diagnóstico
-- `/ecoxpert integrations` muestra detecciones y conteos de reglas por sistema.
+Diagnostics
+- `/ecoxpert integrations` shows detected plugins and rule counts per system.
 
 ### Configuration (integrations.yml excerpt)
 ```yaml

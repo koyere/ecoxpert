@@ -123,6 +123,7 @@ public class ServiceRegistry {
         
         // Economy services
         factoryMethods.put(EconomyManager.class, this::createEconomyManager);
+        factoryMethods.put(me.koyere.ecoxpert.core.economy.EconomySyncService.class, this::createEconomySyncService);
         factoryMethods.put(VaultEconomyProvider.class, this::createVaultEconomyProvider);
         
         // Market services
@@ -207,6 +208,15 @@ public class ServiceRegistry {
             getInstance(DataManager.class)
         );
     }
+
+    private me.koyere.ecoxpert.core.economy.EconomySyncService createEconomySyncService() {
+        return new me.koyere.ecoxpert.core.economy.EconomySyncService(
+            plugin,
+            getInstance(EconomyManager.class),
+            getInstance(ConfigManager.class),
+            getInstance(DataManager.class)
+        );
+    }
     
     private VaultEconomyProvider createVaultEconomyProvider() {
         return new VaultEconomyProviderImpl(
@@ -221,7 +231,8 @@ public class ServiceRegistry {
             getInstance(EconomyManager.class),
             getInstance(MarketManager.class),
             getInstance(BankManager.class),
-            getInstance(TranslationManager.class)
+            getInstance(TranslationManager.class),
+            getInstance(ConfigManager.class)
         );
     }
     
@@ -240,7 +251,9 @@ public class ServiceRegistry {
             plugin,
             getInstance(DataManager.class),
             getInstance(EconomyManager.class),
-            getInstance(InflationManager.class)
+            getInstance(InflationManager.class),
+            getInstance(ConfigManager.class),
+            getInstance(TranslationManager.class)
         );
     }
     

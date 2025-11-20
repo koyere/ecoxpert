@@ -1,15 +1,13 @@
 package me.koyere.ecoxpert.commands;
 
+import me.koyere.ecoxpert.core.config.ConfigManager;
 import me.koyere.ecoxpert.core.translation.TranslationManager;
 import me.koyere.ecoxpert.economy.EconomyManager;
-import me.koyere.ecoxpert.core.economy.EconomySyncManager;
 import me.koyere.ecoxpert.EcoXpertPlugin;
 import me.koyere.ecoxpert.modules.events.EconomicEventEngine;
 import me.koyere.ecoxpert.modules.events.EconomicEvent;
 import me.koyere.ecoxpert.modules.events.EconomicEventType;
 import me.koyere.ecoxpert.modules.inflation.InflationManager;
-import net.milkbowl.vault.economy.Economy;
-import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -36,10 +34,12 @@ import java.util.stream.Collectors;
 public class EcoCommand extends BaseCommand {
     // Dynamic events engine used for /ecoxpert events admin operations
     private final EconomicEventEngine eventEngine;
+    private final ConfigManager configManager;
     
-    public EcoCommand(EconomyManager economyManager, TranslationManager translationManager, EconomicEventEngine eventEngine) {
-        super(economyManager, translationManager);
+    public EcoCommand(EconomyManager economyManager, TranslationManager translationManager, ConfigManager configManager, EconomicEventEngine eventEngine) {
+        super(economyManager, translationManager, configManager);
         this.eventEngine = eventEngine;
+        this.configManager = configManager;
     }
     
     @Override
@@ -53,6 +53,8 @@ public class EcoCommand extends BaseCommand {
         String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
         
         switch (subcommand) {
+            case "reload":
+                return handleReload(sender);
             case "balance":
             case "bal":
                 return handleBalance(sender, subArgs);
@@ -123,6 +125,40 @@ public class EcoCommand extends BaseCommand {
                 sender.sendMessage("§7Territory Towny rules: §e" + (ty != null ? ty.getKeys(false).size() : 0));
             }
         } catch (Exception ignored) {}
+        return true;
+    }
+
+    private boolean handleReload(CommandSender sender) {
+        if (!(sender.hasPermission("ecoxpert.admin") || sender.hasPermission("ecoxpert.admin.reload"))) {
+            sendMessage(sender, "error.no_permission");
+            return true;
+        }
+
+        // Reload core configs and translations
+        try {
+            configManager.reload();
+        } catch (Exception e) {
+            sender.sendMessage("§cFailed to reload configuration: " + e.getMessage());
+            return true;
+        }
+        try {
+            translationManager.reload();
+        } catch (Exception e) {
+            sender.sendMessage("§cFailed to reload translations: " + e.getMessage());
+            return true;
+        }
+
+        // Reload bank limits (tier overrides)
+        try {
+            me.koyere.ecoxpert.modules.bank.BankManager bankManager =
+                org.bukkit.plugin.java.JavaPlugin.getPlugin(EcoXpertPlugin.class)
+                    .getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.bank.BankManager.class);
+            if (bankManager != null) {
+                bankManager.reloadConfig();
+            }
+        } catch (Exception ignored) { }
+
+        sendMessage(sender, "plugin.reloaded");
         return true;
     }
 
@@ -435,6 +471,7 @@ public class EcoCommand extends BaseCommand {
             sendMessage(sender, "economy.admin.help.status");
             sendMessage(sender, "economy.admin.help.diagnostics");
             sendMessage(sender, "economy.admin.help.policy");
+            sendMessage(sender, "economy.admin.help.sync");
             sender.sendMessage("§7Use §e/ecoxpert economy health §7to view CPI and score");
             return true;
         }
@@ -451,10 +488,63 @@ public class EcoCommand extends BaseCommand {
                 return handleEconomyPolicy(sender, java.util.Arrays.copyOfRange(args, 1, args.length));
             case "loans":
                 return handleEconomyLoans(sender, java.util.Arrays.copyOfRange(args, 1, args.length));
+            case "sync":
+                return handleEconomySync(sender, java.util.Arrays.copyOfRange(args, 1, args.length));
             default:
                 sendMessage(sender, "economy.admin.unknown");
                 return true;
         }
+    }
+
+    private boolean handleEconomySync(CommandSender sender, String[] args) {
+        var plugin = JavaPlugin.getPlugin(EcoXpertPlugin.class);
+        var syncService = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.economy.EconomySyncService.class);
+        if (syncService == null) {
+            sender.sendMessage("§cSync service unavailable.");
+            return true;
+        }
+
+        if (args.length > 0 && args[0].equalsIgnoreCase("status")) {
+            var status = syncService.getStatus();
+            sendMessage(sender, "economy.admin.sync.status",
+                status.mode(),
+                status.providerName(),
+                status.running() ? "running" : "stopped",
+                status.trackedPlayers());
+            return true;
+        }
+
+        if (args.length > 0 && !args[0].equalsIgnoreCase("all")) {
+            OfflinePlayer target = findPlayer(sender, args[0]);
+            if (target == null) return true;
+            sendMessage(sender, "economy.admin.sync.started", "player", target.getName());
+            syncService.syncPlayerNow(target).thenAccept(result -> {
+                sendMessage(sender, "economy.admin.sync.completed",
+                    result.providerName(), result.pulled(), result.pushed(), result.skipped());
+            }).exceptionally(ex -> {
+                sendMessage(sender, "economy.admin.sync.error", ex.getMessage());
+                return null;
+            });
+            return true;
+        }
+
+        sendMessage(sender, "economy.admin.sync.started", "online", "all");
+        syncService.syncOnlineNow().thenAccept(result -> {
+            if ("None".equalsIgnoreCase(result.providerName())) {
+                sendMessage(sender, "economy.admin.sync.no-provider");
+                return;
+            }
+            if ("Disabled".equalsIgnoreCase(result.providerName())) {
+                sendMessage(sender, "economy.admin.sync.disabled");
+                return;
+            }
+            sendMessage(sender, "economy.admin.sync.completed",
+                result.providerName(), result.pulled(), result.pushed(), result.skipped());
+        }).exceptionally(ex -> {
+            sendMessage(sender, "economy.admin.sync.error", ex.getMessage());
+            return null;
+        });
+        return true;
     }
 
     private boolean handleEconomyLoans(CommandSender sender, String[] args) {
@@ -706,27 +796,20 @@ public class EcoCommand extends BaseCommand {
             return true;
         }
 
-        // Get current Vault provider
-        RegisteredServiceProvider<Economy> registration = Bukkit.getServicesManager().getRegistration(Economy.class);
-        if (registration == null || registration.getProvider() == null) {
-            sendMessage(sender, "admin.migrate.none");
-            return true;
-        }
-
-        String providerPlugin = registration.getPlugin() != null ? registration.getPlugin().getName() : "Unknown";
-        if (providerPlugin.toLowerCase().contains("ecoxpert")) {
-            // We are the active provider; nothing to import
-            sendMessage(sender, "admin.migrate.none");
-            return true;
-        }
-
-        sendMessage(sender, "admin.migrate.started", providerPlugin);
-
-        // Use plugin instance to run the importer
         EcoXpertPlugin plugin = JavaPlugin.getPlugin(EcoXpertPlugin.class);
-        EconomySyncManager sync = new EconomySyncManager(plugin, economyManager, registration.getProvider());
-        sync.importBalancesFromFallback().thenAccept(imported -> {
-            sendMessage(sender, "admin.migrate.completed", imported);
+        var syncService = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.economy.EconomySyncService.class);
+        if (syncService == null) {
+            sendMessage(sender, "admin.migrate.error", "Sync service unavailable");
+            return true;
+        }
+
+        sendMessage(sender, "admin.migrate.started", syncService.getStatus().providerName());
+        syncService.importAllFromFallback().thenAccept(result -> {
+            if ("None".equalsIgnoreCase(result.providerName())) {
+                sendMessage(sender, "admin.migrate.none");
+                return;
+            }
+            sendMessage(sender, "admin.migrate.completed", result.imported());
         }).exceptionally(ex -> {
             sendMessage(sender, "admin.migrate.error", ex.getMessage());
             return null;

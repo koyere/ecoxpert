@@ -144,6 +144,15 @@ economy:
     import_on_startup: true
     backup_before_import: true
 
+  # EssentialsX / legacy provider synchronization (balances only)
+  sync:
+    # off | pull | push | bidirectional
+    mode: "pull"
+    # Interval between sync runs (seconds). Applies to online players.
+    interval-seconds: 120
+    # Minimum difference required to sync (to avoid tiny drifts)
+    min-delta: 0.01
+
 # Cross-Platform Settings
 cross-platform:
   # Bedrock Edition support

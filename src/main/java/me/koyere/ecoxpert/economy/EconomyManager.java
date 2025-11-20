@@ -146,4 +146,22 @@ public interface EconomyManager {
      * Returns the number of affected accounts.
      */
     CompletableFuture<Integer> applyWealthTax(BigDecimal rate, BigDecimal threshold, String reason);
+
+    /**
+     * Get the top balances ordered descending.
+     *
+     * @param limit maximum entries to return (<=0 returns empty list)
+     * @return list of top balance entries (ordered)
+     */
+    CompletableFuture<java.util.List<TopBalanceEntry>> getTopBalances(int limit);
+
+    /**
+     * Get the 1-based rank of a player's balance (0 if no account).
+     */
+    CompletableFuture<Integer> getBalanceRank(UUID playerUuid);
+
+    /**
+     * Leaderboard entry (balance with owner UUID).
+     */
+    record TopBalanceEntry(UUID playerUuid, BigDecimal balance) { }
 }

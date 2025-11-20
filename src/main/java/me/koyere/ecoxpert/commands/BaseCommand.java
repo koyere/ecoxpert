@@ -1,5 +1,6 @@
 package me.koyere.ecoxpert.commands;
 
+import me.koyere.ecoxpert.core.config.ConfigManager;
 import me.koyere.ecoxpert.core.translation.TranslationManager;
 import me.koyere.ecoxpert.economy.EconomyManager;
 import org.bukkit.Bukkit;
@@ -27,11 +28,13 @@ public abstract class BaseCommand implements CommandExecutor, TabCompleter {
     
     protected final EconomyManager economyManager;
     protected final TranslationManager translationManager;
+    protected final ConfigManager configManager;
     protected final Logger logger;
     
-    protected BaseCommand(EconomyManager economyManager, TranslationManager translationManager) {
+    protected BaseCommand(EconomyManager economyManager, TranslationManager translationManager, ConfigManager configManager) {
         this.economyManager = economyManager;
         this.translationManager = translationManager;
+        this.configManager = configManager;
         this.logger = Bukkit.getLogger();
     }
     
@@ -122,11 +125,17 @@ public abstract class BaseCommand implements CommandExecutor, TabCompleter {
      */
     protected void handleCommandSafely(CommandSender sender, String commandName, Runnable command) {
         try {
-            logger.info("ECOXPERT DEBUG - Executing command: " + commandName + " for sender: " + sender.getName());
+            debug("Executing command: " + commandName + " for sender: " + sender.getName());
             command.run();
         } catch (Exception e) {
             logger.log(Level.SEVERE, "ECOXPERT ERROR - Command execution failed: " + commandName, e);
             sendMessage(sender, "error.database_error");
+        }
+    }
+
+    protected void debug(String message) {
+        if (configManager != null && configManager.isDebugEnabled()) {
+            logger.info("ECOXPERT DEBUG - " + message);
         }
     }
 }

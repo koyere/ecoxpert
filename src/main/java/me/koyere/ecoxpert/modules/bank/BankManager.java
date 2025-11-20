@@ -159,4 +159,9 @@ public interface BankManager {
      * Freeze/unfreeze account (admin)
      */
     CompletableFuture<BankOperationResult> setAccountFrozen(UUID playerId, boolean frozen, String reason);
+
+    /**
+     * Reload bank configuration (limits, tiers, policies).
+     */
+    void reloadConfig();
 }

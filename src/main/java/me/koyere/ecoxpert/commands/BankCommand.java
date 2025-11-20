@@ -1,5 +1,6 @@
 package me.koyere.ecoxpert.commands;
 
+import me.koyere.ecoxpert.core.config.ConfigManager;
 import me.koyere.ecoxpert.core.translation.TranslationManager;
 import me.koyere.ecoxpert.economy.EconomyManager;
 import me.koyere.ecoxpert.modules.bank.BankManager;
@@ -16,8 +17,8 @@ public class BankCommand extends BaseCommand {
 
     private final BankManager bankManager;
     
-    public BankCommand(BankManager bankManager, EconomyManager economyManager, TranslationManager translationManager) {
-        super(economyManager, translationManager);
+    public BankCommand(BankManager bankManager, EconomyManager economyManager, TranslationManager translationManager, ConfigManager configManager) {
+        super(economyManager, translationManager, configManager);
         this.bankManager = bankManager;
     }
 
@@ -90,7 +91,7 @@ public class BankCommand extends BaseCommand {
         
         bankManager.deposit(player, amount).thenAccept(result -> {
             if (result.isSuccess()) {
-                player.sendMessage(translationManager.getMessage("bank.deposit.success", economyManager.formatMoney(amount)));
+                player.sendMessage(translationManager.getMessage("bank.deposit.success", economyManager.formatMoney(amount), economyManager.formatMoney(result.getNewBalance())));
             } else {
                 player.sendMessage(result.getFormattedMessage());
             }
@@ -120,7 +121,7 @@ public class BankCommand extends BaseCommand {
         
         bankManager.withdraw(player, amount).thenAccept(result -> {
             if (result.isSuccess()) {
-                player.sendMessage(translationManager.getMessage("bank.withdraw.success", economyManager.formatMoney(amount)));
+                player.sendMessage(translationManager.getMessage("bank.withdraw.success", economyManager.formatMoney(amount), economyManager.formatMoney(result.getNewBalance())));
             } else {
                 player.sendMessage(result.getFormattedMessage());
             }
@@ -156,7 +157,7 @@ public class BankCommand extends BaseCommand {
         
         bankManager.transfer(player, target.getUniqueId(), amount).thenAccept(result -> {
             if (result.isSuccess()) {
-                player.sendMessage(translationManager.getMessage("bank.transfer.success.sender", economyManager.formatMoney(amount), target.getName()));
+                player.sendMessage(translationManager.getMessage("bank.transfer.success.sender", economyManager.formatMoney(amount), target.getName(), economyManager.formatMoney(result.getNewBalance())));
                 target.sendMessage(translationManager.getMessage("bank.transfer.success.receiver", economyManager.formatMoney(amount), player.getName()));
             } else {
                 player.sendMessage(result.getFormattedMessage());

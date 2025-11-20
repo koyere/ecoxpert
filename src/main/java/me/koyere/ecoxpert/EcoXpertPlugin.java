@@ -50,9 +50,11 @@ public final class EcoXpertPlugin extends JavaPlugin {
     private DependencyManager dependencyManager;
     private EconomyFailsafeManager failsafeManager;
     private EconomyManager economyManager;
+    private me.koyere.ecoxpert.modules.bank.BankManager bankManager;
     private MarketManager marketManager;
     private EconomicEventEngine eventEngine;
     private me.koyere.ecoxpert.core.safety.SafeModeManager safeModeManager;
+    private me.koyere.ecoxpert.core.economy.EconomySyncService economySyncService;
     private VaultEconomyProvider vaultProvider;
     private CommandManager commandManager;
     
@@ -94,6 +96,13 @@ public final class EcoXpertPlugin extends JavaPlugin {
             
             // Register Vault economy provider
             registerVaultProvider();
+
+            // Start periodic balance sync with fallback providers (EssentialsX/CMI) if configured
+            try {
+                economySyncService.start();
+            } catch (Exception e) {
+                getLogger().warning("Failed to start economy sync service: " + e.getMessage());
+            }
             
             // Initialize bStats metrics
             initializeMetrics();
@@ -147,6 +156,9 @@ public final class EcoXpertPlugin extends JavaPlugin {
             if (dependencyManager != null) {
                 dependencyManager.shutdown();
             }
+            if (economySyncService != null) {
+                economySyncService.stop();
+            }
             
             // Clear API reference
             api = null;
@@ -177,9 +189,11 @@ public final class EcoXpertPlugin extends JavaPlugin {
         this.dependencyManager = serviceRegistry.getInstance(DependencyManager.class);
         this.failsafeManager = serviceRegistry.getInstance(EconomyFailsafeManager.class);
         this.economyManager = serviceRegistry.getInstance(EconomyManager.class);
+        this.bankManager = serviceRegistry.getInstance(me.koyere.ecoxpert.modules.bank.BankManager.class);
         this.marketManager = serviceRegistry.getInstance(MarketManager.class);
         this.eventEngine = serviceRegistry.getInstance(EconomicEventEngine.class);
         this.safeModeManager = serviceRegistry.getInstance(me.koyere.ecoxpert.core.safety.SafeModeManager.class);
+        this.economySyncService = serviceRegistry.getInstance(me.koyere.ecoxpert.core.economy.EconomySyncService.class);
         this.vaultProvider = serviceRegistry.getInstance(VaultEconomyProvider.class);
         this.commandManager = serviceRegistry.getInstance(CommandManager.class);
     }
@@ -258,6 +272,7 @@ public final class EcoXpertPlugin extends JavaPlugin {
                 new me.koyere.ecoxpert.modules.integrations.PlaceholderProvider(
                     this,
                     economyManager,
+                    bankManager,
                     marketManager,
                     serviceRegistry.getInstance(me.koyere.ecoxpert.modules.inflation.InflationManager.class),
                     eventEngine,

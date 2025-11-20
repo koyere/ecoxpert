@@ -10,6 +10,8 @@ import javax.inject.Singleton;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
@@ -146,22 +148,22 @@ public class EconomyManagerImpl implements EconomyManager {
     @Override
     public CompletableFuture<Void> addMoney(UUID playerUuid, BigDecimal amount, String reason) {
         validateAmount(amount);
-        plugin.getLogger().info("ECOXPERT DEBUG - addMoney called for: " + playerUuid + " amount: " + amount);
+        debug("addMoney called for: " + playerUuid + " amount: " + amount);
         
         return ensureAccountExists(playerUuid).thenCompose(v -> {
-            plugin.getLogger().info("ECOXPERT DEBUG - ensureAccountExists completed, executing addMoney update");
+            debug("ensureAccountExists completed, executing addMoney update");
             return dataManager.executeUpdate(
                 "UPDATE ecoxpert_accounts SET balance = balance + ?, updated_at = CURRENT_TIMESTAMP WHERE player_uuid = ?",
                 amount, playerUuid.toString()
             ).thenCompose(rows -> {
-                plugin.getLogger().info("ECOXPERT DEBUG - addMoney update affected " + rows + " rows");
+                debug("addMoney update affected " + rows + " rows");
                 if (rows > 0) {
                     return logTransaction(null, playerUuid, amount, "DEPOSIT", reason);
                 }
                 return CompletableFuture.completedFuture(null);
             });
         }).thenApply(v -> {
-            plugin.getLogger().info("ECOXPERT DEBUG - addMoney completed for: " + playerUuid);
+            debug("addMoney completed for: " + playerUuid);
             return (Void) null;
         }).exceptionally(throwable -> {
             plugin.getLogger().log(Level.SEVERE, "ECOXPERT ERROR - addMoney failed for: " + playerUuid, throwable);
@@ -321,6 +323,60 @@ public class EconomyManagerImpl implements EconomyManager {
             return rows;
         });
     }
+
+    @Override
+    public CompletableFuture<List<TopBalanceEntry>> getTopBalances(int limit) {
+        if (limit <= 0) {
+            return CompletableFuture.completedFuture(List.of());
+        }
+
+        return dataManager.executeQuery(
+            "SELECT player_uuid, balance FROM ecoxpert_accounts ORDER BY balance DESC LIMIT ?",
+            limit
+        ).thenApply(result -> {
+            try (result) {
+                List<TopBalanceEntry> list = new ArrayList<>();
+                while (result.next()) {
+                    UUID uuid = UUID.fromString(result.getString("player_uuid"));
+                    BigDecimal balance = result.getBigDecimal("balance");
+                    list.add(new TopBalanceEntry(uuid, balance != null ? balance : BigDecimal.ZERO));
+                }
+                return list;
+            }
+        }).exceptionally(throwable -> {
+            plugin.getLogger().log(Level.SEVERE, "ECOXPERT ERROR - getTopBalances failed", throwable);
+            return List.of();
+        });
+    }
+
+    @Override
+    public CompletableFuture<Integer> getBalanceRank(UUID playerUuid) {
+        return dataManager.executeQuery(
+            "SELECT balance FROM ecoxpert_accounts WHERE player_uuid = ?",
+            playerUuid.toString()
+        ).thenCompose(balanceResult -> {
+            try (balanceResult) {
+                if (!balanceResult.next()) {
+                    return CompletableFuture.completedFuture(0);
+                }
+                BigDecimal balance = balanceResult.getBigDecimal("balance");
+                return dataManager.executeQuery(
+                    "SELECT COUNT(*) + 1 AS rank FROM ecoxpert_accounts WHERE balance > ?",
+                    balance
+                ).thenApply(rankResult -> {
+                    try (rankResult) {
+                        if (rankResult.next()) {
+                            return rankResult.getInt("rank");
+                        }
+                        return 0;
+                    }
+                });
+            }
+        }).exceptionally(throwable -> {
+            plugin.getLogger().log(Level.SEVERE, "ECOXPERT ERROR - getBalanceRank failed for: " + playerUuid, throwable);
+            return 0;
+        });
+    }
     
     /**
      * Load economy configuration from config files
@@ -357,14 +413,14 @@ public class EconomyManagerImpl implements EconomyManager {
      * Ensure a player account exists, create if not
      */
     private CompletableFuture<Void> ensureAccountExists(UUID playerUuid) {
-        plugin.getLogger().info("ECOXPERT DEBUG - ensureAccountExists called for: " + playerUuid);
+        debug("ensureAccountExists called for: " + playerUuid);
         return hasAccount(playerUuid).thenCompose(exists -> {
-            plugin.getLogger().info("ECOXPERT DEBUG - hasAccount returned: " + exists + " for: " + playerUuid);
+            debug("hasAccount returned: " + exists + " for: " + playerUuid);
             if (!exists) {
-                plugin.getLogger().info("ECOXPERT DEBUG - Creating account with starting balance: " + startingBalance);
+                debug("Creating account with starting balance: " + startingBalance);
                 return createAccount(playerUuid, startingBalance);
             }
-            plugin.getLogger().info("ECOXPERT DEBUG - Account exists, no need to create");
+            debug("Account exists, no need to create");
             return CompletableFuture.completedFuture(null);
         });
     }

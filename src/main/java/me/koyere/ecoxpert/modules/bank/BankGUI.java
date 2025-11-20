@@ -60,15 +60,31 @@ public class BankGUI extends BaseGUI {
         if (it == null || !it.hasItemMeta() || !it.getItemMeta().hasDisplayName()) return;
         String name = it.getItemMeta().getDisplayName();
         if (name.contains("+1000")) {
-            bankManager.deposit(p, new BigDecimal("1000")).thenAccept(r -> p.sendMessage(tm.getMessage("prefix") + r.getMessage()));
+            bankManager.deposit(p, new BigDecimal("1000")).thenAccept(r -> sendResult(p, r));
         } else if (name.contains("+100")) {
-            bankManager.deposit(p, new BigDecimal("100")).thenAccept(r -> p.sendMessage(tm.getMessage("prefix") + r.getMessage()));
+            bankManager.deposit(p, new BigDecimal("100")).thenAccept(r -> sendResult(p, r));
         } else if (name.contains("-1000")) {
-            bankManager.withdraw(p, new BigDecimal("1000")).thenAccept(r -> p.sendMessage(tm.getMessage("prefix") + r.getMessage()));
+            bankManager.withdraw(p, new BigDecimal("1000")).thenAccept(r -> sendResult(p, r));
         } else if (name.contains("-100")) {
-            bankManager.withdraw(p, new BigDecimal("100")).thenAccept(r -> p.sendMessage(tm.getMessage("prefix") + r.getMessage()));
+            bankManager.withdraw(p, new BigDecimal("100")).thenAccept(r -> sendResult(p, r));
         } else if (name.contains(tm.getMessage("bank.gui.balance"))) {
             bankManager.getBalance(p.getUniqueId()).thenAccept(b -> p.sendMessage(tm.getMessage("prefix") + tm.getMessage("bank.balance", economyManager.formatMoney(b))));
+        }
+    }
+
+    private void sendResult(Player player, me.koyere.ecoxpert.modules.bank.BankOperationResult result) {
+        if (result.isSuccess()) {
+            // Choose message based on new balance availability
+            if (result.getNewBalance() != null && result.getAmount() != null) {
+                String key = result.getMessage().toLowerCase().contains("withdraw") ? "bank.withdraw.success" : "bank.deposit.success";
+                player.sendMessage(tm.getMessage("prefix") + tm.getMessage(key,
+                    economyManager.formatMoney(result.getAmount()),
+                    economyManager.formatMoney(result.getNewBalance())));
+            } else {
+                player.sendMessage(tm.getMessage("prefix") + "§a" + result.getMessage());
+            }
+        } else {
+            player.sendMessage(tm.getMessage("prefix") + "§c" + result.getMessage());
         }
     }
 }

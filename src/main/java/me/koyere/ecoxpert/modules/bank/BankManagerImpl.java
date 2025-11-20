@@ -4,11 +4,14 @@ import me.koyere.ecoxpert.EcoXpertPlugin;
 import me.koyere.ecoxpert.core.data.DataManager;
 import me.koyere.ecoxpert.core.data.DatabaseTransaction;
 import me.koyere.ecoxpert.core.data.QueryResult;
+import me.koyere.ecoxpert.core.config.ConfigManager;
+import me.koyere.ecoxpert.core.translation.TranslationManager;
 import me.koyere.ecoxpert.economy.EconomyManager;
 import me.koyere.ecoxpert.modules.inflation.InflationManager;
 import me.koyere.ecoxpert.modules.inflation.PlayerEconomicProfile;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.configuration.file.FileConfiguration;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -35,6 +38,8 @@ public class BankManagerImpl implements BankManager {
     private final DataManager dataManager;
     private final EconomyManager economyManager;
     private final InflationManager inflationManager;
+    private final ConfigManager configManager;
+    private final TranslationManager translationManager;
     
     // Account Management
     private final Map<UUID, BankAccount> accountCache = new ConcurrentHashMap<>();
@@ -46,11 +51,14 @@ public class BankManagerImpl implements BankManager {
     private boolean bankingAvailable = false;
     
     public BankManagerImpl(EcoXpertPlugin plugin, DataManager dataManager, 
-                          EconomyManager economyManager, InflationManager inflationManager) {
+                          EconomyManager economyManager, InflationManager inflationManager,
+                          ConfigManager configManager, TranslationManager translationManager) {
         this.plugin = plugin;
         this.dataManager = dataManager;
         this.economyManager = economyManager;
         this.inflationManager = inflationManager;
+        this.configManager = configManager;
+        this.translationManager = translationManager;
         this.interestCalculator = new InterestCalculator();
     }
     
@@ -59,6 +67,9 @@ public class BankManagerImpl implements BankManager {
         return CompletableFuture.runAsync(() -> {
             try {
                 plugin.getLogger().info("🏦 Initializing Smart Banking System...");
+
+                // Apply tier limits from configuration (overrides defaults)
+                applyTierConfig();
                 
                 // Create banking tables
                 createBankingTables();
@@ -211,9 +222,9 @@ public class BankManagerImpl implements BankManager {
             
             // Check daily limits
             if (!account.isWithinDailyLimit(BankTransactionType.DEPOSIT, amount)) {
+                BigDecimal limit = account.getTier().getDailyLimit(BankTransactionType.DEPOSIT);
                 BigDecimal remaining = account.getRemainingDailyLimit(BankTransactionType.DEPOSIT);
-                return BankOperationResult.dailyLimitExceeded(BankTransactionType.DEPOSIT, 
-                    account.getTier().getDailyDepositLimit(), remaining);
+                return dailyLimitExceeded(account, BankTransactionType.DEPOSIT, limit, remaining);
             }
             
             // Check if player has enough money in economy
@@ -293,9 +304,9 @@ public class BankManagerImpl implements BankManager {
             
             // Check daily limits
             if (!account.isWithinDailyLimit(BankTransactionType.WITHDRAW, amount)) {
+                BigDecimal limit = account.getTier().getDailyLimit(BankTransactionType.WITHDRAW);
                 BigDecimal remaining = account.getRemainingDailyLimit(BankTransactionType.WITHDRAW);
-                return BankOperationResult.dailyLimitExceeded(BankTransactionType.WITHDRAW, 
-                    account.getTier().getDailyWithdrawLimit(), remaining);
+                return dailyLimitExceeded(account, BankTransactionType.WITHDRAW, limit, remaining);
             }
             
             // Check account balance
@@ -388,9 +399,9 @@ public class BankManagerImpl implements BankManager {
             
             // Check daily limits
             if (!fromAccount.isWithinDailyLimit(BankTransactionType.TRANSFER_OUT, amount)) {
+                BigDecimal limit = fromAccount.getTier().getDailyLimit(BankTransactionType.TRANSFER_OUT);
                 BigDecimal remaining = fromAccount.getRemainingDailyLimit(BankTransactionType.TRANSFER_OUT);
-                return BankOperationResult.dailyLimitExceeded(BankTransactionType.TRANSFER_OUT, 
-                    fromAccount.getTier().getDailyTransferLimit(), remaining);
+                return dailyLimitExceeded(fromAccount, BankTransactionType.TRANSFER_OUT, limit, remaining);
             }
             
             // Check sender balance
@@ -715,6 +726,84 @@ public class BankManagerImpl implements BankManager {
                 }
             });
         });
+    }
+
+    @Override
+    public void reloadConfig() {
+        applyTierConfig();
+    }
+
+    /**
+     * Apply tier limits from modules/bank.yml (per tier, per transaction type).
+     */
+    private void applyTierConfig() {
+        try {
+            FileConfiguration cfg = configManager.getModuleConfig("bank");
+            if (cfg == null) {
+                return;
+            }
+
+            Map<BankAccountTier, BankAccountTier.TierLimits> overrides = new EnumMap<>(BankAccountTier.class);
+            overrides.put(BankAccountTier.BASIC, new BankAccountTier.TierLimits(
+                readLimit(cfg, "tiers.basic.daily.deposit_limit", BankAccountTier.BASIC.getDailyDepositLimit()),
+                readLimit(cfg, "tiers.basic.daily.withdraw_limit", BankAccountTier.BASIC.getDailyWithdrawLimit()),
+                readLimit(cfg, "tiers.basic.daily.transfer_limit", BankAccountTier.BASIC.getDailyTransferLimit())
+            ));
+            overrides.put(BankAccountTier.SILVER, new BankAccountTier.TierLimits(
+                readLimit(cfg, "tiers.silver.daily.deposit_limit", BankAccountTier.SILVER.getDailyDepositLimit()),
+                readLimit(cfg, "tiers.silver.daily.withdraw_limit", BankAccountTier.SILVER.getDailyWithdrawLimit()),
+                readLimit(cfg, "tiers.silver.daily.transfer_limit", BankAccountTier.SILVER.getDailyTransferLimit())
+            ));
+            overrides.put(BankAccountTier.GOLD, new BankAccountTier.TierLimits(
+                readLimit(cfg, "tiers.gold.daily.deposit_limit", BankAccountTier.GOLD.getDailyDepositLimit()),
+                readLimit(cfg, "tiers.gold.daily.withdraw_limit", BankAccountTier.GOLD.getDailyWithdrawLimit()),
+                readLimit(cfg, "tiers.gold.daily.transfer_limit", BankAccountTier.GOLD.getDailyTransferLimit())
+            ));
+            overrides.put(BankAccountTier.PLATINUM, new BankAccountTier.TierLimits(
+                readLimit(cfg, "tiers.platinum.daily.deposit_limit", BankAccountTier.PLATINUM.getDailyDepositLimit()),
+                readLimit(cfg, "tiers.platinum.daily.withdraw_limit", BankAccountTier.PLATINUM.getDailyWithdrawLimit()),
+                readLimit(cfg, "tiers.platinum.daily.transfer_limit", BankAccountTier.PLATINUM.getDailyTransferLimit())
+            ));
+
+            BankAccountTier.applyOverrides(overrides);
+            plugin.getLogger().info("Bank tier limits loaded from modules/bank.yml");
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to load bank tier limits, using defaults: " + e.getMessage());
+        }
+    }
+
+    private BigDecimal readLimit(FileConfiguration cfg, String path, BigDecimal fallback) {
+        if (!cfg.contains(path)) {
+            return fallback;
+        }
+        try {
+            Object raw = cfg.get(path);
+            if (raw instanceof Number number) {
+                return BigDecimal.valueOf(number.doubleValue());
+            }
+            if (raw instanceof String str) {
+                return new BigDecimal(str);
+            }
+        } catch (Exception ignored) {
+        }
+        return fallback;
+    }
+
+    private BankOperationResult dailyLimitExceeded(BankAccount account, BankTransactionType type, BigDecimal limit, BigDecimal remaining) {
+        String typeKey = "bank.limit.type." + type.name().toLowerCase();
+        String typeLabel = translationManager.getMessage(typeKey);
+        if (typeLabel.equals(typeKey)) {
+            typeLabel = type.getDisplayName();
+        }
+        String tierLabel = account.getTier().getDisplayName();
+        String message = translationManager.getMessage(
+            "bank.error.daily_limit",
+            typeLabel,
+            tierLabel,
+            economyManager.formatMoney(limit),
+            economyManager.formatMoney(remaining)
+        );
+        return BankOperationResult.failure(message, BankOperationError.DAILY_LIMIT_EXCEEDED);
     }
     
     @Override
