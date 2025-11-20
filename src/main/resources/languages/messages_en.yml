@@ -59,6 +59,13 @@ bank:
     success:
       sender: "&aTransferred &e{0} &ato &e{1} &7| New bank balance: &a{2}"
       receiver: "&aYou received &e{0} &afrom &e{1}"
+events:
+  banner: "&6=== Economic Event ==="
+  started: "&aEvent started: &e{0}"
+  ended: "&cEvent ended: &e{0}"
+  info:
+    description: "&7Description: &f{0}"
+    duration: "&7Duration: &e{0} minutes"
 
 
 # Commands
@@ -314,6 +321,16 @@ education:
   events:
     generic: "📢 Event {0} started. Buy Δ {1}, Sell Δ {2}."
     generic_simple: "📢 Event {0} started."
+    GOVERNMENT_STIMULUS: "💠 Government stimulus: liquidity injected; costs easing slightly."
+    TRADE_BOOM: "📈 Trade boom: higher trading volume and opportunities."
+    MARKET_DISCOVERY: "🪙 Market discovery: new deposits found; some resources gain value."
+    TECHNOLOGICAL_BREAKTHROUGH: "🔬 Tech breakthrough: production efficiency rising."
+    INVESTMENT_OPPORTUNITY: "📊 Investment opportunity: better returns available temporarily."
+    LUXURY_DEMAND: "💎 Luxury demand: premium items trending upward."
+    MARKET_CORRECTION: "⚖️ Market correction: prices cooling toward fairness."
+    RESOURCE_SHORTAGE: "⛏️ Resource shortage: scarcity is lifting prices on affected goods."
+    SEASONAL_DEMAND: "🍂 Seasonal demand shift: specific categories are moving in price."
+    BLACK_SWAN_EVENT: "⚠️ Market shock; expect volatility until conditions stabilize."
   policy:
     wealth_tax_applied: "💸 Wealth tax applied: your balance exceeded {0}"
   

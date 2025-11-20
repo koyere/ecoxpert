@@ -12,30 +12,30 @@ public enum BankAccountTier {
     
     BASIC("Basic", 
           new BigDecimal("0.01"),    // 1% annual interest
-          new BigDecimal("1000"),    // $1000 daily deposit limit
-          new BigDecimal("500"),     // $500 daily withdraw limit
-          new BigDecimal("250"),     // $250 daily transfer limit
+          new BigDecimal("1000000"), // default high daily deposit limit
+          new BigDecimal("500000"),  // default high daily withdraw limit
+          new BigDecimal("250000"),  // default high daily transfer limit
           BigDecimal.ZERO),          // No minimum balance
           
     SILVER("Silver", 
            new BigDecimal("0.015"),   // 1.5% annual interest
-           new BigDecimal("5000"),    // $5000 daily deposit limit
-           new BigDecimal("2500"),    // $2500 daily withdraw limit
-           new BigDecimal("1000"),    // $1000 daily transfer limit
+           new BigDecimal("5000000"),   // higher defaults to avoid early blocking
+           new BigDecimal("2500000"),
+           new BigDecimal("1000000"),
            new BigDecimal("10000")),  // $10000 minimum balance
            
     GOLD("Gold", 
          new BigDecimal("0.02"),     // 2% annual interest
-         new BigDecimal("25000"),    // $25000 daily deposit limit
-         new BigDecimal("10000"),    // $10000 daily withdraw limit
-         new BigDecimal("5000"),     // $5000 daily transfer limit
+         new BigDecimal("25000000"),
+         new BigDecimal("10000000"),
+         new BigDecimal("5000000"),
          new BigDecimal("50000")),   // $50000 minimum balance
          
     PLATINUM("Platinum", 
              new BigDecimal("0.025"),  // 2.5% annual interest
-             new BigDecimal("100000"), // $100000 daily deposit limit
-             new BigDecimal("50000"),  // $50000 daily withdraw limit
-             new BigDecimal("25000"),  // $25000 daily transfer limit
+             new BigDecimal("100000000"),
+             new BigDecimal("50000000"),
+             new BigDecimal("25000000"),
              new BigDecimal("250000")); // $250000 minimum balance
     
     private final String displayName;

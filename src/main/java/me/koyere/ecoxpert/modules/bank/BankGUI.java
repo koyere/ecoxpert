@@ -84,7 +84,7 @@ public class BankGUI extends BaseGUI {
                 player.sendMessage(tm.getMessage("prefix") + "§a" + result.getMessage());
             }
         } else {
-            player.sendMessage(tm.getMessage("prefix") + "§c" + result.getMessage());
+            player.sendMessage(tm.getMessage("prefix") + result.getFormattedMessage());
         }
     }
 }

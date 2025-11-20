@@ -59,6 +59,13 @@ bank:
     success:
       sender: "&aTransferiste &e{0} &aa &e{1} &7| Nuevo saldo bancario: &a{2}"
       receiver: "&aRecibiste &e{0} &ade &e{1}"
+events:
+  banner: "&6=== Evento Económico ==="
+  started: "&aEvento iniciado: &e{0}"
+  ended: "&cEvento finalizado: &e{0}"
+  info:
+    description: "&7Descripción: &f{0}"
+    duration: "&7Duración: &e{0} minutos"
   admin:
     help:
       header: "&6=== Administración de Economía ==="
@@ -341,6 +348,16 @@ education:
   events:
     generic: "📢 Evento {0} iniciado. Δ Compra {1}, Δ Venta {2}."
     generic_simple: "📢 Evento {0} iniciado."
+    GOVERNMENT_STIMULUS: "💠 Estímulo gubernamental: más liquidez, costos suavizados."
+    TRADE_BOOM: "📈 Auge comercial: mayor volumen y oportunidades de intercambio."
+    MARKET_DISCOVERY: "🪙 Descubrimiento de recursos: nuevos depósitos; algunos recursos suben de valor."
+    TECHNOLOGICAL_BREAKTHROUGH: "🔬 Avance tecnológico: mejora la eficiencia de producción."
+    INVESTMENT_OPPORTUNITY: "📊 Oportunidad de inversión: mejores retornos por tiempo limitado."
+    LUXURY_DEMAND: "💎 Demanda de lujo: ítems premium al alza."
+    MARKET_CORRECTION: "⚖️ Corrección de mercado: precios ajustándose a valores justos."
+    RESOURCE_SHORTAGE: "⛏️ Escasez de recursos: la falta eleva precios en los bienes afectados."
+    SEASONAL_DEMAND: "🍂 Demanda estacional: ciertas categorías modifican sus precios."
+    BLACK_SWAN_EVENT: "⚠️ Choque de mercado; espera volatilidad hasta estabilizarse."
   policy:
     wealth_tax_applied: "💸 Se aplicó impuesto a grandes fortunas: tu balance superó {0}"
   

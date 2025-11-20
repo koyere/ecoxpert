@@ -336,6 +336,15 @@ public final class EcoXpertPlugin extends JavaPlugin {
         if (importOnStartup && (hasEssentials || hasCMI)) {
             getServer().getScheduler().runTaskLaterAsynchronously(this, () -> {
                 try {
+                    // Skip import if we already have EcoXpert accounts to avoid overwriting balances after deposits/bank ops
+                    if (hasExistingEcoxpertAccounts()) {
+                        getLogger().info("Startup balance import skipped: EcoXpert accounts already exist (set economy.migration.import_on_startup=false to silence).");
+                        getServer().getScheduler().runTask(this, () -> {
+                            vaultProvider.register();
+                            getLogger().info("Vault economy provider registered successfully");
+                        });
+                        return;
+                    }
                     var registration = getServer().getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class);
                     if (registration != null) {
                         String providerPlugin = registration.getPlugin() != null ? registration.getPlugin().getName() : "Unknown";
@@ -373,6 +382,20 @@ public final class EcoXpertPlugin extends JavaPlugin {
             vaultProvider.register();
             getLogger().info("Vault economy provider registered successfully");
         }
+    }
+
+    private boolean hasExistingEcoxpertAccounts() {
+        try (me.koyere.ecoxpert.core.data.QueryResult qr = dataManager.executeQuery(
+            "SELECT COUNT(*) AS cnt FROM ecoxpert_accounts"
+        ).join()) {
+            if (qr.next()) {
+                Long cnt = qr.getLong("cnt");
+                return cnt != null && cnt > 0;
+            }
+        } catch (Exception e) {
+            getLogger().warning("Could not check existing EcoXpert accounts before import: " + e.getMessage());
+        }
+        return false;
     }
     
     /**
