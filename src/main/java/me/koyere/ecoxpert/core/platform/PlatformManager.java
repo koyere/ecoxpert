@@ -1,5 +1,9 @@
 package me.koyere.ecoxpert.core.platform;
 
+import org.bukkit.entity.Player;
+
+import java.util.UUID;
+
 /**
  * Platform detection and capability management interface
  * 
@@ -56,6 +60,22 @@ public interface PlatformManager {
      * @return true if Bedrock players are detected
      */
     boolean hasBedrockPlayers();
+
+    /**
+     * Determine if a specific player is a Bedrock (Floodgate/Geyser) player.
+     *
+     * @param player Target Bukkit player
+     * @return true if the player is a Bedrock client
+     */
+    boolean isBedrockPlayer(Player player);
+
+    /**
+     * Determine if a specific UUID represents a Bedrock player.
+     *
+     * @param uuid Player UUID
+     * @return true if the UUID matches a Bedrock client
+     */
+    boolean isBedrockPlayer(UUID uuid);
     
     /**
      * Get the Minecraft server version

@@ -70,6 +70,19 @@
             <id>central</id>
             <url>https://repo1.maven.org/maven2/</url>
         </repository>
+
+        <!-- Geyser Repository (Bedrock Support) -->
+        <repository>
+            <id>opencollab-snapshots</id>
+            <url>https://repo.opencollab.dev/maven-snapshots/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>opencollab-releases</id>
+            <url>https://repo.opencollab.dev/maven-releases/</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -112,6 +125,30 @@
             <version>${placeholderapi.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- Geyser API (Bedrock Forms Support) -->
+        <!-- NOTE: Commented out - loaded at runtime via reflection when Geyser is installed -->
+        <!--
+        <dependency>
+            <groupId>org.geysermc.geyser</groupId>
+            <artifactId>api</artifactId>
+            <version>2.4.2-SNAPSHOT</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+        -->
+
+        <!-- Floodgate API (Bedrock Player Detection) -->
+        <!-- NOTE: Commented out - loaded at runtime via reflection when Floodgate is installed -->
+        <!--
+        <dependency>
+            <groupId>org.geysermc.floodgate</groupId>
+            <artifactId>api</artifactId>
+            <version>2.2.3-SNAPSHOT</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+        -->
         
         <!-- bStats Metrics -->
         <dependency>

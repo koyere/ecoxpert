@@ -21,12 +21,209 @@ public class LoansGUI extends BaseGUI {
     private final java.util.Map<java.util.UUID, LoanOffer> pendingOffer = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.Map<java.util.UUID, Integer> schedulePage = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.Map<java.util.UUID, java.util.List<LoanPayment>> scheduleCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final me.koyere.ecoxpert.core.platform.PlatformManager platformManager;
+    private final me.koyere.ecoxpert.core.bedrock.BedrockFormsManager bedrockFormsManager;
 
     public LoansGUI(EcoXpertPlugin plugin, LoanManager loanManager, EconomyManager economyManager, TranslationManager tm) {
         super(plugin);
         this.loanManager = loanManager;
         this.economyManager = economyManager;
         this.tm = tm;
+        var registry = plugin.getServiceRegistry();
+        this.platformManager = registry.getInstance(me.koyere.ecoxpert.core.platform.PlatformManager.class);
+        this.bedrockFormsManager = registry.getInstance(me.koyere.ecoxpert.core.bedrock.BedrockFormsManager.class);
+    }
+
+    /**
+     * Open appropriate GUI based on player platform
+     */
+    @Override
+    public void open(Player player) {
+        // Use Geyser Forms for Bedrock players if available
+        if (platformManager.isBedrockPlayer(player) && bedrockFormsManager != null && bedrockFormsManager.isFormsAvailable()) {
+            openBedrockMainMenu(player);
+        } else {
+            super.open(player); // Chest GUI fallback
+        }
+    }
+
+    /**
+     * Open Bedrock-native Form for loans main menu
+     */
+    private void openBedrockMainMenu(Player player) {
+        // Get loan status
+        loanManager.getActiveLoan(player.getUniqueId()).thenAccept(loanOpt -> {
+            StringBuilder content = new StringBuilder();
+            content.append("§7").append(tm.getMessage("loans.gui.bedrock.welcome", "Loans Manager")).append("\n\n");
+
+            if (loanOpt.isPresent()) {
+                var loan = loanOpt.get();
+                content.append("§7").append(tm.getMessage("loans.gui.bedrock.active", "Active Loan")).append(":\n");
+                content.append("§7Outstanding: §c").append(economyManager.formatMoney(loan.getOutstanding())).append("\n");
+                content.append("§7Principal: §e").append(economyManager.formatMoney(loan.getPrincipal())).append("\n");
+                content.append("§7Rate: §e").append(loan.getInterestRate().multiply(new java.math.BigDecimal("100")).setScale(1)).append("%");
+            } else {
+                content.append("§7").append(tm.getMessage("loans.gui.bedrock.no-loan", "No active loans"));
+            }
+
+            java.util.List<String> buttons = new java.util.ArrayList<>();
+            buttons.add("§a" + tm.getMessage("loans.gui.bedrock.btn.request", "Request Loan"));
+            if (loanOpt.isPresent()) {
+                buttons.add("§e" + tm.getMessage("loans.gui.bedrock.btn.pay", "Make Payment"));
+            }
+            buttons.add("§b" + tm.getMessage("loans.gui.bedrock.btn.status", "Loan Status"));
+            buttons.add("§7" + tm.getMessage("loans.gui.bedrock.btn.close", "Close"));
+
+            bedrockFormsManager.sendSimpleForm(
+                player,
+                tm.getMessage("loans.gui.bedrock.title", "Loans"),
+                content.toString(),
+                buttons,
+                buttonIndex -> handleLoansMenuSelection(player, buttonIndex, loanOpt.isPresent())
+            );
+        });
+    }
+
+    /**
+     * Handle loans main menu selection
+     */
+    private void handleLoansMenuSelection(Player player, int buttonIndex, boolean hasActiveLoan) {
+        if (buttonIndex == 0) {
+            // Request loan
+            openRequestLoanForm(player);
+        } else if (hasActiveLoan && buttonIndex == 1) {
+            // Make payment
+            openPaymentForm(player);
+        } else if ((hasActiveLoan && buttonIndex == 2) || (!hasActiveLoan && buttonIndex == 1)) {
+            // Show status
+            loanManager.getActiveLoan(player.getUniqueId()).thenAccept(opt -> {
+                if (opt.isEmpty()) {
+                    player.sendMessage(tm.getMessage("prefix") + tm.getMessage("loans.no-active-loans"));
+                } else {
+                    var loan = opt.get();
+                    player.sendMessage(tm.getMessage("prefix") + tm.getMessage("loans.status",
+                        economyManager.formatMoney(loan.getOutstanding()),
+                        economyManager.formatMoney(loan.getPrincipal()),
+                        loan.getInterestRate().multiply(new java.math.BigDecimal("100")).setScale(1) + "%"));
+                }
+            });
+        }
+        // Close is last button - do nothing
+    }
+
+    /**
+     * Open loan request form
+     */
+    private void openRequestLoanForm(Player player) {
+        StringBuilder content = new StringBuilder();
+        content.append("§7").append(tm.getMessage("loans.gui.bedrock.request.info", "Select loan amount:")).append("\n\n");
+        content.append("§7").append(tm.getMessage("loans.gui.bedrock.request.note", "Interest rate and terms based on your credit score"));
+
+        java.util.List<String> buttons = java.util.Arrays.asList(
+            "§a$1,000",
+            "§a$2,500",
+            "§a$5,000",
+            "§a$10,000",
+            "§a$25,000",
+            "§7" + tm.getMessage("loans.gui.bedrock.btn.back", "Back")
+        );
+
+        bedrockFormsManager.sendSimpleForm(
+            player,
+            tm.getMessage("loans.gui.bedrock.request.title", "Request Loan"),
+            content.toString(),
+            buttons,
+            buttonIndex -> {
+                if (buttonIndex < 5) {
+                    java.math.BigDecimal amount = new java.math.BigDecimal(new int[]{1000, 2500, 5000, 10000, 25000}[buttonIndex]);
+                    // Request loan with confirmation
+                    loanManager.getOffer(player.getUniqueId(), amount).thenAccept(offer -> {
+                        if (offer.approved()) {
+                            bedrockFormsManager.sendModalForm(
+                                player,
+                                tm.getMessage("loans.gui.bedrock.confirm.title", "Confirm Loan"),
+                                String.format("§7Amount: §e%s\n§7Rate: §e%.2f%%\n§7Term: §e%d days\n\n§aConfirm loan request?",
+                                    economyManager.formatMoney(offer.amount()),
+                                    offer.interestRate().multiply(new java.math.BigDecimal("100")).doubleValue(),
+                                    offer.termDays()),
+                                tm.getMessage("loans.gui.bedrock.confirm.yes", "Confirm"),
+                                tm.getMessage("loans.gui.bedrock.confirm.no", "Cancel"),
+                                confirmed -> {
+                                    if (confirmed) {
+                                        loanManager.requestLoanSmart(player.getUniqueId(), offer.amount()).thenAccept(ok -> {
+                                            player.sendMessage(tm.getMessage("prefix") +
+                                                (ok ? tm.getMessage("loans.loan-approved", economyManager.formatMoney(offer.amount()))
+                                                    : tm.getMessage("loans.loan-denied", "")));
+                                        });
+                                    }
+                                }
+                            );
+                        } else {
+                            player.sendMessage(tm.getMessage("prefix") + tm.getMessage("loans.loan-denied", offer.reason()));
+                        }
+                    });
+                } else if (buttonIndex == 5) {
+                    openBedrockMainMenu(player);
+                }
+            }
+        );
+    }
+
+    /**
+     * Open payment form
+     */
+    private void openPaymentForm(Player player) {
+        loanManager.getActiveLoan(player.getUniqueId()).thenAccept(loanOpt -> {
+            if (loanOpt.isEmpty()) {
+                player.sendMessage(tm.getMessage("prefix") + tm.getMessage("loans.no-active-loans"));
+                return;
+            }
+
+            var loan = loanOpt.get();
+            StringBuilder content = new StringBuilder();
+            content.append("§7").append(tm.getMessage("loans.gui.bedrock.pay.info", "Select payment amount:")).append("\n\n");
+            content.append("§7Outstanding: §c").append(economyManager.formatMoney(loan.getOutstanding()));
+
+            java.util.List<String> buttons = java.util.Arrays.asList(
+                "§e$500",
+                "§e$1,000",
+                "§e$2,500",
+                "§e$5,000",
+                "§a" + tm.getMessage("loans.gui.bedrock.pay.full", "Pay Full Amount"),
+                "§7" + tm.getMessage("loans.gui.bedrock.btn.back", "Back")
+            );
+
+            bedrockFormsManager.sendSimpleForm(
+                player,
+                tm.getMessage("loans.gui.bedrock.pay.title", "Make Payment"),
+                content.toString(),
+                buttons,
+                buttonIndex -> {
+                    if (buttonIndex < 5) {
+                        java.math.BigDecimal amount;
+                        if (buttonIndex == 4) {
+                            // Pay full
+                            amount = loan.getOutstanding();
+                        } else {
+                            amount = new java.math.BigDecimal(new int[]{500, 1000, 2500, 5000}[buttonIndex]);
+                        }
+
+                        loanManager.payLoan(player.getUniqueId(), amount).thenAccept(ok -> {
+                            player.sendMessage(tm.getMessage("prefix") +
+                                (ok ? tm.getMessage("loans.payment-made", economyManager.formatMoney(amount))
+                                    : tm.getMessage("loans.loan-denied", "")));
+                            if (ok) {
+                                // Re-open menu to show updated balance
+                                plugin.getServer().getScheduler().runTaskLater(plugin,
+                                    () -> openBedrockMainMenu(player), 20L);
+                            }
+                        });
+                    } else if (buttonIndex == 5) {
+                        openBedrockMainMenu(player);
+                    }
+                }
+            );
+        });
     }
 
     @Override

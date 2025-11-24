@@ -59,6 +59,49 @@ bank:
     success:
       sender: "&aTransferiste &e{0} &aa &e{1} &7| Nuevo saldo bancario: &a{2}"
       receiver: "&aRecibiste &e{0} &ade &e{1}"
+  account-info: "&6=== Cuenta Bancaria ==="
+  balance: "&7Saldo de la Cuenta: &a{0}"
+  interest-rate: "&7Tasa de Interés: &e{0}%"
+  deposited: "&aDepositaste &e{0} &aen tu cuenta bancaria"
+  withdrawn: "&aRetiraste &e{0} &ade tu cuenta bancaria"
+  insufficient-bank-funds: "&cFondos insuficientes en tu cuenta bancaria"
+  interest-earned: "&aGanaste &e{0} &aen intereses"
+  daily-limit-reached: "&cHas alcanzado tu límite diario de transacciones"
+  gui:
+    title: "Banco"
+    deposit: "Depositar"
+    withdraw: "Retirar"
+    balance: "Saldo"
+    deposit-lore1: "Depósita una cantidad fija en tu cuenta bancaria."
+    deposit-lore2: "Seguro, con límites diarios."
+    deposit-fast-lore1: "Atajo para depósitos mayores."
+    deposit-fast-lore2: "Afecta tus límites diarios."
+    balance-lore: "Muestra el saldo actual de tu cuenta bancaria."
+    withdraw-lore1: "Retira una cantidad fija desde tu cuenta bancaria."
+    withdraw-lore2: "Se transfiere a tu saldo general."
+    withdraw-fast-lore1: "Atajo para retiros mayores."
+    withdraw-fast-lore2: "Respeta límites y seguridad."
+  
+# Loan System
+  gui:
+    bedrock:
+      title: "Banco"
+      welcome: "¡Bienvenido al Banco!"
+      balance: "Saldo Bancario"
+      wallet: "Cartera"
+      btn:
+        deposit: "Depositar Dinero"
+        withdraw: "Retirar Dinero"
+        balance: "Consultar Saldo"
+        back: "Atrás"
+        close: "Cerrar"
+      deposit:
+        title: "Depositar"
+        info: "Selecciona la cantidad a depositar:"
+      withdraw:
+        title: "Retirar"
+        info: "Selecciona la cantidad a retirar:"
+
 events:
   banner: "&6=== Evento Económico ==="
   started: "&aEvento iniciado: &e{0}"
@@ -97,6 +140,102 @@ events:
         installments: "&7Cuotas (total/pagadas/pendientes/mora): &e{0} &7/ &a{1} &7/ &e{2} &7/ &c{3}"
 
 # Commands
+  banner: "&6&l[EVENTO ECONÓMICO]"
+  started: "&6Evento Económico: &e{0} &6¡ha comenzado!"
+  ended: "&6Evento Económico: &e{0} &6ha terminado"
+  inflation-warning: "&cAdvertencia: Alta inflación detectada en la economía"
+  deflation-warning: "&eAviso: Deflación detectada en la economía"
+  market-crash: "&c¡Colapso del mercado! Todos los precios reducidos en {0}%"
+  economic-boom: "&a¡Auge económico! Todos los precios aumentaron en {0}%"
+  info:
+    description: "&7{0}"
+    duration: "&7Duración: &e{0} &7minutos"
+  stimulus:
+    received: "&a¡Has recibido &e{0} &adel estímulo gubernamental!"
+    injected: "&e💰 ¡El gobierno inyectó &a{0} &ea la economía!"
+  trade_boom:
+    announce: "&e📈 ¡Auge Comercial! ¡Todas las transacciones tienen &a{0}% &ede bono!"
+  market_discovery:
+    announce: "&e🔍 ¡Descubrimiento de Mercado! Ítems valiosos: &a{0} &e(+{1}% valor)"
+  investment:
+    announce: "&e💼 ¡Oportunidad de inversión! Retornos de mercado hasta &a{0}% &een ítems seleccionados."
+  market_correction:
+    announce: "&e⚖️ Corrección de mercado activa: compra +&c{0}% &e, venta -&c{1}%"
+  tech_breakthrough:
+    announce: "&e🧪 ¡Avance tecnológico! Categoría redstone más barata: compra -&a{0}% &e, venta -&a{1}%"
+  luxury_demand:
+    announce: "&e💎 ¡Demanda de lujo! Los ítems de lujo se venden hasta &a{0}% &emás caros."
+  resource_shortage:
+    announce: "&e⛏️ ¡Escasez de recursos! Los ítems afectados aumentan &a{0}% &een precio"
+  seasonal_demand:
+    announce: "&e🍂 ¡Demanda estacional! Ítems seleccionados aumentan hasta &a{0}%"
+  black_swan:
+    announce: "&e⚠️ ¡Evento cisne negro! Choque de mercado: compra -&a{0}% &e, venta -&a{1}%"
+  admin:
+    help:
+      header: "&6=== Administración de Eventos ==="
+      status: "&e/ecoxpert events status &7- Ver estado del motor"
+      active: "&e/ecoxpert events active &7- Listar eventos activos"
+      history: "&e/ecoxpert events history &7- Ver eventos recientes"
+      stats: "&e/ecoxpert events stats [días] &7- Ver conteo de eventos"
+      statsdetail: "&e/ecoxpert events statsdetail <TIPO> [días] &7- Estadísticas detalladas"
+      recent: "&e/ecoxpert events recent &7- Ver eventos desde la base de datos"
+      antistagnation: "&e/ecoxpert events anti-stagnation &7- Ver horas de quietud"
+      pause: "&e/ecoxpert events pause &7- Pausar motor de eventos"
+      resume: "&e/ecoxpert events resume &7- Reanudar motor de eventos"
+      trigger: "&e/ecoxpert events trigger <TIPO> &7- Disparar un evento"
+      end: "&e/ecoxpert events end <ID> &7- Terminar un evento activo"
+    unknown: "&cSubcomando de eventos desconocido"
+    status: "&7Motor de Eventos: &eActivo: {0} &7| Activos: &e{1} &7| Historial: &e{2}"
+    active:
+      header: "&6=== Eventos Activos ==="
+      none: "&7No hay eventos activos"
+      item: "&7ID: &e{0} &7Nombre: &e{1} &7Tipo: &e{2} &7Duración: &e{3}m"
+    history:
+      header: "&6=== Eventos Recientes ==="
+      none: "&7No hay eventos pasados"
+      item: "&7ID: &e{0} &7Nombre: &e{1} &7Tipo: &e{2} &7Estado: &e{3}"
+    trigger:
+      usage: "&cUso: &e/ecoxpert events trigger <TIPO>"
+    triggered: "&aEvento activado: &e{0}"
+    trigger:
+      failed: "&cError al activar el evento: {0}"
+    unknown_type: "&cTipo de evento desconocido: {0}"
+    end:
+      usage: "&cUso: &e/ecoxpert events end <ID>"
+    ended: "&aEvento finalizado: &e{0}"
+    not_found: "&cNo se encontró el evento activo: {0}"
+    stats:
+      header: "&6=== Estadísticas de Eventos (últimos {0} días) ==="
+      item: "&7{0}: &e{1}"
+      none: "&7Sin eventos en los últimos {0} días"
+      total: "&7Eventos totales: &e{0}"
+    recent:
+      header: "&6=== Eventos Recientes (DB) ==="
+      none: "&7No hay eventos persistidos"
+      item: "&7ID: &e{0} &7Tipo: &e{1} &7Estado: &e{2} &7Inicio: &e{3} &7Fin: &e{4}"
+    antistagnation:
+      info: "&7Horas desde el último evento: &e{0} &7| Horas de quietud: &e{1}"
+    engine:
+      paused: "&eMotor de eventos en pausa"
+      resumed: "&aMotor de eventos reanudado"
+  gui:
+    title: "Administrador de Eventos"
+    pause: "Pausar Motor"
+    resume: "Reanudar Motor"
+    status: "Estado"
+    recent: "Recientes"
+  admin:
+    statsdetail:
+      header: "&6=== Estadísticas de Evento: {0} (últimos {1} días) ==="
+      count: "&7Cantidad: &e{0}"
+      avg_duration: "&7Duración Promedio: &e{0} &7minutos"
+      avg_items: "&7Ítems Afectados Promedio: &e{0}"
+      avg_buy_delta: "&7Delta Promedio Compra: &e{0}"
+      avg_sell_delta: "&7Delta Promedio Venta: &e{0}"
+      total_stimulus: "&7Estímulo Total: &e{0}"
+
+# Mensajes de Admin (movidos para evitar sobreescribir admin.gui)
 commands:
   balance:
     own: "&7Tu saldo: &a{0}"
@@ -305,6 +444,31 @@ market:
         amount: "Vender por {0}"
         lore1: "Aproxima cantidad al monto"
         lore2: "Usa el precio de venta actual"
+      bedrock:
+        action:
+          title: "Opciones de Comercio » {0}"
+          summary:
+            buy: "Precio compra: {0}"
+            sell: "Precio venta: {0}"
+            info: "Modo Bedrock – toca una opción para comprar, vender o listar."
+          buy-one: "Comprar x1"
+          buy-some: "Comprar x{0}"
+          buy-stack: "Comprar stack x{0}"
+          sell-one: "Vender x1"
+          sell-stack: "Vender stack x{0}"
+          sell-all: "Vender todo"
+          list: "Crear listado"
+          back: "Volver"
+          list-help: "Publica una orden a precio fijo."
+          no-permission: "No tienes permiso para listar."
+          close: "Cerrar"
+          cost: "Costo: {0}"
+          earn: "Recibes: {0}"
+          amount: "Cantidad: {0}"
+          require-items: "Necesitas ítems en tu inventario."
+          left-click: "Click izquierdo para confirmar."
+          not-buyable: "No puedes comprar este ítem."
+          not-sellable: "No puedes vender este ítem."
     
     item:
       header: "Ítem del Mercado"
@@ -337,6 +501,24 @@ market:
       cancel: "Cancelar"
 
 # Mensajes educativos
+  gui:
+    bedrock:
+      form:
+        title: "{0} - Mercado"
+        info: "Selecciona una acción para este ítem:"
+        buy: "Precio de Compra"
+        sell: "Precio de Venta"
+        inventory: "Tienes"
+        btn:
+          buy1: "Comprar 1"
+          buy-some: "Comprar {0}"
+          buy-stack: "Comprar {0} (stack)"
+          sell1: "Vender 1"
+          sell-stack: "Vender {0} (stack)"
+          sell-all: "Vender Todo ({0})"
+          list: "Crear Listado"
+          close: "Cerrar"
+
 education:
   cycle:
     DEPRESSION: "📉 La economía entró en DEPRESIÓN; se espera menor actividad y precios."
@@ -362,31 +544,6 @@ education:
     wealth_tax_applied: "💸 Se aplicó impuesto a grandes fortunas: tu balance superó {0}"
   
 # Banking System
-bank:
-  account-info: "&6=== Cuenta Bancaria ==="
-  balance: "&7Saldo de la Cuenta: &a{0}"
-  interest-rate: "&7Tasa de Interés: &e{0}%"
-  deposited: "&aDepositaste &e{0} &aen tu cuenta bancaria"
-  withdrawn: "&aRetiraste &e{0} &ade tu cuenta bancaria"
-  insufficient-bank-funds: "&cFondos insuficientes en tu cuenta bancaria"
-  interest-earned: "&aGanaste &e{0} &aen intereses"
-  daily-limit-reached: "&cHas alcanzado tu límite diario de transacciones"
-  gui:
-    title: "Banco"
-    deposit: "Depositar"
-    withdraw: "Retirar"
-    balance: "Saldo"
-    deposit-lore1: "Depósita una cantidad fija en tu cuenta bancaria."
-    deposit-lore2: "Seguro, con límites diarios."
-    deposit-fast-lore1: "Atajo para depósitos mayores."
-    deposit-fast-lore2: "Afecta tus límites diarios."
-    balance-lore: "Muestra el saldo actual de tu cuenta bancaria."
-    withdraw-lore1: "Retira una cantidad fija desde tu cuenta bancaria."
-    withdraw-lore2: "Se transfiere a tu saldo general."
-    withdraw-fast-lore1: "Atajo para retiros mayores."
-    withdraw-fast-lore2: "Respeta límites y seguridad."
-  
-# Loan System
 loans:
   usage:
     request: "&cUso: &e/loans request <cantidad>"
@@ -450,92 +607,31 @@ loans:
       title: "Calendario de Pagos"
   
 # Economic Events
-events:
-  banner: "&6&l[EVENTO ECONÓMICO]"
-  started: "&6Evento Económico: &e{0} &6¡ha comenzado!"
-  ended: "&6Evento Económico: &e{0} &6ha terminado"
-  inflation-warning: "&cAdvertencia: Alta inflación detectada en la economía"
-  deflation-warning: "&eAviso: Deflación detectada en la economía"
-  market-crash: "&c¡Colapso del mercado! Todos los precios reducidos en {0}%"
-  economic-boom: "&a¡Auge económico! Todos los precios aumentaron en {0}%"
-  info:
-    description: "&7{0}"
-    duration: "&7Duración: &e{0} &7minutos"
-  stimulus:
-    received: "&a¡Has recibido &e{0} &adel estímulo gubernamental!"
-    injected: "&e💰 ¡El gobierno inyectó &a{0} &ea la economía!"
-  trade_boom:
-    announce: "&e📈 ¡Auge Comercial! ¡Todas las transacciones tienen &a{0}% &ede bono!"
-  market_discovery:
-    announce: "&e🔍 ¡Descubrimiento de Mercado! Ítems valiosos: &a{0} &e(+{1}% valor)"
-  investment:
-    announce: "&e💼 ¡Oportunidad de inversión! Retornos de mercado hasta &a{0}% &een ítems seleccionados."
-  market_correction:
-    announce: "&e⚖️ Corrección de mercado activa: compra +&c{0}% &e, venta -&c{1}%"
-  tech_breakthrough:
-    announce: "&e🧪 ¡Avance tecnológico! Categoría redstone más barata: compra -&a{0}% &e, venta -&a{1}%"
-  luxury_demand:
-    announce: "&e💎 ¡Demanda de lujo! Los ítems de lujo se venden hasta &a{0}% &emás caros."
-  resource_shortage:
-    announce: "&e⛏️ ¡Escasez de recursos! Los ítems afectados aumentan &a{0}% &een precio"
-  seasonal_demand:
-    announce: "&e🍂 ¡Demanda estacional! Ítems seleccionados aumentan hasta &a{0}%"
-  black_swan:
-    announce: "&e⚠️ ¡Evento cisne negro! Choque de mercado: compra -&a{0}% &e, venta -&a{1}%"
-  admin:
-    help:
-      header: "&6=== Administración de Eventos ==="
-      status: "&e/ecoxpert events status &7- Ver estado del motor"
-      active: "&e/ecoxpert events active &7- Listar eventos activos"
-      history: "&e/ecoxpert events history &7- Ver eventos recientes"
-      stats: "&e/ecoxpert events stats [días] &7- Ver conteo de eventos"
-      statsdetail: "&e/ecoxpert events statsdetail <TIPO> [días] &7- Estadísticas detalladas"
-      recent: "&e/ecoxpert events recent &7- Ver eventos desde la base de datos"
-      antistagnation: "&e/ecoxpert events anti-stagnation &7- Ver horas de quietud"
-      pause: "&e/ecoxpert events pause &7- Pausar motor de eventos"
-      resume: "&e/ecoxpert events resume &7- Reanudar motor de eventos"
-      trigger: "&e/ecoxpert events trigger <TIPO> &7- Disparar un evento"
-      end: "&e/ecoxpert events end <ID> &7- Terminar un evento activo"
-    unknown: "&cSubcomando de eventos desconocido"
-    status: "&7Motor de Eventos: &eActivo: {0} &7| Activos: &e{1} &7| Historial: &e{2}"
-    active:
-      header: "&6=== Eventos Activos ==="
-      none: "&7No hay eventos activos"
-      item: "&7ID: &e{0} &7Nombre: &e{1} &7Tipo: &e{2} &7Duración: &e{3}m"
-    history:
-      header: "&6=== Eventos Recientes ==="
-      none: "&7No hay eventos pasados"
-      item: "&7ID: &e{0} &7Nombre: &e{1} &7Tipo: &e{2} &7Estado: &e{3}"
-    trigger:
-      usage: "&cUso: &e/ecoxpert events trigger <TIPO>"
-    triggered: "&aEvento activado: &e{0}"
-    trigger:
-      failed: "&cError al activar el evento: {0}"
-    unknown_type: "&cTipo de evento desconocido: {0}"
-    end:
-      usage: "&cUso: &e/ecoxpert events end <ID>"
-    ended: "&aEvento finalizado: &e{0}"
-    not_found: "&cNo se encontró el evento activo: {0}"
-    stats:
-      header: "&6=== Estadísticas de Eventos (últimos {0} días) ==="
-      item: "&7{0}: &e{1}"
-      none: "&7Sin eventos en los últimos {0} días"
-      total: "&7Eventos totales: &e{0}"
-    recent:
-      header: "&6=== Eventos Recientes (DB) ==="
-      none: "&7No hay eventos persistidos"
-      item: "&7ID: &e{0} &7Tipo: &e{1} &7Estado: &e{2} &7Inicio: &e{3} &7Fin: &e{4}"
-    antistagnation:
-      info: "&7Horas desde el último evento: &e{0} &7| Horas de quietud: &e{1}"
-    engine:
-      paused: "&eMotor de eventos en pausa"
-      resumed: "&aMotor de eventos reanudado"
   gui:
-    title: "Administrador de Eventos"
-    pause: "Pausar Motor"
-    resume: "Reanudar Motor"
-    status: "Estado"
-    recent: "Recientes"
+    bedrock:
+      title: "Préstamos"
+      welcome: "Gestor de Préstamos"
+      active: "Préstamo Activo"
+      no-loan: "Sin préstamos activos"
+      btn:
+        request: "Solicitar Préstamo"
+        pay: "Realizar Pago"
+        status: "Estado del Préstamo"
+        back: "Atrás"
+        close: "Cerrar"
+      request:
+        title: "Solicitar Préstamo"
+        info: "Selecciona el monto del préstamo:"
+        note: "La tasa de interés y plazos se basan en tu puntaje crediticio"
+      pay:
+        title: "Realizar Pago"
+        info: "Selecciona el monto del pago:"
+        full: "Pagar Monto Completo"
+      confirm:
+        title: "Confirmar Préstamo"
+        yes: "Confirmar"
+        no: "Cancelar"
+
 admin:
   gui:
     title: "Panel Admin EcoXpert"
@@ -553,6 +649,28 @@ admin:
       total_stimulus: "&7Estímulo Total: &e{0}"
 
 # Professions System
+  migrate:
+    started: "&7Iniciando importación de saldos desde &e{0}&7..."
+    completed: "&aImportación completada. Cuentas importadas: &e{0}"
+    none: "&7No se encontró un proveedor de economía externo vía Vault"
+    error: "&cNo se pudieron importar saldos: {0}"
+  
+# Error Messages
+admin_cmd:
+  player-balance-set: "&aEstablecido saldo de {0} a &e{1}"
+  player-balance-added: "&aAgregado &e{0} &aal saldo de {1}"
+  player-balance-removed: "&aRemovido &e{0} &adel saldo de {1}"
+  market-price-set: "&aEstablecido precio de {0} a &e{1}"
+  event-triggered: "&aEvento económico activado: &e{0}"
+  database-backup: "&aRespaldo de base de datos creado exitosamente"
+  migrate:
+    started: "&7Iniciando importación de saldos desde &e{0}&7..."
+    completed: "&aImportación completada. Cuentas importadas: &e{0}"
+    none: "&7No se encontró un proveedor de economía externo vía Vault"
+    error: "&cNo se pudieron importar saldos: {0}"
+  migration-started: "&aMigración de base de datos iniciada"
+  migration-completed: "&aMigración de base de datos completada exitosamente"
+
 professions:
   selected: "&aAhora eres un &e{0}"
   changed: "&aCambiaste de &e{0} &aa &e{1}"
@@ -574,41 +692,10 @@ professions:
   levelup: "&a¡Has subido de nivel de profesión! Nivel &e{0}"
   
 # Estadísticas detalladas (faltantes) de eventos de admin
-events:
-  admin:
-    statsdetail:
-      header: "&6=== Estadísticas de Evento: {0} (últimos {1} días) ==="
-      count: "&7Cantidad: &e{0}"
-      avg_duration: "&7Duración Promedio: &e{0} &7minutos"
-      avg_items: "&7Ítems Afectados Promedio: &e{0}"
-      avg_buy_delta: "&7Delta Promedio Compra: &e{0}"
-      avg_sell_delta: "&7Delta Promedio Venta: &e{0}"
-      total_stimulus: "&7Estímulo Total: &e{0}"
-
-# Mensajes de Admin (movidos para evitar sobreescribir admin.gui)
-admin_cmd:
-  player-balance-set: "&aEstablecido saldo de {0} a &e{1}"
-  player-balance-added: "&aAgregado &e{0} &aal saldo de {1}"
-  player-balance-removed: "&aRemovido &e{0} &adel saldo de {1}"
-  market-price-set: "&aEstablecido precio de {0} a &e{1}"
-  event-triggered: "&aEvento económico activado: &e{0}"
-  database-backup: "&aRespaldo de base de datos creado exitosamente"
-  migrate:
-    started: "&7Iniciando importación de saldos desde &e{0}&7..."
-    completed: "&aImportación completada. Cuentas importadas: &e{0}"
-    none: "&7No se encontró un proveedor de economía externo vía Vault"
-    error: "&cNo se pudieron importar saldos: {0}"
-  migration-started: "&aMigración de base de datos iniciada"
-  migration-completed: "&aMigración de base de datos completada exitosamente"
-
-admin:
-  migrate:
-    started: "&7Iniciando importación de saldos desde &e{0}&7..."
-    completed: "&aImportación completada. Cuentas importadas: &e{0}"
-    none: "&7No se encontró un proveedor de economía externo vía Vault"
-    error: "&cNo se pudieron importar saldos: {0}"
-  
-# Error Messages
+  gui:
+    bedrock:
+      title: "Profesiones"
+      info: "Selecciona tu profesión:"
 errors:
   command-error: "&cOcurrió un error al ejecutar este comando"
   database-error: "&cOcurrió un error de base de datos. Por favor contacta un administrador"
@@ -665,3 +752,5 @@ numbers:
   million: "M"
   billion: "B"
   trillion: "T"
+
+# Bedrock Forms (Geyser)

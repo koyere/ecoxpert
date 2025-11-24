@@ -1,5 +1,6 @@
 package me.koyere.ecoxpert.modules.market;
 
+import me.koyere.ecoxpert.core.platform.PlatformManager;
 import me.koyere.ecoxpert.core.translation.TranslationManager;
 import me.koyere.ecoxpert.core.config.ConfigManager;
 import org.bukkit.Bukkit;
@@ -32,9 +33,12 @@ public class MarketGUI implements Listener {
     private final TranslationManager translationManager;
     private final ConfigManager configManager;
     private final Logger logger;
+    private final PlatformManager platformManager;
+    private final me.koyere.ecoxpert.core.bedrock.BedrockFormsManager bedrockFormsManager;
     
     // GUI tracking
     private final Map<UUID, MarketInventory> openGUIs = new ConcurrentHashMap<>();
+    private final Map<UUID, BedrockActionState> bedrockActions = new ConcurrentHashMap<>();
     
     // GUI configuration
     private static final int ITEMS_PER_PAGE = 45; // 5 rows for items
@@ -56,14 +60,16 @@ public class MarketGUI implements Listener {
     private final java.util.List<String> categoryOrder = new java.util.ArrayList<>();
     private final java.util.Map<String, java.util.Set<Material>> categories = new java.util.HashMap<>();
     
-    public MarketGUI(MarketManager marketManager, TranslationManager translationManager, Logger logger) {
+    public MarketGUI(MarketManager marketManager, TranslationManager translationManager, Logger logger,
+                     PlatformManager platformManager) {
         this.marketManager = marketManager;
         this.translationManager = translationManager;
         this.logger = logger;
-        this.configManager = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
-            .getServiceRegistry().getInstance(ConfigManager.class);
-        this.orderService = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
-            .getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.market.orders.MarketOrderService.class);
+        this.platformManager = platformManager;
+        var registry = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class).getServiceRegistry();
+        this.configManager = registry.getInstance(ConfigManager.class);
+        this.orderService = registry.getInstance(me.koyere.ecoxpert.modules.market.orders.MarketOrderService.class);
+        this.bedrockFormsManager = registry.getInstance(me.koyere.ecoxpert.core.bedrock.BedrockFormsManager.class);
         loadCategories();
     }
 
@@ -109,7 +115,8 @@ public class MarketGUI implements Listener {
                 
                 // Create and open GUI
                 Bukkit.getScheduler().runTask(player.getServer().getPluginManager().getPlugin("EcoXpert"), () -> {
-                    MarketInventory marketInv = new MarketInventory(player, activeItems, 0);
+                    boolean bedrock = platformManager != null && platformManager.isBedrockPlayer(player);
+                    MarketInventory marketInv = new MarketInventory(player, activeItems, 0, bedrock);
                     openGUIs.put(player.getUniqueId(), marketInv);
                     
                     Inventory gui = createMarketPage(marketInv);
@@ -600,6 +607,10 @@ public class MarketGUI implements Listener {
             if (st.durationSlots.containsKey(slot)) { st.hours = st.durationSlots.get(slot); event.getView().getTopInventory().setContents(buildListInventory(player, st).getContents()); return; }
             return;
         }
+        
+        if (handleBedrockActionClick(event, player)) {
+            return;
+        }
 
         MarketInventory marketInv = openGUIs.get(player.getUniqueId());
         if (marketInv == null) return;
@@ -735,6 +746,10 @@ public class MarketGUI implements Listener {
             int itemIndex = (marketInv.getCurrentPage() * ITEMS_PER_PAGE) + slot;
             if (itemIndex < marketInv.getItems().size()) {
                 MarketItem item = marketInv.getItems().get(itemIndex);
+                if (marketInv.isBedrockPlayer()) {
+                    openBedrockActionGUI(player, item);
+                    return;
+                }
                 if (event.isRightClick()) {
                     // Right-click: open listing GUI if permission
                     if (!player.hasPermission("ecoxpert.market.list")) {
@@ -807,6 +822,431 @@ public class MarketGUI implements Listener {
         
         // Close GUI after transaction
         player.closeInventory();
+    }
+
+    // === Bedrock Action GUI ===
+
+    private enum BedrockAction {
+        BUY_ONE, BUY_MID, BUY_STACK,
+        SELL_ONE, SELL_STACK, SELL_ALL,
+        LIST, CLOSE
+    }
+
+    private static class BedrockActionState {
+        final MarketItem item;
+        final String title;
+        final Map<Integer, BedrockAction> slotActions = new HashMap<>();
+        final Map<BedrockAction, Integer> actionQuantities = new EnumMap<>(BedrockAction.class);
+        final int stackSize;
+
+        BedrockActionState(MarketItem item, String title) {
+            this.item = item;
+            this.title = title;
+            this.stackSize = Math.max(1, item.getMaterial().getMaxStackSize());
+        }
+    }
+
+    private boolean handleBedrockActionClick(InventoryClickEvent event, Player player) {
+        BedrockActionState state = bedrockActions.get(player.getUniqueId());
+        if (state == null || !event.getView().getTitle().equals(state.title)) {
+            return false;
+        }
+        event.setCancelled(true);
+        BedrockAction action = state.slotActions.get(event.getRawSlot());
+        if (action == null) {
+            return true;
+        }
+        switch (action) {
+            case BUY_ONE -> performBedrockBuy(player, state, 1);
+            case BUY_MID -> {
+                int qty = state.actionQuantities.getOrDefault(BedrockAction.BUY_MID, 1);
+                performBedrockBuy(player, state, qty);
+            }
+            case BUY_STACK -> {
+                int qty = state.actionQuantities.getOrDefault(BedrockAction.BUY_STACK, state.stackSize);
+                performBedrockBuy(player, state, qty);
+            }
+            case SELL_ONE -> performBedrockSell(player, state, 1);
+            case SELL_STACK -> {
+                int available = marketManager.countItems(player, state.item.getMaterial());
+                int qty = Math.min(state.stackSize, available);
+                performBedrockSell(player, state, qty);
+            }
+            case SELL_ALL -> {
+                int available = marketManager.countItems(player, state.item.getMaterial());
+                performBedrockSell(player, state, available);
+            }
+            case LIST -> {
+                bedrockActions.remove(player.getUniqueId());
+                player.closeInventory();
+                if (!player.hasPermission("ecoxpert.market.list")) {
+                    player.sendMessage(translationManager.getMessage("no-permission"));
+                    return true;
+                }
+                openListGUI(player, state.item);
+            }
+            case CLOSE -> {
+                bedrockActions.remove(player.getUniqueId());
+                player.closeInventory();
+            }
+        }
+        return true;
+    }
+
+    private void performBedrockBuy(Player player, BedrockActionState state, int quantity) {
+        if (quantity <= 0) {
+            player.sendMessage(translationManager.getMessage("market.invalid-quantity"));
+            return;
+        }
+        if (!state.item.isBuyable()) {
+            player.sendMessage(translationManager.getMessage("market.item-not-buyable"));
+            return;
+        }
+        bedrockActions.remove(player.getUniqueId());
+        player.closeInventory();
+        marketManager.buyItem(player, state.item.getMaterial(), quantity).whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                logger.log(Level.SEVERE, "Error in Bedrock buy transaction", throwable);
+                player.sendMessage(translationManager.getMessage("market.system-error"));
+                return;
+            }
+            player.sendMessage(translationManager.getMessage("prefix") + result.getMessage());
+        });
+    }
+
+    /**
+     * Open Bedrock-native Form (Geyser Forms API)
+     */
+    private void openBedrockForm(Player player, MarketItem item) {
+        String friendlyName = capitalizeWords(item.getMaterial().name().toLowerCase().replace('_', ' '));
+
+        // Build form content
+        StringBuilder content = new StringBuilder();
+        content.append("§7").append(translationManager.getMessage("market.gui.bedrock.form.info")).append("\n\n");
+
+        if (item.isBuyable()) {
+            content.append("§a").append(translationManager.getMessage("market.gui.bedrock.form.buy"))
+                   .append(": ").append(formatPrice(item.getCurrentBuyPrice())).append("\n");
+        }
+        if (item.isSellable()) {
+            content.append("§c").append(translationManager.getMessage("market.gui.bedrock.form.sell"))
+                   .append(": ").append(formatPrice(item.getCurrentSellPrice())).append("\n");
+        }
+
+        int available = marketManager.countItems(player, item.getMaterial());
+        content.append("\n§7").append(translationManager.getMessage("market.gui.bedrock.form.inventory"))
+               .append(": ").append(available);
+
+        // Build button list
+        List<String> buttons = new ArrayList<>();
+        int stackSize = Math.max(1, item.getMaterial().getMaxStackSize());
+
+        if (item.isBuyable()) {
+            buttons.add("§a" + translationManager.getMessage("market.gui.bedrock.form.btn.buy1"));
+            int midBuy = Math.min(16, stackSize);
+            if (midBuy > 1) {
+                buttons.add("§a" + translationManager.getMessage("market.gui.bedrock.form.btn.buy-some", midBuy));
+            }
+            if (stackSize > 1) {
+                buttons.add("§a" + translationManager.getMessage("market.gui.bedrock.form.btn.buy-stack", stackSize));
+            }
+        }
+
+        if (item.isSellable() && available > 0) {
+            buttons.add("§c" + translationManager.getMessage("market.gui.bedrock.form.btn.sell1"));
+            if (stackSize > 1 && available >= stackSize) {
+                buttons.add("§c" + translationManager.getMessage("market.gui.bedrock.form.btn.sell-stack", stackSize));
+            }
+            buttons.add("§c" + translationManager.getMessage("market.gui.bedrock.form.btn.sell-all", available));
+        }
+
+        if (player.hasPermission("ecoxpert.market.list")) {
+            buttons.add("§b" + translationManager.getMessage("market.gui.bedrock.form.btn.list"));
+        }
+
+        buttons.add("§c" + translationManager.getMessage("market.gui.bedrock.form.btn.close"));
+
+        // Send Form
+        bedrockFormsManager.sendSimpleForm(
+            player,
+            translationManager.getMessage("market.gui.bedrock.form.title", friendlyName),
+            content.toString(),
+            buttons,
+            buttonIndex -> handleBedrockFormResponse(player, item, buttonIndex, buttons.size(), stackSize, available)
+        );
+    }
+
+    /**
+     * Handle Bedrock Form response
+     */
+    private void handleBedrockFormResponse(Player player, MarketItem item, int buttonIndex,
+                                          int totalButtons, int stackSize, int available) {
+        // Map button index to action based on what buttons were added
+        boolean buyable = item.isBuyable();
+        boolean sellable = item.isSellable() && available > 0;
+        boolean hasList = player.hasPermission("ecoxpert.market.list");
+
+        int midBuy = Math.min(16, stackSize);
+        int currentIndex = 0;
+
+        // Buy options
+        if (buyable) {
+            if (buttonIndex == currentIndex++) {
+                performBedrockBuy(player, item, 1);
+                return;
+            }
+            if (midBuy > 1 && buttonIndex == currentIndex++) {
+                performBedrockBuy(player, item, midBuy);
+                return;
+            }
+            if (stackSize > 1 && buttonIndex == currentIndex++) {
+                performBedrockBuy(player, item, stackSize);
+                return;
+            }
+        }
+
+        // Sell options
+        if (sellable) {
+            if (buttonIndex == currentIndex++) {
+                performBedrockSell(player, item, 1);
+                return;
+            }
+            if (stackSize > 1 && available >= stackSize && buttonIndex == currentIndex++) {
+                performBedrockSell(player, item, Math.min(stackSize, available));
+                return;
+            }
+            if (buttonIndex == currentIndex++) {
+                performBedrockSell(player, item, available);
+                return;
+            }
+        }
+
+        // List button
+        if (hasList && buttonIndex == currentIndex++) {
+            openListGUI(player, item);
+            return;
+        }
+
+        // Close button - do nothing
+    }
+
+    private void performBedrockBuy(Player player, MarketItem item, int quantity) {
+        if (quantity <= 0) {
+            player.sendMessage(translationManager.getMessage("market.invalid-quantity"));
+            return;
+        }
+        if (!item.isBuyable()) {
+            player.sendMessage(translationManager.getMessage("market.item-not-buyable"));
+            return;
+        }
+        marketManager.buyItem(player, item.getMaterial(), quantity).whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                logger.log(Level.SEVERE, "Error in Bedrock Form buy transaction", throwable);
+                player.sendMessage(translationManager.getMessage("market.system-error"));
+                return;
+            }
+            player.sendMessage(translationManager.getMessage("prefix") + result.getMessage());
+        });
+    }
+
+    private void performBedrockSell(Player player, MarketItem item, int quantity) {
+        if (!item.isSellable()) {
+            player.sendMessage(translationManager.getMessage("market.item-not-sellable"));
+            return;
+        }
+        if (quantity <= 0) {
+            player.sendMessage(translationManager.getMessage("market.no-items-to-sell",
+                item.getMaterial().name().toLowerCase().replace('_', ' ')));
+            return;
+        }
+        marketManager.sellItem(player, item.getMaterial(), quantity).whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                logger.log(Level.SEVERE, "Error in Bedrock Form sell transaction", throwable);
+                player.sendMessage(translationManager.getMessage("market.system-error"));
+                return;
+            }
+            player.sendMessage(translationManager.getMessage("prefix") + result.getMessage());
+        });
+    }
+
+    private void performBedrockSell(Player player, BedrockActionState state, int quantity) {
+        if (!state.item.isSellable()) {
+            player.sendMessage(translationManager.getMessage("market.item-not-sellable"));
+            return;
+        }
+        if (quantity <= 0) {
+            player.sendMessage(translationManager.getMessage("market.no-items-to-sell",
+                state.item.getMaterial().name().toLowerCase().replace('_', ' ')));
+            return;
+        }
+        bedrockActions.remove(player.getUniqueId());
+        player.closeInventory();
+        marketManager.sellItem(player, state.item.getMaterial(), quantity).whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                logger.log(Level.SEVERE, "Error in Bedrock sell transaction", throwable);
+                player.sendMessage(translationManager.getMessage("market.system-error"));
+                return;
+            }
+            player.sendMessage(translationManager.getMessage("prefix") + result.getMessage());
+        });
+    }
+
+    private void openBedrockActionGUI(Player player, MarketItem item) {
+        // Use Geyser Forms if available, otherwise fallback to chest GUI
+        if (bedrockFormsManager != null && bedrockFormsManager.isFormsAvailable()) {
+            openBedrockForm(player, item);
+            return;
+        }
+
+        // Fallback: chest-based GUI for Bedrock players when Geyser Forms not available
+        String friendlyName = capitalizeWords(item.getMaterial().name().toLowerCase().replace('_', ' '));
+        String title = translationManager.getMessage("market.gui.bedrock.action.title", friendlyName);
+        Inventory gui = Bukkit.createInventory(null, 27, title);
+        BedrockActionState state = new BedrockActionState(item, title);
+        bedrockActions.put(player.getUniqueId(), state);
+
+        gui.setItem(4, bedrockSummaryItem(item, friendlyName));
+
+        BigDecimal unitBuy = item.getCurrentBuyPrice();
+        BigDecimal unitSell = item.getCurrentSellPrice();
+        boolean buyable = item.isBuyable() && unitBuy != null && unitBuy.compareTo(BigDecimal.ZERO) > 0;
+        boolean sellable = item.isSellable() && unitSell != null && unitSell.compareTo(BigDecimal.ZERO) > 0;
+        int quickBuy = Math.min(16, state.stackSize);
+        if (quickBuy <= 1 && state.stackSize > 1) {
+            quickBuy = Math.min(8, state.stackSize);
+        }
+        int available = marketManager.countItems(player, item.getMaterial());
+
+        if (buyable) {
+            addBedrockButton(gui, state, 10, Material.EMERALD, "market.gui.bedrock.action.buy-one",
+                BedrockAction.BUY_ONE, true, 1, Arrays.asList(
+                    "§7" + translationManager.getMessage("market.gui.bedrock.action.cost",
+                        formatPrice(unitBuy)),
+                    "§7" + translationManager.getMessage("market.gui.bedrock.action.left-click")
+                ));
+
+            if (quickBuy > 1) {
+                BigDecimal total = unitBuy.multiply(BigDecimal.valueOf(quickBuy)).setScale(2, BigDecimal.ROUND_HALF_UP);
+                addBedrockButton(gui, state, 11, Material.GOLD_INGOT, "market.gui.bedrock.action.buy-some",
+                    BedrockAction.BUY_MID, true, quickBuy, Arrays.asList(
+                        "§7" + translationManager.getMessage("market.gui.bedrock.action.amount", quickBuy),
+                        "§7" + translationManager.getMessage("market.gui.bedrock.action.cost", formatPrice(total))
+                    ), quickBuy);
+            }
+            if (state.stackSize > 1) {
+                BigDecimal total = unitBuy.multiply(BigDecimal.valueOf(state.stackSize)).setScale(2, BigDecimal.ROUND_HALF_UP);
+                addBedrockButton(gui, state, 12, Material.EMERALD_BLOCK, "market.gui.bedrock.action.buy-stack",
+                    BedrockAction.BUY_STACK, true, state.stackSize, Arrays.asList(
+                        "§7" + translationManager.getMessage("market.gui.bedrock.action.amount", state.stackSize),
+                        "§7" + translationManager.getMessage("market.gui.bedrock.action.cost", formatPrice(total))
+                    ), state.stackSize);
+            }
+        } else {
+            addBedrockButton(gui, state, 10, Material.BARRIER, "market.gui.bedrock.action.not-buyable",
+                null, false, null, Collections.emptyList());
+        }
+
+        if (sellable) {
+            addBedrockButton(gui, state, 14, Material.REDSTONE, "market.gui.bedrock.action.sell-one",
+                BedrockAction.SELL_ONE, available >= 1, 1, Arrays.asList(
+                    "§7" + translationManager.getMessage("market.gui.bedrock.action.earn",
+                        formatPrice(unitSell)),
+                    "§7" + translationManager.getMessage("market.gui.bedrock.action.require-items")
+                ));
+
+            if (state.stackSize > 1) {
+                int stackQty = Math.min(state.stackSize, available);
+                BigDecimal total = unitSell.multiply(BigDecimal.valueOf(stackQty)).setScale(2, BigDecimal.ROUND_HALF_UP);
+                addBedrockButton(gui, state, 15, Material.GOLD_BLOCK, "market.gui.bedrock.action.sell-stack",
+                    BedrockAction.SELL_STACK, stackQty > 0, stackQty, Arrays.asList(
+                        "§7" + translationManager.getMessage("market.gui.bedrock.action.amount", stackQty),
+                        "§7" + translationManager.getMessage("market.gui.bedrock.action.earn", formatPrice(total))
+                    ), stackQty);
+            }
+
+            BigDecimal total = unitSell.multiply(BigDecimal.valueOf(Math.max(available, 0))).setScale(2, BigDecimal.ROUND_HALF_UP);
+            addBedrockButton(gui, state, 16, Material.DIAMOND_BLOCK, "market.gui.bedrock.action.sell-all",
+                BedrockAction.SELL_ALL, available > 0, null, Arrays.asList(
+                    "§7" + translationManager.getMessage("market.gui.bedrock.action.amount", available),
+                    "§7" + translationManager.getMessage("market.gui.bedrock.action.earn", formatPrice(total))
+                ));
+        } else {
+            addBedrockButton(gui, state, 14, Material.BARRIER, "market.gui.bedrock.action.not-sellable",
+                null, false, null, Collections.emptyList());
+        }
+
+        ItemStack close = new ItemStack(Material.BARRIER);
+        ItemMeta cMeta = close.getItemMeta();
+        if (cMeta != null) {
+            cMeta.setDisplayName("§c" + translationManager.getMessage("market.gui.bedrock.action.close"));
+            close.setItemMeta(cMeta);
+        }
+        gui.setItem(22, close);
+        state.slotActions.put(22, BedrockAction.CLOSE);
+
+        ItemStack listButton = new ItemStack(Material.BOOK);
+        ItemMeta lMeta = listButton.getItemMeta();
+        if (lMeta != null) {
+            boolean hasPerm = player.hasPermission("ecoxpert.market.list");
+            lMeta.setDisplayName((hasPerm ? "§b" : "§7") + translationManager.getMessage("market.gui.bedrock.action.list"));
+            List<String> lore = new ArrayList<>();
+            lore.add("§7" + translationManager.getMessage("market.gui.bedrock.action.list-help"));
+            if (!hasPerm) {
+                lore.add("§c" + translationManager.getMessage("market.gui.bedrock.action.no-permission"));
+            }
+            lMeta.setLore(lore);
+            listButton.setItemMeta(lMeta);
+            if (hasPerm) {
+                state.slotActions.put(23, BedrockAction.LIST);
+                gui.setItem(23, listButton);
+            } else {
+                gui.setItem(23, listButton);
+            }
+        } else {
+            gui.setItem(23, listButton);
+        }
+
+        player.openInventory(gui);
+    }
+
+    private ItemStack bedrockSummaryItem(MarketItem item, String friendlyName) {
+        ItemStack summary = new ItemStack(item.getMaterial());
+        ItemMeta meta = summary.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§e" + friendlyName);
+            List<String> lore = new ArrayList<>();
+            lore.add("§7" + translationManager.getMessage("market.gui.bedrock.action.summary.buy",
+                formatPrice(item.getCurrentBuyPrice())));
+            lore.add("§7" + translationManager.getMessage("market.gui.bedrock.action.summary.sell",
+                formatPrice(item.getCurrentSellPrice())));
+            lore.add("");
+            lore.add("§7" + translationManager.getMessage("market.gui.bedrock.action.summary.info"));
+            meta.setLore(lore);
+            summary.setItemMeta(meta);
+        }
+        return summary;
+    }
+
+    private void addBedrockButton(Inventory gui, BedrockActionState state, int slot,
+                                  Material enabledIcon, String labelKey, BedrockAction action,
+                                  boolean enabled, Integer quantity, List<String> lore, Object... args) {
+        Material icon = enabled ? enabledIcon : Material.GRAY_DYE;
+        ItemStack button = new ItemStack(icon);
+        ItemMeta meta = button.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName((enabled ? "§a" : "§7") + translationManager.getMessage(labelKey, args));
+            if (lore != null && !lore.isEmpty()) {
+                meta.setLore(lore);
+            }
+            button.setItemMeta(meta);
+        }
+        gui.setItem(slot, button);
+        if (enabled && action != null) {
+            state.slotActions.put(slot, action);
+            if (quantity != null) {
+                state.actionQuantities.put(action, quantity);
+            }
+        }
     }
 
     // === List GUI (Order Book listing) ===
@@ -978,6 +1418,7 @@ public class MarketGUI implements Listener {
     public void onInventoryClose(InventoryCloseEvent event) {
         if (event.getPlayer() instanceof Player player) {
             openGUIs.remove(player.getUniqueId());
+            bedrockActions.remove(player.getUniqueId());
         }
     }
     
@@ -1083,15 +1524,17 @@ public class MarketGUI implements Listener {
     private static class MarketInventory {
         private final Player player;
         private final List<MarketItem> items;
+        private final boolean bedrockPlayer;
         private int currentPage;
         private String selectedCategory = "ALL";
         private Character filterLetter = null;
         private SortMode sortMode = SortMode.NAME;
         
-        public MarketInventory(Player player, List<MarketItem> items, int currentPage) {
+        public MarketInventory(Player player, List<MarketItem> items, int currentPage, boolean bedrockPlayer) {
             this.player = player;
             this.items = items;
             this.currentPage = currentPage;
+            this.bedrockPlayer = bedrockPlayer;
         }
         
         public Player getPlayer() { return player; }
@@ -1104,6 +1547,7 @@ public class MarketGUI implements Listener {
         public void setFilterLetter(Character c) { this.filterLetter = c; }
         public SortMode getSortMode() { return sortMode; }
         public void cycleSort() { this.sortMode = this.sortMode.next(); }
+        public boolean isBedrockPlayer() { return bedrockPlayer; }
     }
 
     private enum SortMode { NAME, BUY_ASC, SELL_ASC, SELL_DESC, VOLUME_ASC, VOLUME_DESC;

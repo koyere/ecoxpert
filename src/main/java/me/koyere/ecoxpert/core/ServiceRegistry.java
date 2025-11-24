@@ -14,6 +14,7 @@ import me.koyere.ecoxpert.core.failsafe.EconomyFailsafeManager;
 import me.koyere.ecoxpert.core.failsafe.EconomyFailsafeManagerImpl;
 import me.koyere.ecoxpert.core.platform.PlatformManager;
 import me.koyere.ecoxpert.core.platform.PlatformManagerImpl;
+import me.koyere.ecoxpert.core.bedrock.BedrockFormsManager;
 import me.koyere.ecoxpert.core.translation.TranslationManager;
 import me.koyere.ecoxpert.core.translation.TranslationManagerImpl;
 import me.koyere.ecoxpert.core.update.UpdateChecker;
@@ -114,6 +115,7 @@ public class ServiceRegistry {
         
         // Core services - order matters for dependencies
         factoryMethods.put(PlatformManager.class, this::createPlatformManager);
+        factoryMethods.put(BedrockFormsManager.class, this::createBedrockFormsManager);
         factoryMethods.put(ConfigManager.class, this::createConfigManager);
         factoryMethods.put(TranslationManager.class, this::createTranslationManager);
         factoryMethods.put(DependencyManager.class, this::createDependencyManager);
@@ -164,7 +166,11 @@ public class ServiceRegistry {
     private PlatformManager createPlatformManager() {
         return new PlatformManagerImpl(plugin);
     }
-    
+
+    private BedrockFormsManager createBedrockFormsManager() {
+        return new BedrockFormsManager(plugin);
+    }
+
     private ConfigManager createConfigManager() {
         return new ConfigManagerImpl(plugin);
     }

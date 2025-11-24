@@ -2,9 +2,13 @@ package me.koyere.ecoxpert.core.platform;
 
 import me.koyere.ecoxpert.EcoXpertPlugin;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.lang.reflect.Method;
+import java.util.UUID;
+import java.util.logging.Level;
 
 /**
  * Implementation of platform detection and capability management
@@ -20,6 +24,9 @@ public class PlatformManagerImpl implements PlatformManager {
     private String platformName;
     private String minecraftVersion;
     private boolean geyserAvailable;
+    private boolean floodgateAvailable;
+    private Object floodgateApi;
+    private Method floodgateIsPlayer;
     
     @Inject
     public PlatformManagerImpl(EcoXpertPlugin plugin) {
@@ -37,6 +44,21 @@ public class PlatformManagerImpl implements PlatformManager {
         
         // Check for GeyserMC (Bedrock support)
         this.geyserAvailable = plugin.getServer().getPluginManager().getPlugin("Geyser-Spigot") != null;
+        this.floodgateAvailable = plugin.getServer().getPluginManager().getPlugin("floodgate") != null;
+        if (floodgateAvailable) {
+            try {
+                Class<?> apiClass = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
+                Method getInstance = apiClass.getMethod("getInstance");
+                this.floodgateApi = getInstance.invoke(null);
+                this.floodgateIsPlayer = apiClass.getMethod("isFloodgatePlayer", UUID.class);
+                plugin.getLogger().info("Floodgate detected - enhanced Bedrock detection enabled");
+            } catch (Exception ex) {
+                floodgateAvailable = false;
+                floodgateApi = null;
+                floodgateIsPlayer = null;
+                plugin.getLogger().log(Level.WARNING, "Floodgate detected but API binding failed", ex);
+            }
+        }
         
         plugin.getLogger().info("Detected platform: " + platform.getDisplayName() + 
                                " (MC " + minecraftVersion + ")");
@@ -76,11 +98,34 @@ public class PlatformManagerImpl implements PlatformManager {
     
     @Override
     public boolean hasBedrockPlayers() {
-        if (!geyserAvailable) return false;
+        if (!geyserAvailable && !floodgateAvailable) return false;
         
         // Check if any online players are Bedrock players
         return Bukkit.getOnlinePlayers().stream()
-            .anyMatch(player -> isBedrockPlayer(player.getUniqueId().toString()));
+            .anyMatch(player -> isBedrockPlayer(player.getUniqueId()));
+    }
+
+    @Override
+    public boolean isBedrockPlayer(Player player) {
+        if (player == null) return false;
+        return isBedrockPlayer(player.getUniqueId());
+    }
+
+    @Override
+    public boolean isBedrockPlayer(UUID uuid) {
+        if (uuid == null) return false;
+        if (floodgateAvailable && floodgateApi != null && floodgateIsPlayer != null) {
+            try {
+                Object result = floodgateIsPlayer.invoke(floodgateApi, uuid);
+                if (result instanceof Boolean bool) {
+                    return bool;
+                }
+            } catch (Exception ex) {
+                plugin.getLogger().log(Level.WARNING, "Failed Floodgate bedrock detection", ex);
+            }
+        }
+        if (!geyserAvailable) return false;
+        return looksLikeBedrockUuid(uuid.toString());
     }
     
     @Override
@@ -132,7 +177,7 @@ public class PlatformManagerImpl implements PlatformManager {
      * @param uuid Player UUID string
      * @return true if Bedrock player
      */
-    private boolean isBedrockPlayer(String uuid) {
+    private boolean looksLikeBedrockUuid(String uuid) {
         // Bedrock players typically have UUIDs starting with 00000000
         return uuid.startsWith("00000000");
     }
@@ -146,6 +191,9 @@ public class PlatformManagerImpl implements PlatformManager {
         plugin.getLogger().info("  Adventure API: " + supportsAdventure());
         plugin.getLogger().info("  Async Scheduler: " + supportsAsyncScheduler());
         plugin.getLogger().info("  Folia Threading: " + isFoliaAvailable());
-        plugin.getLogger().info("  Bedrock Support: " + isGeyserAvailable());
+        plugin.getLogger().info("  Bedrock Support: " + (isGeyserAvailable() || floodgateAvailable));
+        if (floodgateAvailable) {
+            plugin.getLogger().info("  Floodgate API: true");
+        }
     }
 }

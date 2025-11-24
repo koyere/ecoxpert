@@ -17,11 +17,90 @@ import java.util.Locale;
 public class ProfessionsGUI extends BaseGUI {
     private final ProfessionsManager professionsManager;
     private final TranslationManager tm;
+    private final me.koyere.ecoxpert.core.platform.PlatformManager platformManager;
+    private final me.koyere.ecoxpert.core.bedrock.BedrockFormsManager bedrockFormsManager;
 
     public ProfessionsGUI(EcoXpertPlugin plugin, ProfessionsManager professionsManager, TranslationManager tm) {
         super(plugin);
         this.professionsManager = professionsManager;
         this.tm = tm;
+        var registry = plugin.getServiceRegistry();
+        this.platformManager = registry.getInstance(me.koyere.ecoxpert.core.platform.PlatformManager.class);
+        this.bedrockFormsManager = registry.getInstance(me.koyere.ecoxpert.core.bedrock.BedrockFormsManager.class);
+    }
+
+    /**
+     * Open appropriate GUI based on player platform
+     */
+    @Override
+    public void open(Player player) {
+        // Use Geyser Forms for Bedrock players if available
+        if (platformManager.isBedrockPlayer(player) && bedrockFormsManager != null && bedrockFormsManager.isFormsAvailable()) {
+            openBedrockForm(player);
+        } else {
+            super.open(player); // Chest GUI fallback
+        }
+    }
+
+    /**
+     * Open Bedrock-native Form for profession selection
+     */
+    private void openBedrockForm(Player player) {
+        java.util.List<String> buttons = new java.util.ArrayList<>();
+        java.util.List<String> descriptions = new java.util.ArrayList<>();
+
+        // Build profession list
+        for (ProfessionRole role : ProfessionRole.values()) {
+            String name = pretty(role.name());
+            String desc = buildFormDescription(player, role);
+            buttons.add("§e" + name);
+            descriptions.add(desc);
+        }
+
+        // Build form content
+        StringBuilder content = new StringBuilder();
+        content.append("§7").append(tm.getMessage("professions.gui.bedrock.info", "Select your profession:")).append("\n\n");
+
+        // Get current profession
+        professionsManager.getRole(player.getUniqueId()).thenAccept(currentRole -> {
+            if (currentRole.isPresent()) {
+                content.append("§7Current: §e").append(pretty(currentRole.get().name())).append("\n");
+            }
+            content.append("§7Level: §e").append(professionsManager.getLevel(player.getUniqueId()).join()).append("\n");
+            content.append("§7XP: §e").append(professionsManager.getXp(player.getUniqueId()).join());
+
+            // Send form
+            bedrockFormsManager.sendSimpleForm(
+                player,
+                tm.getMessage("professions.gui.bedrock.title", "Professions"),
+                content.toString(),
+                buttons,
+                buttonIndex -> {
+                    if (buttonIndex >= 0 && buttonIndex < ProfessionRole.values().length) {
+                        ProfessionRole selected = ProfessionRole.values()[buttonIndex];
+                        professionsManager.setRole(player.getUniqueId(), selected).thenAccept(ok -> {
+                            if (ok) {
+                                player.sendMessage(tm.getMessage("prefix") +
+                                    tm.getMessage("professions.changed", pretty(selected.name())));
+                            } else {
+                                player.sendMessage(tm.getMessage("prefix") +
+                                    tm.getMessage("professions.cooldown", ""));
+                            }
+                        });
+                    }
+                }
+            );
+        });
+    }
+
+    /**
+     * Build profession description for Bedrock Form
+     */
+    private String buildFormDescription(Player p, ProfessionRole r) {
+        var cfg = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class).getModuleConfig("professions");
+        double buyF = cfg.getDouble("roles." + r.name().toLowerCase() + ".buy_factor", 1.0);
+        double sellF = cfg.getDouble("roles." + r.name().toLowerCase() + ".sell_factor", 1.0);
+        return String.format(java.util.Locale.US, "Buy: %.2fx | Sell: %.2fx", buyF, sellF);
     }
 
     @Override

@@ -42,6 +42,48 @@ economy:
       no-provider: "&cNo fallback economy provider detected (EssentialsX/CMI) to sync against"
       error: "&cSync failed: {0}"
 
+  admin:
+    help:
+      header: "&6=== Economy Admin ==="
+      status: "&e/ecoxpert economy status &7- Show provider and DB status"
+      diagnostics: "&e/ecoxpert economy diagnostics &7- Run safe diagnostics"
+      policy: "&e/ecoxpert economy policy [show|set <param> <value>|reload] &7- View/adjust policy"
+    unknown: "&cUnknown economy subcommand"
+    status:
+      header: "&6=== Economy Status ==="
+      provider: "&7Provider: &e{0} &7(Plugin: &e{1}&7)"
+      plugins: "&7Detected economy plugins: &e{0}"
+      db: "&7Database: &e{0} &7| Connected: &e{1} &7| Healthy: &e{2}"
+    health:
+      header: "&6=== Economy Health ==="
+      cpi: "&7CPI Index: &e{0}"
+      inflation_annual: "&7Annualized Inflation: &e{0}%"
+      target: "&7Target Inflation: &e{0}"
+      score: "&7Health Score: &e{0}/100"
+    policy:
+      header: "&6=== Economy Policy ==="
+      updated: "&aUpdated policy parameter: &e{0} &7= &e{1}"
+      unknown_param: "&cUnknown policy parameter: {0}"
+      invalid_value: "&cInvalid value: {0}"
+      reloaded: "&aPolicy reloaded from configuration"
+      usage: "&cUsage: &e/ecoxpert economy policy [show|set <param> <value>|reload]"
+    loans:
+      help:
+        header: "&6=== Loans Admin ==="
+        stats: "&e/ecoxpert economy loans stats [days] &7- Totals"
+        statsdetail: "&e/ecoxpert economy loans statsdetail [days] &7- Detailed"
+      stats:
+        header: "&6=== Loans Stats (last {0} days) ==="
+        active: "&7Active loans: &e{0}"
+        outstanding: "&7Total outstanding: &e{0}"
+        avg_rate: "&7Average rate: &e{0}"
+        late: "&7Late installments: &e{0}"
+      statsdetail:
+        header: "&6=== Loans Detailed (last {0} days) ==="
+        created: "&7Loans created: &e{0}"
+        installments: "&7Installments (total/paid/pending/late): &e{0} &7/ &a{1} &7/ &e{2} &7/ &c{3}"
+  
+# Update System
 bank:
   error:
     daily_limit: "&cDaily {0} limit for tier {1}: limit {2}, remaining {3}. Resets daily (server time)."
@@ -59,6 +101,67 @@ bank:
     success:
       sender: "&aTransferred &e{0} &ato &e{1} &7| New bank balance: &a{2}"
       receiver: "&aYou received &e{0} &afrom &e{1}"
+  account-info: "&6=== Bank Account ==="
+  balance: "&7Account Balance: &a{0}"
+
+  # GUI Messages
+  gui:
+    title: "Bank"
+    deposit: "Deposit"
+    withdraw: "Withdraw"
+    balance: "Balance"
+    deposit-lore1: "Deposit money into your account"
+    deposit-lore2: "Click to deposit"
+    deposit-fast-lore1: "Fast deposit"
+    deposit-fast-lore2: "Click to deposit quickly"
+    withdraw-lore1: "Withdraw money from your account"
+    withdraw-lore2: "Click to withdraw"
+    withdraw-fast-lore1: "Fast withdrawal"
+    withdraw-fast-lore2: "Click to withdraw quickly"
+    balance-lore: "View your account balance"
+
+    # Bedrock Forms
+    bedrock:
+      title: "Bank"
+      welcome: "Welcome to the Bank!"
+      balance: "Bank Balance"
+      wallet: "Wallet"
+      btn:
+        deposit: "Deposit Money"
+        withdraw: "Withdraw Money"
+        balance: "Check Balance"
+        back: "Back"
+        close: "Close"
+      deposit:
+        title: "Deposit"
+        info: "Select amount to deposit:"
+      withdraw:
+        title: "Withdraw"
+        info: "Select amount to withdraw:"
+  interest-rate: "&7Interest Rate: &e{0}%"
+  deposited: "&aDeposited &e{0} &ato your bank account"
+  withdrawn: "&aWithdrawn &e{0} &afrom your bank account"
+  insufficient-bank-funds: "&cInsufficient funds in your bank account"
+  interest-earned: "&aYou earned &e{0} &ain interest"
+  daily-limit-reached: "&cYou have reached your daily transaction limit"
+  gui:
+    title: "Bank"
+    deposit: "Deposit"
+    withdraw: "Withdraw"
+    balance: "Balance"
+    deposit-lore1: "Deposit a fixed amount into your bank account."
+    deposit-lore2: "Secure, with daily limits."
+    deposit-fast-lore1: "Shortcut for larger deposits."
+    deposit-fast-lore2: "Affects your daily limits."
+    balance-lore: "Shows your current bank account balance."
+    withdraw-lore1: "Withdraw a fixed amount from your bank account."
+    withdraw-lore2: "Transfers to your general balance."
+    withdraw-fast-lore1: "Shortcut for larger withdrawals."
+    withdraw-fast-lore2: "Respects limits and security."
+  error:
+    safe-mode: "&eBank operations are temporarily paused (Safe Mode)."
+  
+# Loan System
 events:
   banner: "&6=== Economic Event ==="
   started: "&aEvent started: &e{0}"
@@ -69,6 +172,103 @@ events:
 
 
 # Commands
+  banner: "&6&l[ECONOMIC EVENT]"
+  started: "&6Economic Event: &e{0} &6has started!"
+  ended: "&6Economic Event: &e{0} &6has ended"
+  inflation-warning: "&cWarning: High inflation detected in the economy"
+  deflation-warning: "&eNotice: Deflation detected in the economy"
+  market-crash: "&cMarket crash! All prices reduced by {0}%"
+  economic-boom: "&aEconomic boom! All prices increased by {0}%"
+  info:
+    description: "&7{0}"
+    duration: "&7Duration: &e{0} &7minutes"
+  stimulus:
+    received: "&aYou received &e{0} &afrom government stimulus!"
+    injected: "&e💰 Government injected &a{0} &einto the economy!"
+  trade_boom:
+    announce: "&e📈 Trade Boom! All market trades give &a{0}% &ebonus rewards!"
+  market_discovery:
+    announce: "&e🔍 Market Discovery! New valuable items: &a{0} &e(+{1}% value)"
+  investment:
+    announce: "&e💼 Investment opportunity! Market returns up to &a{0}% &eon selected items."
+  market_correction:
+    announce: "&e⚖️ Market correction active: buy +&c{0}% &e, sell -&c{1}%"
+  tech_breakthrough:
+    announce: "&e🧪 Technological breakthrough! Redstone category cheaper: buy -&a{0}% &e, sell -&a{1}%"
+  luxury_demand:
+    announce: "&e💎 Luxury demand! Luxury items sell up to &a{0}% &ehigher."
+  resource_shortage:
+    announce: "&e⛏️ Resource shortage! Affected items prices increased by &a{0}%"
+  seasonal_demand:
+    announce: "&e🍂 Seasonal demand! Selected items increased up to &a{0}%"
+  black_swan:
+    announce: "&e⚠️ Black swan event! Market shock: buy -&a{0}% &e, sell -&a{1}%"
+  
+  admin:
+    help:
+      header: "&6=== Events Admin ==="
+      status: "&e/ecoxpert events status &7- View engine status"
+      active: "&e/ecoxpert events active &7- List active events"
+      history: "&e/ecoxpert events history &7- Show recent events"
+      stats: "&e/ecoxpert events stats [days] &7- Show event counts"
+      statsdetail: "&e/ecoxpert events statsdetail <TYPE> [days] &7- Detailed stats"
+      recent: "&e/ecoxpert events recent &7- Show events from database"
+      antistagnation: "&e/ecoxpert events anti-stagnation &7- Show quiet hours"
+      pause: "&e/ecoxpert events pause &7- Pause event engine"
+      resume: "&e/ecoxpert events resume &7- Resume event engine"
+      trigger: "&e/ecoxpert events trigger <TYPE> &7- Trigger an event"
+      end: "&e/ecoxpert events end <ID> &7- End an active event"
+    unknown: "&cUnknown events subcommand"
+    status: "&7Events Engine: &eActive: {0} &7| Active Events: &e{1} &7| History: &e{2}"
+    active:
+      header: "&6=== Active Events ==="
+      none: "&7No active events"
+      item: "&7ID: &e{0} &7Name: &e{1} &7Type: &e{2} &7Duration: &e{3}m"
+    history:
+      header: "&6=== Recent Events ==="
+      none: "&7No past events"
+      item: "&7ID: &e{0} &7Name: &e{1} &7Type: &e{2} &7Status: &e{3}"
+    trigger:
+      usage: "&cUsage: &e/ecoxpert events trigger <TYPE>"
+    triggered: "&aTriggered event: &e{0}"
+    trigger:
+      failed: "&cFailed to trigger event: {0}"
+    unknown_type: "&cUnknown event type: {0}"
+    end:
+      usage: "&cUsage: &e/ecoxpert events end <ID>"
+    ended: "&aEnded event: &e{0}"
+    not_found: "&cActive event not found: {0}"
+    stats:
+      header: "&6=== Event Stats (last {0} days) ==="
+      item: "&7{0}: &e{1}"
+      none: "&7No events in the last {0} days"
+      total: "&7Total events: &e{0}"
+    recent:
+      header: "&6=== DB Recent Events ==="
+      none: "&7No persisted events found"
+      item: "&7ID: &e{0} &7Type: &e{1} &7Status: &e{2} &7Start: &e{3} &7End: &e{4}"
+    antistagnation:
+      info: "&7Hours since last event: &e{0} &7| Quiet hours: &e{1}"
+    engine:
+      paused: "&eEvents engine paused"
+      resumed: "&aEvents engine resumed"
+  gui:
+    title: "Events Admin"
+    pause: "Pause Engine"
+    resume: "Resume Engine"
+    status: "Status"
+    recent: "Recent"
+  admin:
+    statsdetail:
+      header: "&6=== Event Stats: {0} (last {1} days) ==="
+      count: "&7Count: &e{0}"
+      avg_duration: "&7Avg Duration: &e{0} &7minutes"
+      avg_items: "&7Avg Items Affected: &e{0}"
+      avg_buy_delta: "&7Avg Buy Delta: &e{0}"
+      avg_sell_delta: "&7Avg Sell Delta: &e{0}"
+      total_stimulus: "&7Total Stimulus: &e{0}"
+
+# Admin Commands (moved to avoid overriding admin.gui)
 commands:
   balance:
     own: "&7Your balance: &a{0}"
@@ -278,6 +478,31 @@ market:
         amount: "Sell for {0}"
         lore1: "Approximates quantity to target"
         lore2: "Uses current sell price"
+      bedrock:
+        action:
+          title: "Trade Options » {0}"
+          summary:
+            buy: "Buy price: {0}"
+            sell: "Sell price: {0}"
+            info: "Bedrock mode – tap an option to buy, sell, or list."
+          buy-one: "Buy x1"
+          buy-some: "Buy x{0}"
+          buy-stack: "Buy stack x{0}"
+          sell-one: "Sell x1"
+          sell-stack: "Sell stack x{0}"
+          sell-all: "Sell all"
+          list: "Create Listing"
+          back: "Back"
+          list-help: "Publish a fixed-price order."
+          no-permission: "You lack listing permission."
+          close: "Close"
+          cost: "Cost: {0}"
+          earn: "Earn: {0}"
+          amount: "Quantity: {0}"
+          require-items: "Requires items in your inventory."
+          left-click: "Left-click to confirm."
+          not-buyable: "Cannot buy this item."
+          not-sellable: "Cannot sell this item."
     
     item:
       header: "Market Item"
@@ -309,6 +534,24 @@ market:
       confirm: "Confirm"
       cancel: "Cancel"
 
+    # Bedrock Forms (Geyser)
+    bedrock:
+      form:
+        title: "{0} - Market"
+        info: "Select an action for this item:"
+        buy: "Buy Price"
+        sell: "Sell Price"
+        inventory: "You have"
+        btn:
+          buy1: "Buy 1"
+          buy-some: "Buy {0}"
+          buy-stack: "Buy {0} (stack)"
+          sell1: "Sell 1"
+          sell-stack: "Sell {0} (stack)"
+          sell-all: "Sell All ({0})"
+          list: "Create Listing"
+          close: "Close"
+
 # Educational messages
 education:
   cycle:
@@ -335,33 +578,6 @@ education:
     wealth_tax_applied: "💸 Wealth tax applied: your balance exceeded {0}"
   
 # Banking System
-bank:
-  account-info: "&6=== Bank Account ==="
-  balance: "&7Account Balance: &a{0}"
-  interest-rate: "&7Interest Rate: &e{0}%"
-  deposited: "&aDeposited &e{0} &ato your bank account"
-  withdrawn: "&aWithdrawn &e{0} &afrom your bank account"
-  insufficient-bank-funds: "&cInsufficient funds in your bank account"
-  interest-earned: "&aYou earned &e{0} &ain interest"
-  daily-limit-reached: "&cYou have reached your daily transaction limit"
-  gui:
-    title: "Bank"
-    deposit: "Deposit"
-    withdraw: "Withdraw"
-    balance: "Balance"
-    deposit-lore1: "Deposit a fixed amount into your bank account."
-    deposit-lore2: "Secure, with daily limits."
-    deposit-fast-lore1: "Shortcut for larger deposits."
-    deposit-fast-lore2: "Affects your daily limits."
-    balance-lore: "Shows your current bank account balance."
-    withdraw-lore1: "Withdraw a fixed amount from your bank account."
-    withdraw-lore2: "Transfers to your general balance."
-    withdraw-fast-lore1: "Shortcut for larger withdrawals."
-    withdraw-fast-lore2: "Respects limits and security."
-  error:
-    safe-mode: "&eBank operations are temporarily paused (Safe Mode)."
-  
-# Loan System
 loans:
   usage:
     request: "&cUsage: &e/loans request <amount>"
@@ -426,95 +642,33 @@ loans:
     schedule:
       button: "Schedule"
       title: "Repayment Schedule"
+
+    # Bedrock Forms
+    bedrock:
+      title: "Loans"
+      welcome: "Loans Manager"
+      active: "Active Loan"
+      no-loan: "No active loans"
+      btn:
+        request: "Request Loan"
+        pay: "Make Payment"
+        status: "Loan Status"
+        close: "Close"
+        back: "Back"
+      request:
+        title: "Request Loan"
+        info: "Select loan amount:"
+        note: "Interest rate and terms based on your credit score"
+      confirm:
+        title: "Confirm Loan"
+        yes: "Confirm"
+        no: "Cancel"
+      pay:
+        title: "Make Payment"
+        info: "Select payment amount:"
+        full: "Pay Full Amount"
   
 # Economic Events
-events:
-  banner: "&6&l[ECONOMIC EVENT]"
-  started: "&6Economic Event: &e{0} &6has started!"
-  ended: "&6Economic Event: &e{0} &6has ended"
-  inflation-warning: "&cWarning: High inflation detected in the economy"
-  deflation-warning: "&eNotice: Deflation detected in the economy"
-  market-crash: "&cMarket crash! All prices reduced by {0}%"
-  economic-boom: "&aEconomic boom! All prices increased by {0}%"
-  info:
-    description: "&7{0}"
-    duration: "&7Duration: &e{0} &7minutes"
-  stimulus:
-    received: "&aYou received &e{0} &afrom government stimulus!"
-    injected: "&e💰 Government injected &a{0} &einto the economy!"
-  trade_boom:
-    announce: "&e📈 Trade Boom! All market trades give &a{0}% &ebonus rewards!"
-  market_discovery:
-    announce: "&e🔍 Market Discovery! New valuable items: &a{0} &e(+{1}% value)"
-  investment:
-    announce: "&e💼 Investment opportunity! Market returns up to &a{0}% &eon selected items."
-  market_correction:
-    announce: "&e⚖️ Market correction active: buy +&c{0}% &e, sell -&c{1}%"
-  tech_breakthrough:
-    announce: "&e🧪 Technological breakthrough! Redstone category cheaper: buy -&a{0}% &e, sell -&a{1}%"
-  luxury_demand:
-    announce: "&e💎 Luxury demand! Luxury items sell up to &a{0}% &ehigher."
-  resource_shortage:
-    announce: "&e⛏️ Resource shortage! Affected items prices increased by &a{0}%"
-  seasonal_demand:
-    announce: "&e🍂 Seasonal demand! Selected items increased up to &a{0}%"
-  black_swan:
-    announce: "&e⚠️ Black swan event! Market shock: buy -&a{0}% &e, sell -&a{1}%"
-  
-  admin:
-    help:
-      header: "&6=== Events Admin ==="
-      status: "&e/ecoxpert events status &7- View engine status"
-      active: "&e/ecoxpert events active &7- List active events"
-      history: "&e/ecoxpert events history &7- Show recent events"
-      stats: "&e/ecoxpert events stats [days] &7- Show event counts"
-      statsdetail: "&e/ecoxpert events statsdetail <TYPE> [days] &7- Detailed stats"
-      recent: "&e/ecoxpert events recent &7- Show events from database"
-      antistagnation: "&e/ecoxpert events anti-stagnation &7- Show quiet hours"
-      pause: "&e/ecoxpert events pause &7- Pause event engine"
-      resume: "&e/ecoxpert events resume &7- Resume event engine"
-      trigger: "&e/ecoxpert events trigger <TYPE> &7- Trigger an event"
-      end: "&e/ecoxpert events end <ID> &7- End an active event"
-    unknown: "&cUnknown events subcommand"
-    status: "&7Events Engine: &eActive: {0} &7| Active Events: &e{1} &7| History: &e{2}"
-    active:
-      header: "&6=== Active Events ==="
-      none: "&7No active events"
-      item: "&7ID: &e{0} &7Name: &e{1} &7Type: &e{2} &7Duration: &e{3}m"
-    history:
-      header: "&6=== Recent Events ==="
-      none: "&7No past events"
-      item: "&7ID: &e{0} &7Name: &e{1} &7Type: &e{2} &7Status: &e{3}"
-    trigger:
-      usage: "&cUsage: &e/ecoxpert events trigger <TYPE>"
-    triggered: "&aTriggered event: &e{0}"
-    trigger:
-      failed: "&cFailed to trigger event: {0}"
-    unknown_type: "&cUnknown event type: {0}"
-    end:
-      usage: "&cUsage: &e/ecoxpert events end <ID>"
-    ended: "&aEnded event: &e{0}"
-    not_found: "&cActive event not found: {0}"
-    stats:
-      header: "&6=== Event Stats (last {0} days) ==="
-      item: "&7{0}: &e{1}"
-      none: "&7No events in the last {0} days"
-      total: "&7Total events: &e{0}"
-    recent:
-      header: "&6=== DB Recent Events ==="
-      none: "&7No persisted events found"
-      item: "&7ID: &e{0} &7Type: &e{1} &7Status: &e{2} &7Start: &e{3} &7End: &e{4}"
-    antistagnation:
-      info: "&7Hours since last event: &e{0} &7| Quiet hours: &e{1}"
-    engine:
-      paused: "&eEvents engine paused"
-      resumed: "&aEvents engine resumed"
-  gui:
-    title: "Events Admin"
-    pause: "Pause Engine"
-    resume: "Resume Engine"
-    status: "Status"
-    recent: "Recent"
 admin:
   gui:
     title: "EcoXpert Admin"
@@ -532,39 +686,13 @@ admin:
       total_stimulus: "&7Total Stimulus: &e{0}"
 
 # Professions System
-professions:
-  selected: "&aYou are now a &e{0}"
-  changed: "&aYou changed from &e{0} &ato &e{1}"
-  cooldown: "&cYou must wait &e{0} &cbefore changing professions again"
-  bonus-earned: "&aYou earned a profession bonus of &e{0}"
-  level-up: "&aYour &e{0} &alevel increased to &e{1}"
-  max-level: "&eYou have reached the maximum level for &e{0}"
-  current: "Your current profession: {0}"
-  available: "Available: {0}"
-  gui:
-    title: "Professions"
-    lore:
-      xp: "&7XP: &e{0}&7/&e{1}"
-      progress: "&7Progress: &e{0}% &7to next"
-  xp:
-    gained:
-      buy: "&7You gained &a+{0} XP &7for buying."
-      sell: "&7You gained &a+{0} XP &7for selling."
-  levelup: "&aProfession level up! Now level &e{0}"
+  migrate:
+    started: "&7Starting balance import from &e{0}&7..."
+    completed: "&aImport completed. Imported &e{0} &aaccounts"
+    none: "&7No external economy provider found via Vault"
+    error: "&cFailed to import balances: {0}"
   
-# Events admin detailed stats (missing keys)
-events:
-  admin:
-    statsdetail:
-      header: "&6=== Event Stats: {0} (last {1} days) ==="
-      count: "&7Count: &e{0}"
-      avg_duration: "&7Avg Duration: &e{0} &7minutes"
-      avg_items: "&7Avg Items Affected: &e{0}"
-      avg_buy_delta: "&7Avg Buy Delta: &e{0}"
-      avg_sell_delta: "&7Avg Sell Delta: &e{0}"
-      total_stimulus: "&7Total Stimulus: &e{0}"
-
-# Admin Commands (moved to avoid overriding admin.gui)
+# Error Messages
 admin_cmd:
   player-balance-set: "&aSet {0}'s balance to &e{1}"
   player-balance-added: "&aAdded &e{0} &ato {1}'s balance"
@@ -580,14 +708,33 @@ admin_cmd:
   migration-started: "&aDatabase migration started"
   migration-completed: "&aDatabase migration completed successfully"
 
-admin:
-  migrate:
-    started: "&7Starting balance import from &e{0}&7..."
-    completed: "&aImport completed. Imported &e{0} &aaccounts"
-    none: "&7No external economy provider found via Vault"
-    error: "&cFailed to import balances: {0}"
+professions:
+  selected: "&aYou are now a &e{0}"
+  changed: "&aYou changed from &e{0} &ato &e{1}"
+  cooldown: "&cYou must wait &e{0} &cbefore changing professions again"
+  bonus-earned: "&aYou earned a profession bonus of &e{0}"
+  level-up: "&aYour &e{0} &alevel increased to &e{1}"
+  max-level: "&eYou have reached the maximum level for &e{0}"
+  current: "Your current profession: {0}"
+  available: "Available: {0}"
+  gui:
+    title: "Professions"
+    lore:
+      xp: "&7XP: &e{0}&7/&e{1}"
+      progress: "&7Progress: &e{0}% &7to next"
+
+    # Bedrock Forms
+    bedrock:
+      title: "Professions"
+      info: "Select your profession:"
+
+  xp:
+    gained:
+      buy: "&7You gained &a+{0} XP &7for buying."
+      sell: "&7You gained &a+{0} XP &7for selling."
+  levelup: "&aProfession level up! Now level &e{0}"
   
-# Error Messages
+# Events admin detailed stats (missing keys)
 errors:
   command-error: "&cAn error occurred while executing this command"
   database-error: "&cDatabase error occurred. Please contact an administrator"
@@ -618,49 +765,6 @@ error:
     loans: "&e/loans &7- Manage your loans"
     professions: "&e/profession &7- Manage your economic profession"
 
-economy:
-  admin:
-    help:
-      header: "&6=== Economy Admin ==="
-      status: "&e/ecoxpert economy status &7- Show provider and DB status"
-      diagnostics: "&e/ecoxpert economy diagnostics &7- Run safe diagnostics"
-      policy: "&e/ecoxpert economy policy [show|set <param> <value>|reload] &7- View/adjust policy"
-    unknown: "&cUnknown economy subcommand"
-    status:
-      header: "&6=== Economy Status ==="
-      provider: "&7Provider: &e{0} &7(Plugin: &e{1}&7)"
-      plugins: "&7Detected economy plugins: &e{0}"
-      db: "&7Database: &e{0} &7| Connected: &e{1} &7| Healthy: &e{2}"
-    health:
-      header: "&6=== Economy Health ==="
-      cpi: "&7CPI Index: &e{0}"
-      inflation_annual: "&7Annualized Inflation: &e{0}%"
-      target: "&7Target Inflation: &e{0}"
-      score: "&7Health Score: &e{0}/100"
-    policy:
-      header: "&6=== Economy Policy ==="
-      updated: "&aUpdated policy parameter: &e{0} &7= &e{1}"
-      unknown_param: "&cUnknown policy parameter: {0}"
-      invalid_value: "&cInvalid value: {0}"
-      reloaded: "&aPolicy reloaded from configuration"
-      usage: "&cUsage: &e/ecoxpert economy policy [show|set <param> <value>|reload]"
-    loans:
-      help:
-        header: "&6=== Loans Admin ==="
-        stats: "&e/ecoxpert economy loans stats [days] &7- Totals"
-        statsdetail: "&e/ecoxpert economy loans statsdetail [days] &7- Detailed"
-      stats:
-        header: "&6=== Loans Stats (last {0} days) ==="
-        active: "&7Active loans: &e{0}"
-        outstanding: "&7Total outstanding: &e{0}"
-        avg_rate: "&7Average rate: &e{0}"
-        late: "&7Late installments: &e{0}"
-      statsdetail:
-        header: "&6=== Loans Detailed (last {0} days) ==="
-        created: "&7Loans created: &e{0}"
-        installments: "&7Installments (total/paid/pending/late): &e{0} &7/ &a{1} &7/ &e{2} &7/ &c{3}"
-  
-# Update System
 updates:
   available: "&aNew update available: &ev{0}"
   download: "&7Download: &e{0}"

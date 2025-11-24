@@ -1,5 +1,6 @@
 package me.koyere.ecoxpert.commands;
 
+import me.koyere.ecoxpert.core.platform.PlatformManager;
 import me.koyere.ecoxpert.core.translation.TranslationManager;
 import me.koyere.ecoxpert.modules.market.MarketManager;
 import me.koyere.ecoxpert.modules.market.MarketItem;
@@ -40,10 +41,12 @@ public class MarketCommand implements TabExecutor {
         this.marketManager = marketManager;
         this.translationManager = translationManager;
         this.logger = logger;
-        this.marketGUI = new MarketGUI(marketManager, translationManager, logger);
+        var plugin = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class);
+        var registry = plugin.getServiceRegistry();
+        PlatformManager platformManager = registry.getInstance(PlatformManager.class);
+        this.marketGUI = new MarketGUI(marketManager, translationManager, logger, platformManager);
         // order service via ServiceRegistry
-        this.orderService = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
-            .getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.market.orders.MarketOrderService.class);
+        this.orderService = registry.getInstance(me.koyere.ecoxpert.modules.market.orders.MarketOrderService.class);
         this.ordersGUI = new me.koyere.ecoxpert.modules.market.orders.MarketOrdersGUI(orderService, translationManager, logger);
     }
     

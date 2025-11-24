@@ -18,12 +18,166 @@ public class BankGUI extends BaseGUI {
     private final BankManager bankManager;
     private final EconomyManager economyManager;
     private final TranslationManager tm;
+    private final me.koyere.ecoxpert.core.platform.PlatformManager platformManager;
+    private final me.koyere.ecoxpert.core.bedrock.BedrockFormsManager bedrockFormsManager;
 
     public BankGUI(EcoXpertPlugin plugin, BankManager bankManager, EconomyManager economyManager, TranslationManager tm) {
         super(plugin);
         this.bankManager = bankManager;
         this.economyManager = economyManager;
         this.tm = tm;
+        var registry = plugin.getServiceRegistry();
+        this.platformManager = registry.getInstance(me.koyere.ecoxpert.core.platform.PlatformManager.class);
+        this.bedrockFormsManager = registry.getInstance(me.koyere.ecoxpert.core.bedrock.BedrockFormsManager.class);
+    }
+
+    /**
+     * Open appropriate GUI based on player platform
+     */
+    @Override
+    public void open(Player player) {
+        // Use Geyser Forms for Bedrock players if available
+        if (platformManager.isBedrockPlayer(player) && bedrockFormsManager != null && bedrockFormsManager.isFormsAvailable()) {
+            openBedrockMainMenu(player);
+        } else {
+            super.open(player); // Chest GUI fallback
+        }
+    }
+
+    /**
+     * Open Bedrock-native Form for bank main menu
+     */
+    private void openBedrockMainMenu(Player player) {
+        // Get current bank balance
+        bankManager.getBalance(player.getUniqueId()).thenAccept(balance -> {
+            StringBuilder content = new StringBuilder();
+            content.append("§7").append(tm.getMessage("bank.gui.bedrock.welcome", "Welcome to the Bank!")).append("\n\n");
+            content.append("§7").append(tm.getMessage("bank.gui.bedrock.balance", "Bank Balance")).append(": §e")
+                   .append(economyManager.formatMoney(balance)).append("\n");
+
+            economyManager.getBalance(player.getUniqueId()).thenAccept(walletBalance -> {
+                content.append("§7").append(tm.getMessage("bank.gui.bedrock.wallet", "Wallet")).append(": §e")
+                       .append(economyManager.formatMoney(walletBalance));
+
+                java.util.List<String> buttons = java.util.Arrays.asList(
+                    "§a" + tm.getMessage("bank.gui.bedrock.btn.deposit", "Deposit Money"),
+                    "§c" + tm.getMessage("bank.gui.bedrock.btn.withdraw", "Withdraw Money"),
+                    "§e" + tm.getMessage("bank.gui.bedrock.btn.balance", "Check Balance"),
+                    "§7" + tm.getMessage("bank.gui.bedrock.btn.close", "Close")
+                );
+
+                bedrockFormsManager.sendSimpleForm(
+                    player,
+                    tm.getMessage("bank.gui.bedrock.title", "Bank"),
+                    content.toString(),
+                    buttons,
+                    buttonIndex -> handleBankMenuSelection(player, buttonIndex)
+                );
+            });
+        });
+    }
+
+    /**
+     * Handle bank main menu selection
+     */
+    private void handleBankMenuSelection(Player player, int buttonIndex) {
+        switch (buttonIndex) {
+            case 0 -> openDepositForm(player);
+            case 1 -> openWithdrawForm(player);
+            case 2 -> {
+                bankManager.getBalance(player.getUniqueId()).thenAccept(balance -> {
+                    player.sendMessage(tm.getMessage("prefix") +
+                        tm.getMessage("bank.balance", economyManager.formatMoney(balance)));
+                });
+            }
+            // case 3 is close - do nothing
+        }
+    }
+
+    /**
+     * Open deposit amount selection form
+     */
+    private void openDepositForm(Player player) {
+        economyManager.getBalance(player.getUniqueId()).thenAccept(walletBalance -> {
+            StringBuilder content = new StringBuilder();
+            content.append("§7").append(tm.getMessage("bank.gui.bedrock.deposit.info", "Select amount to deposit:")).append("\n\n");
+            content.append("§7").append(tm.getMessage("bank.gui.bedrock.wallet", "Wallet")).append(": §e")
+                   .append(economyManager.formatMoney(walletBalance));
+
+            java.util.List<String> buttons = java.util.Arrays.asList(
+                "§a+$100",
+                "§a+$500",
+                "§a+$1,000",
+                "§a+$5,000",
+                "§a+$10,000",
+                "§7" + tm.getMessage("bank.gui.bedrock.btn.back", "Back")
+            );
+
+            bedrockFormsManager.sendSimpleForm(
+                player,
+                tm.getMessage("bank.gui.bedrock.deposit.title", "Deposit"),
+                content.toString(),
+                buttons,
+                buttonIndex -> {
+                    if (buttonIndex < 5) {
+                        BigDecimal amount = new BigDecimal(new int[]{100, 500, 1000, 5000, 10000}[buttonIndex]);
+                        bankManager.deposit(player, amount).thenAccept(result -> {
+                            sendResult(player, result);
+                            if (result.isSuccess()) {
+                                // Re-open menu to show updated balance
+                                plugin.getServer().getScheduler().runTaskLater(plugin,
+                                    () -> openBedrockMainMenu(player), 20L);
+                            }
+                        });
+                    } else if (buttonIndex == 5) {
+                        openBedrockMainMenu(player);
+                    }
+                }
+            );
+        });
+    }
+
+    /**
+     * Open withdraw amount selection form
+     */
+    private void openWithdrawForm(Player player) {
+        bankManager.getBalance(player.getUniqueId()).thenAccept(bankBalance -> {
+            StringBuilder content = new StringBuilder();
+            content.append("§7").append(tm.getMessage("bank.gui.bedrock.withdraw.info", "Select amount to withdraw:")).append("\n\n");
+            content.append("§7").append(tm.getMessage("bank.gui.bedrock.balance", "Bank Balance")).append(": §e")
+                   .append(economyManager.formatMoney(bankBalance));
+
+            java.util.List<String> buttons = java.util.Arrays.asList(
+                "§c-$100",
+                "§c-$500",
+                "§c-$1,000",
+                "§c-$5,000",
+                "§c-$10,000",
+                "§7" + tm.getMessage("bank.gui.bedrock.btn.back", "Back")
+            );
+
+            bedrockFormsManager.sendSimpleForm(
+                player,
+                tm.getMessage("bank.gui.bedrock.withdraw.title", "Withdraw"),
+                content.toString(),
+                buttons,
+                buttonIndex -> {
+                    if (buttonIndex < 5) {
+                        BigDecimal amount = new BigDecimal(new int[]{100, 500, 1000, 5000, 10000}[buttonIndex]);
+                        bankManager.withdraw(player, amount).thenAccept(result -> {
+                            sendResult(player, result);
+                            if (result.isSuccess()) {
+                                // Re-open menu to show updated balance
+                                plugin.getServer().getScheduler().runTaskLater(plugin,
+                                    () -> openBedrockMainMenu(player), 20L);
+                            }
+                        });
+                    } else if (buttonIndex == 5) {
+                        openBedrockMainMenu(player);
+                    }
+                }
+            );
+        });
     }
 
     @Override

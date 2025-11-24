@@ -50,7 +50,8 @@ Traditional servers follow this pattern:
 - **Safety Constraints** - Prevents extreme price manipulation
 
 ### 🌐 **Cross-Platform Support**
-- **Java + Bedrock** - Full GeyserMC/FloodGate compatibility
+- **Java + Bedrock** - Full GeyserMC/FloodGate compatibility with Floodgate reflection hook and platform-aware UX
+- **Bedrock UX** - When a Bedrock player taps an item in the Market GUI, a touch-friendly action panel appears (buy/sell/list buttons) so no right-click/shift-click is required
 - **Multi-Server** - Spigot, Paper, Purpur, Folia support
 - **Version Range** - MC 1.19.4 through 1.21.9+
 
@@ -289,6 +290,7 @@ GUI Notes
   - Info panel shows sorting mode. Modes: Name, Buy ↑, Sell ↑/↓, Volume ↑/↓ (click the book to cycle).
   - Right-click on an item: opens "List Item" sub‑GUI to publish a fixed-price listing with quick quantity/duration and price adjustments.
   - In the List GUI, the allowed price range (min/max) is displayed under the unit price based on `orders.listing.price_bounds_*`.
+  - Bedrock players: tapping an item opens a touch-friendly Trade Options panel with explicit buttons to buy (x1/xN/stack), sell (x1/stack/all), or create listings—no right-click or shift-click needed.
 - Loans GUI:
   - Offer preview: shows amount, rate, term, and score with Confirm/Cancel before creating the loan.
   - Schedule pagination: view up to 45 installments per page with Prev/Next.
@@ -989,6 +991,58 @@ A: Market uses real supply/demand. Prices adjust based on actual trading activit
 
 **Q: Banking features not available**
 A: Banking system requires full database setup. Check logs for initialization errors.
+
+### Bedrock Edition (GeyserMC) Issues
+
+**Q: Error `[SQLITE_BUSY] The database file is locked (database is locked)`**
+
+A: This occurs when multiple transactions happen simultaneously in SQLite. EcoXpert has been optimized to handle this:
+
+**Solution (Automatic in v1.2.3+):**
+- SQLite `busy_timeout` increased from 5s to 15s
+- WAL (Write-Ahead Logging) mode enabled
+- Most lock errors should resolve automatically
+
+**If errors persist:**
+1. Consider migrating to MySQL for better concurrency:
+   ```yaml
+   database:
+     type: "mysql"  # Change from "sqlite"
+   ```
+2. MySQL drivers download automatically on first startup
+3. Configure MySQL connection in `config.yml`
+
+**Q: Bedrock players report "blocks staying in inventory" when using GUIs**
+
+A: Bedrock Edition doesn't support interactive chest GUIs like Java Edition. EcoXpert has Bedrock-native solutions:
+
+**Solution (v1.2.3+):**
+1. Install **GeyserMC** and **Floodgate** on your server
+2. Restart server - EcoXpert auto-detects Geyser
+3. Log will show: `"Geyser Forms API detected - Bedrock-native UIs enabled"`
+4. Bedrock players now get native Forms instead of chest GUIs
+
+**Current Bedrock Forms Support (v1.2.3):**
+- ✅ `/market` - Full Geyser Forms support (buy/sell/list items)
+- ✅ `/bankgui` - Full Geyser Forms support (deposit/withdraw/balance) **NEW!**
+- ✅ `/loansgui` - Full Geyser Forms support (request/pay/status) **NEW!**
+- ✅ `/professiongui` - Full Geyser Forms support (select profession) **NEW!**
+- ℹ️ Admin GUIs (`/ecoevents`, `/ecoadmin`) - Java Edition recommended
+
+**With Geyser installed:**
+- ✅ Native Bedrock Forms for all player-facing GUIs
+- ✅ Touch-friendly interface optimized for mobile/console
+- ✅ No item duplication or inventory issues
+- ✅ Automatic platform detection and UX adaptation
+
+**Without Geyser installed:**
+- ⚠️ Fallback to chest GUIs (items may appear in inventory temporarily)
+- **Recommendation:** Install Geyser-Spigot + Floodgate for best experience
+- **Alternative:** Use text commands instead of GUIs
+
+**Future Development:**
+- ALL new features MUST be 100% Bedrock compatible (see `BEDROCK_COMPATIBILITY.md`)
+- Bedrock support is a MANDATORY requirement, not optional
 
 ### MySQL Database Connection Issues
 
