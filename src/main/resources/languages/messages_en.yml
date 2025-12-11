@@ -791,3 +791,37 @@ numbers:
   million: "M"
   billion: "B"
   trillion: "T"
+
+# Baltop System
+baltop:
+  header: "&6&l=== &eTop Balances &7(Page {0}/{1}) &6&l==="
+  entry: "&7#{0} &f{1} &8- &a{2}"
+  entry-self: "&e&l#{0} &e&l{1} &7(You) &8- &a{2}"
+  footer-prev: "&a« &7Previous page: &e/baltop {0}"
+  footer-next: "&a» &7Next page: &e/baltop {0}"
+  your-rank: "&7Your rank: &e#{0} &8- &a{1}"
+  no-data: "&cNo leaderboard data available"
+  invalid-page: "&cInvalid page number: {0}"
+  page-out-of-range: "&cPage {0} is out of range (max: {1})"
+
+  gui:
+    title: "Top Balances - Page {0}"
+    balance: "Balance"
+    your-position: "This is your position!"
+    your-stats: "Your Statistics"
+    your-rank: "Your Rank"
+    your-balance: "Your Balance"
+    prev: "« Previous Page"
+    next: "Next Page »"
+    close: "Close"
+    nav-hint: "Click to navigate"
+
+    bedrock:
+      title: "Top Balances"
+      subtitle: "Top Players - Page {0}/{1}"
+      welcome: "Leaderboard"
+      your-rank: "Your Rank: #{0}"
+      btn:
+        prev: "Previous Page"
+        next: "Next Page"
+        close: "Close"

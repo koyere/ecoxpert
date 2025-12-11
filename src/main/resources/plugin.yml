@@ -47,6 +47,8 @@ permissions:
     children:
       ecoxpert.economy.balance: true
       ecoxpert.economy.pay: true
+      ecoxpert.baltop: true
+      ecoxpert.baltop.gui: true
       ecoxpert.market.buy: true
       ecoxpert.market.sell: true
       ecoxpert.market.prices: true
@@ -114,7 +116,15 @@ permissions:
   ecoxpert.economy.pay:
     description: Pay other players
     default: true
-    
+
+  ecoxpert.baltop:
+    description: View balance leaderboard
+    default: true
+
+  ecoxpert.baltop.gui:
+    description: Open baltop GUI
+    default: true
+
   ecoxpert.market.buy:
     description: Buy items from market
     default: true
@@ -186,7 +196,13 @@ commands:
     aliases: [ pay ]
     usage: /<command> <player> <amount>
     permission: ecoxpert.economy.pay
-    
+
+  baltop:
+    description: View balance leaderboard
+    aliases: [ balancetop, topbalances ]
+    usage: /<command> [page|gui [page]]
+    permission: ecoxpert.baltop
+
   market:
     description: Access market system
     aliases: [ shop, store ]

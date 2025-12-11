@@ -26,38 +26,36 @@ public class BankingServiceImpl implements BankingService {
     @Override
     public CompletableFuture<BankAccountInfo> getAccount(UUID playerId) {
         return bankManager.getAccount(playerId)
-            .thenApply(optAccount -> {
-                if (optAccount.isEmpty()) return null;
-                BankAccount account = optAccount.get();
+                .thenApply(optAccount -> {
+                    if (optAccount.isEmpty())
+                        return null;
+                    BankAccount account = optAccount.get();
 
-                // Convert LocalDateTime to Instant
-                java.time.Instant lastInterest = account.getLastInterestCalculation()
-                    .atZone(java.time.ZoneId.systemDefault()).toInstant();
+                    // Convert LocalDateTime to Instant
+                    java.time.Instant lastInterest = account.getLastInterestCalculation()
+                            .atZone(java.time.ZoneId.systemDefault()).toInstant();
 
-                return new BankAccountInfo(
-                    playerId,
-                    account.getBalance(),
-                    account.getTier().name(),
-                    account.getTier().getAnnualInterestRate().doubleValue(),
-                    lastInterest
-                );
-            })
-            .exceptionally(ex -> null);
+                    return new BankAccountInfo(
+                            playerId,
+                            account.getBalance(),
+                            account.getTier().name(),
+                            account.getTier().getAnnualInterestRate().doubleValue(),
+                            lastInterest);
+                })
+                .exceptionally(ex -> null);
     }
 
     @Override
     public CompletableFuture<BankOperationStatus> createAccount(UUID playerId) {
         return bankManager.getOrCreateAccount(playerId)
-            .thenApply(account -> new BankOperationStatus(
-                true,
-                "Account created successfully",
-                account.getBalance()
-            ))
-            .exceptionally(ex -> new BankOperationStatus(
-                false,
-                "Failed to create account: " + ex.getMessage(),
-                BigDecimal.ZERO
-            ));
+                .thenApply(account -> new BankOperationStatus(
+                        true,
+                        "Account created successfully",
+                        account.getBalance()))
+                .exceptionally(ex -> new BankOperationStatus(
+                        false,
+                        "Failed to create account: " + ex.getMessage(),
+                        BigDecimal.ZERO));
     }
 
     @Override
@@ -65,21 +63,18 @@ public class BankingServiceImpl implements BankingService {
         Player player = Bukkit.getPlayer(playerId);
         if (player == null) {
             return CompletableFuture.completedFuture(
-                new BankOperationStatus(false, "Player not online", BigDecimal.ZERO)
-            );
+                    new BankOperationStatus(false, "Player not online", BigDecimal.ZERO));
         }
 
         return bankManager.deposit(player, amount)
-            .thenApply(result -> new BankOperationStatus(
-                result.isSuccess(),
-                result.getMessage(),
-                result.getNewBalance()
-            ))
-            .exceptionally(ex -> new BankOperationStatus(
-                false,
-                "Deposit failed: " + ex.getMessage(),
-                BigDecimal.ZERO
-            ));
+                .thenApply(result -> new BankOperationStatus(
+                        result.isSuccess(),
+                        result.getMessage(),
+                        result.getNewBalance()))
+                .exceptionally(ex -> new BankOperationStatus(
+                        false,
+                        "Deposit failed: " + ex.getMessage(),
+                        BigDecimal.ZERO));
     }
 
     @Override
@@ -87,21 +82,18 @@ public class BankingServiceImpl implements BankingService {
         Player player = Bukkit.getPlayer(playerId);
         if (player == null) {
             return CompletableFuture.completedFuture(
-                new BankOperationStatus(false, "Player not online", BigDecimal.ZERO)
-            );
+                    new BankOperationStatus(false, "Player not online", BigDecimal.ZERO));
         }
 
         return bankManager.withdraw(player, amount)
-            .thenApply(result -> new BankOperationStatus(
-                result.isSuccess(),
-                result.getMessage(),
-                result.getNewBalance()
-            ))
-            .exceptionally(ex -> new BankOperationStatus(
-                false,
-                "Withdrawal failed: " + ex.getMessage(),
-                BigDecimal.ZERO
-            ));
+                .thenApply(result -> new BankOperationStatus(
+                        result.isSuccess(),
+                        result.getMessage(),
+                        result.getNewBalance()))
+                .exceptionally(ex -> new BankOperationStatus(
+                        false,
+                        "Withdrawal failed: " + ex.getMessage(),
+                        BigDecimal.ZERO));
     }
 
     @Override
@@ -109,38 +101,40 @@ public class BankingServiceImpl implements BankingService {
         // BankManager doesn't have getStatistics(UUID)
         // We'd need to calculate from transaction history
         return bankManager.getTransactionHistory(playerId, 1000)
-            .thenApply(transactions -> {
-                BigDecimal totalDeposited = BigDecimal.ZERO;
-                BigDecimal totalWithdrawn = BigDecimal.ZERO;
-                BigDecimal totalInterest = BigDecimal.ZERO;
+                .thenApply(transactions -> {
+                    BigDecimal totalDeposited = BigDecimal.ZERO;
+                    BigDecimal totalWithdrawn = BigDecimal.ZERO;
+                    BigDecimal totalInterest = BigDecimal.ZERO;
 
-                for (var tx : transactions) {
-                    switch (tx.getType()) {
-                        case DEPOSIT -> totalDeposited = totalDeposited.add(tx.getAmount());
-                        case WITHDRAW -> totalWithdrawn = totalWithdrawn.add(tx.getAmount());
-                        case INTEREST -> totalInterest = totalInterest.add(tx.getAmount());
+                    for (var tx : transactions) {
+                        switch (tx.getType()) {
+                            case DEPOSIT -> totalDeposited = totalDeposited.add(tx.getAmount());
+                            case WITHDRAW -> totalWithdrawn = totalWithdrawn.add(tx.getAmount());
+                            case INTEREST -> totalInterest = totalInterest.add(tx.getAmount());
+                            // Other transaction types (TRANSFER_IN, TRANSFER_OUT, FEE, ADMIN_ADJUSTMENT,
+                            // FREEZE, UNFREEZE, TIER_UPGRADE) don't affect these basic statistics
+                            default -> {
+                            } // Explicitly ignore other types
+                        }
                     }
-                }
 
-                return new BankStats(
-                    totalDeposited,
-                    totalWithdrawn,
-                    totalInterest,
-                    transactions.size()
-                );
-            })
-            .exceptionally(ex -> new BankStats(
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                0
-            ));
+                    return new BankStats(
+                            totalDeposited,
+                            totalWithdrawn,
+                            totalInterest,
+                            transactions.size());
+                })
+                .exceptionally(ex -> new BankStats(
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        BigDecimal.ZERO,
+                        0));
     }
 
     @Override
     public CompletableFuture<Double> getInterestRate(UUID playerId) {
         return bankManager.getAccountTier(playerId)
-            .thenApply(tier -> tier.getAnnualInterestRate().doubleValue())
-            .exceptionally(ex -> 0.0);
+                .thenApply(tier -> tier.getAnnualInterestRate().doubleValue())
+                .exceptionally(ex -> 0.0);
     }
 }

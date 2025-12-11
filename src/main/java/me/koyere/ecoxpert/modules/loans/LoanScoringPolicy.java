@@ -8,7 +8,6 @@ import me.koyere.ecoxpert.core.data.QueryResult;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -61,9 +60,10 @@ class LoanScoringPolicy {
             try {
                 // Fetch last loan id for player (the one we just inserted)
                 try (QueryResult qr = dataManager.executeQuery(
-                    "SELECT id FROM ecoxpert_loans WHERE player_uuid = ? AND status='ACTIVE' ORDER BY id DESC LIMIT 1",
-                    player.toString()).join()) {
-                    if (!qr.next()) return false;
+                        "SELECT id FROM ecoxpert_loans WHERE player_uuid = ? AND status='ACTIVE' ORDER BY id DESC LIMIT 1",
+                        player.toString()).join()) {
+                    if (!qr.next())
+                        return false;
                     long loanId = qr.getLong("id");
                     // Total repay = principal * (1 + rate)
                     BigDecimal totalRepay = amount.multiply(BigDecimal.ONE.add(rate)).setScale(2, RoundingMode.HALF_UP);
@@ -72,9 +72,8 @@ class LoanScoringPolicy {
                     for (int i = 1; i <= termDays; i++) {
                         LocalDate due = start.plusDays(i - 1);
                         dataManager.executeUpdate(
-                            "INSERT INTO ecoxpert_loan_schedules (loan_id, installment_no, due_date, amount_due, paid_amount, status) VALUES (?, ?, ?, ?, 0, 'PENDING')",
-                            loanId, i, java.sql.Date.valueOf(due), daily
-                        ).join();
+                                "INSERT INTO ecoxpert_loan_schedules (loan_id, installment_no, due_date, amount_due, paid_amount, status) VALUES (?, ?, ?, ?, 0, 'PENDING')",
+                                loanId, i, java.sql.Date.valueOf(due), daily).join();
                     }
                 }
                 return true;
@@ -87,24 +86,24 @@ class LoanScoringPolicy {
     List<LoanPayment> getSchedule(UUID player) {
         List<LoanPayment> out = new ArrayList<>();
         try (QueryResult qr = dataManager.executeQuery(
-            "SELECT s.id, s.loan_id, s.installment_no, s.due_date, s.amount_due, s.paid_amount, s.status " +
-                "FROM ecoxpert_loan_schedules s JOIN ecoxpert_loans l ON l.id = s.loan_id " +
-                "WHERE l.player_uuid = ? AND l.status='ACTIVE' ORDER BY s.installment_no",
-            player.toString()).join()) {
+                "SELECT s.id, s.loan_id, s.installment_no, s.due_date, s.amount_due, s.paid_amount, s.status " +
+                        "FROM ecoxpert_loan_schedules s JOIN ecoxpert_loans l ON l.id = s.loan_id " +
+                        "WHERE l.player_uuid = ? AND l.status='ACTIVE' ORDER BY s.installment_no",
+                player.toString()).join()) {
             while (qr.next()) {
                 out.add(new LoanPayment(
-                    qr.getLong("id"),
-                    qr.getLong("loan_id"),
-                    qr.getInt("installment_no"),
-                    (qr.getTimestamp("due_date") != null
-                        ? qr.getTimestamp("due_date").toLocalDateTime().toLocalDate()
-                        : java.time.LocalDate.now()),
-                    qr.getBigDecimal("amount_due"),
-                    qr.getBigDecimal("paid_amount"),
-                    qr.getString("status")
-                ));
+                        qr.getLong("id"),
+                        qr.getLong("loan_id"),
+                        qr.getInt("installment_no"),
+                        (qr.getTimestamp("due_date") != null
+                                ? qr.getTimestamp("due_date").toLocalDateTime().toLocalDate()
+                                : java.time.LocalDate.now()),
+                        qr.getBigDecimal("amount_due"),
+                        qr.getBigDecimal("paid_amount"),
+                        qr.getString("status")));
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return out;
     }
 
@@ -123,42 +122,48 @@ class LoanScoringPolicy {
             // Delinquency penalty (0..200)
             int delinq = getDelinquencies(player, 30);
             score -= Math.min(200, delinq * 40);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return Math.max(300, Math.min(1000, score));
     }
 
     private BigDecimal getBalance(UUID player) {
         try (QueryResult qr = dataManager.executeQuery(
-            "SELECT balance FROM ecoxpert_accounts WHERE player_uuid = ?", player.toString()).join()) {
-            if (qr.next()) return qr.getBigDecimal("balance");
-        } catch (Exception ignored) {}
+                "SELECT balance FROM ecoxpert_accounts WHERE player_uuid = ?", player.toString()).join()) {
+            if (qr.next())
+                return qr.getBigDecimal("balance");
+        } catch (Exception ignored) {
+        }
         return BigDecimal.ZERO;
     }
 
     private BigDecimal getIncomeLastDays(UUID player, int days) {
         try (QueryResult qr = dataManager.executeQuery(
-            "SELECT SUM(amount) as total FROM ecoxpert_transactions WHERE to_uuid = ? AND created_at >= datetime('now', '-' || ? || ' days')",
-            player.toString(), days).join()) {
+                "SELECT SUM(amount) as total FROM ecoxpert_transactions WHERE to_uuid = ? AND created_at >= datetime('now', '-' || ? || ' days')",
+                player.toString(), days).join()) {
             if (qr.next()) {
                 BigDecimal sum = qr.getBigDecimal("total");
                 return sum != null ? sum : BigDecimal.ZERO;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return BigDecimal.ZERO;
     }
 
     private int getDelinquencies(UUID player, int days) {
         try (QueryResult qr = dataManager.executeQuery(
-            "SELECT COUNT(*) as cnt FROM ecoxpert_loan_schedules s JOIN ecoxpert_loans l ON l.id = s.loan_id " +
-                "WHERE l.player_uuid = ? AND s.status = 'LATE' AND s.due_date >= date('now', '-' || ? || ' days')",
-            player.toString(), days).join()) {
+                "SELECT COUNT(*) as cnt FROM ecoxpert_loan_schedules s JOIN ecoxpert_loans l ON l.id = s.loan_id " +
+                        "WHERE l.player_uuid = ? AND s.status = 'LATE' AND s.due_date >= date('now', '-' || ? || ' days')",
+                player.toString(), days).join()) {
             if (qr.next()) {
                 Integer cnt = qr.getInt("cnt");
-                if (cnt != null) return cnt;
+                if (cnt != null)
+                    return cnt;
                 Long l = qr.getLong("cnt");
                 return l != null ? l.intValue() : 0;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return 0;
     }
 }

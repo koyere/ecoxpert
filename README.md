@@ -197,6 +197,8 @@ EcoXpert operates in different modes based on your server setup:
 ```
 /ecox balance [player]          - Check balance
 /ecox pay <player> <amount>     - Pay another player
+/baltop [page]                  - View balance leaderboard (top players)
+/baltop gui [page]              - Open leaderboard GUI (Java + Bedrock)
 /ecox help                      - Show help menu
 ```
 
@@ -257,6 +259,7 @@ Key parameters (quick reference)
 ```
 /bankgui                        - Open Bank GUI
 /loansgui                      - Open Loans GUI
+/baltop gui [page]             - Open Baltop (Leaderboard) GUI
 /ecoevents                     - Open Events Admin GUI
 /ecoadmin                      - Open EcoXpert Admin dashboard
 /professiongui                 - Open Professions GUI
@@ -447,12 +450,17 @@ market:
 ```
 
 ### Permissions (summary)
-- Users: `ecoxpert.user`, `ecoxpert.economy.balance`, `ecoxpert.economy.pay`, `ecoxpert.market.*`, `ecoxpert.bank.*`, `ecoxpert.loans.request`, `ecoxpert.loans.pay`
+- Users: `ecoxpert.user`, `ecoxpert.economy.balance`, `ecoxpert.economy.pay`, `ecoxpert.baltop`, `ecoxpert.baltop.gui`, `ecoxpert.market.*`, `ecoxpert.bank.*`, `ecoxpert.loans.request`, `ecoxpert.loans.pay`
 - Admins: `ecoxpert.admin`, `ecoxpert.admin.economy`, `ecoxpert.admin.events`, `ecoxpert.admin.bank`, `ecoxpert.admin.market`
+
+**Baltop Permissions:**
+- `ecoxpert.baltop` - View balance leaderboard in chat (default: true)
+- `ecoxpert.baltop.gui` - Open GUI leaderboard (default: true)
 
 GUI Permissions
 - `/bankgui`: `ecoxpert.bank.account`
 - `/loansgui`: `ecoxpert.loans.request`
+- `/baltop gui`: `ecoxpert.baltop.gui`
 - `/ecoevents`: `ecoxpert.admin.events`
 - `/market` (GUI with no args): `ecoxpert.market.buy` (opens GUI; trades still validate specific perms)
 

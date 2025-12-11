@@ -7,9 +7,6 @@ import me.koyere.ecoxpert.modules.market.MarketManager;
 import me.koyere.ecoxpert.modules.bank.BankManager;
 import me.koyere.ecoxpert.modules.events.EconomicEventEngine;
 import me.koyere.ecoxpert.modules.loans.LoanManager;
-import me.koyere.ecoxpert.commands.LoansCommand;
-
-import java.util.Arrays;
 
 public class CommandManager {
 
@@ -23,22 +20,27 @@ public class CommandManager {
     private final LoanManager loanManager;
     private MarketCommand marketCommand;
 
-    public CommandManager(EcoXpertPlugin plugin, EconomyManager economyManager, MarketManager marketManager, BankManager bankManager, TranslationManager translationManager) {
-        this(plugin, economyManager, marketManager, bankManager, translationManager, plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class));
+    public CommandManager(EcoXpertPlugin plugin, EconomyManager economyManager, MarketManager marketManager,
+            BankManager bankManager, TranslationManager translationManager) {
+        this(plugin, economyManager, marketManager, bankManager, translationManager,
+                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class));
     }
 
-    public CommandManager(EcoXpertPlugin plugin, EconomyManager economyManager, MarketManager marketManager, BankManager bankManager, TranslationManager translationManager, me.koyere.ecoxpert.core.config.ConfigManager configManager) {
+    public CommandManager(EcoXpertPlugin plugin, EconomyManager economyManager, MarketManager marketManager,
+            BankManager bankManager, TranslationManager translationManager,
+            me.koyere.ecoxpert.core.config.ConfigManager configManager) {
         this.plugin = plugin;
         this.economyManager = economyManager;
         this.marketManager = marketManager;
         this.bankManager = bankManager;
         this.translationManager = translationManager;
         this.configManager = configManager;
-        // Fetch event engine from service registry to wire into commands without changing constructor API
+        // Fetch event engine from service registry to wire into commands without
+        // changing constructor API
         this.eventEngine = plugin.getServiceRegistry().getInstance(EconomicEventEngine.class);
         this.loanManager = plugin.getServiceRegistry().getInstance(LoanManager.class);
     }
-    
+
     /**
      * Register all plugin commands
      */
@@ -48,39 +50,45 @@ public class CommandManager {
         EcoCommand ecoCommand = new EcoCommand(economyManager, translationManager, configManager, eventEngine);
         plugin.getCommand("ecoxpert").setExecutor(ecoCommand);
         plugin.getCommand("ecoxpert").setTabCompleter(ecoCommand);
-        
+
         // Direct commands for convenience
         BalanceCommand balanceCommand = new BalanceCommand(economyManager, translationManager, configManager);
         plugin.getCommand("ecobalance").setExecutor(balanceCommand);
         plugin.getCommand("ecobalance").setTabCompleter(balanceCommand);
-        
+
         PayCommand payCommand = new PayCommand(economyManager, translationManager, configManager);
         plugin.getCommand("ecopay").setExecutor(payCommand);
         plugin.getCommand("ecopay").setTabCompleter(payCommand);
-        
+
+        // Baltop command
+        BaltopCommand baltopCommand = new BaltopCommand(plugin, economyManager, translationManager, configManager);
+        plugin.getCommand("baltop").setExecutor(baltopCommand);
+        plugin.getCommand("baltop").setTabCompleter(baltopCommand);
+
         // Market commands
         this.marketCommand = new MarketCommand(marketManager, translationManager, plugin.getLogger());
         plugin.getCommand("market").setExecutor(marketCommand);
         plugin.getCommand("market").setTabCompleter(marketCommand);
-        
+
         // Register Market GUIs events
         plugin.getServer().getPluginManager().registerEvents(marketCommand.getMarketGUI(), plugin);
         plugin.getServer().getPluginManager().registerEvents(marketCommand.getOrdersGUI(), plugin);
         // Register loan notifications
         plugin.getServer().getPluginManager().registerEvents(
-            new me.koyere.ecoxpert.modules.loans.LoanNotificationListener(
-                plugin,
-                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.data.DataManager.class),
-                translationManager
-            ), plugin);
-        
+                new me.koyere.ecoxpert.modules.loans.LoanNotificationListener(
+                        plugin,
+                        plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.data.DataManager.class),
+                        translationManager),
+                plugin);
+
         // Bank commands
         BankCommand bankCommand = new BankCommand(bankManager, economyManager, translationManager, configManager);
         plugin.getCommand("bank").setExecutor(bankCommand);
         plugin.getCommand("bank").setTabCompleter(bankCommand);
         // Bank GUI command
         if (plugin.getCommand("bankgui") != null) {
-            plugin.getCommand("bankgui").setExecutor(new BankGuiCommand(plugin, bankManager, economyManager, translationManager));
+            plugin.getCommand("bankgui")
+                    .setExecutor(new BankGuiCommand(plugin, bankManager, economyManager, translationManager));
         }
 
         // Loans commands
@@ -90,7 +98,8 @@ public class CommandManager {
             plugin.getCommand("loans").setTabCompleter(loansCommand);
         }
         if (plugin.getCommand("loansgui") != null) {
-            plugin.getCommand("loansgui").setExecutor(new LoansGuiCommand(plugin, loanManager, economyManager, translationManager));
+            plugin.getCommand("loansgui")
+                    .setExecutor(new LoansGuiCommand(plugin, loanManager, economyManager, translationManager));
         }
 
         // Admin GUI command
@@ -99,28 +108,32 @@ public class CommandManager {
         }
         if (plugin.getCommand("ecoevents") != null) {
             plugin.getCommand("ecoevents").setExecutor(new EventsGuiCommand(plugin,
-                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.events.EconomicEventEngine.class),
-                translationManager));
+                    plugin.getServiceRegistry()
+                            .getInstance(me.koyere.ecoxpert.modules.events.EconomicEventEngine.class),
+                    translationManager));
         }
         if (plugin.getCommand("professiongui") != null) {
             plugin.getCommand("professiongui").setExecutor(new ProfessionGuiCommand(
-                plugin,
-                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class),
-                translationManager));
+                    plugin,
+                    plugin.getServiceRegistry()
+                            .getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class),
+                    translationManager));
         }
         // Profession command
         if (plugin.getCommand("profession") != null) {
             plugin.getCommand("profession").setExecutor(new ProfessionCommand(
-                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class),
-                translationManager));
+                    plugin.getServiceRegistry()
+                            .getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class),
+                    translationManager));
             plugin.getCommand("profession").setTabCompleter(new ProfessionCommand(
-                plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class),
-                translationManager));
+                    plugin.getServiceRegistry()
+                            .getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class),
+                    translationManager));
         }
-        
+
         plugin.getLogger().info("Registered economy and market commands");
     }
-    
+
     /**
      * Unregister all commands
      */
@@ -129,7 +142,7 @@ public class CommandManager {
         if (marketCommand != null) {
             marketCommand.getMarketGUI().closeAllGUIs();
         }
-        
+
         // Commands are automatically unregistered when plugin disables
         plugin.getLogger().info("Unregistered economy commands");
     }

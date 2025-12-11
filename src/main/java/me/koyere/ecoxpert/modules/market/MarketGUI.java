@@ -27,7 +27,7 @@ import java.util.logging.Logger;
  * item browsing, and interactive trading functionality.
  */
 public class MarketGUI implements Listener {
-    
+
     private final MarketManager marketManager;
     private final me.koyere.ecoxpert.modules.market.orders.MarketOrderService orderService;
     private final TranslationManager translationManager;
@@ -35,16 +35,15 @@ public class MarketGUI implements Listener {
     private final Logger logger;
     private final PlatformManager platformManager;
     private final me.koyere.ecoxpert.core.bedrock.BedrockFormsManager bedrockFormsManager;
-    
+
     // GUI tracking
     private final Map<UUID, MarketInventory> openGUIs = new ConcurrentHashMap<>();
     private final Map<UUID, BedrockActionState> bedrockActions = new ConcurrentHashMap<>();
-    
+
     // GUI configuration
     private static final int ITEMS_PER_PAGE = 45; // 5 rows for items
     private static final int INVENTORY_SIZE = 54; // 6 rows total
-    private static final String GUI_TITLE = "Market";
-    
+
     // Special item slots
     private static final int PREV_PAGE_SLOT = 45;
     private static final int NEXT_PAGE_SLOT = 53;
@@ -59,14 +58,15 @@ public class MarketGUI implements Listener {
     // Category cache
     private final java.util.List<String> categoryOrder = new java.util.ArrayList<>();
     private final java.util.Map<String, java.util.Set<Material>> categories = new java.util.HashMap<>();
-    
+
     public MarketGUI(MarketManager marketManager, TranslationManager translationManager, Logger logger,
-                     PlatformManager platformManager) {
+            PlatformManager platformManager) {
         this.marketManager = marketManager;
         this.translationManager = translationManager;
         this.logger = logger;
         this.platformManager = platformManager;
-        var registry = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class).getServiceRegistry();
+        var registry = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+                .getServiceRegistry();
         this.configManager = registry.getInstance(ConfigManager.class);
         this.orderService = registry.getInstance(me.koyere.ecoxpert.modules.market.orders.MarketOrderService.class);
         this.bedrockFormsManager = registry.getInstance(me.koyere.ecoxpert.core.bedrock.BedrockFormsManager.class);
@@ -85,15 +85,19 @@ public class MarketGUI implements Listener {
                     java.util.List<String> mats = marketCfg.getStringList("categories." + key + ".materials");
                     java.util.Set<Material> set = new java.util.HashSet<>();
                     for (String m : mats) {
-                        try { set.add(Material.valueOf(m.toUpperCase())); } catch (Exception ignored) {}
+                        try {
+                            set.add(Material.valueOf(m.toUpperCase()));
+                        } catch (Exception ignored) {
+                        }
                     }
                     categories.put(key.toUpperCase(), set);
                     categoryOrder.add(key.toUpperCase());
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
     }
-    
+
     /**
      * Open market GUI for player
      */
@@ -106,51 +110,51 @@ public class MarketGUI implements Listener {
                     player.sendMessage(translationManager.getMessage("market.system-error"));
                     return;
                 }
-                
+
                 // Filter active items
                 List<MarketItem> activeItems = items.stream()
-                    .filter(MarketItem::isActivelyTraded)
-                    .sorted(Comparator.comparing(item -> item.getMaterial().name()))
-                    .toList();
-                
+                        .filter(MarketItem::isActivelyTraded)
+                        .sorted(Comparator.comparing(item -> item.getMaterial().name()))
+                        .toList();
+
                 // Create and open GUI
                 Bukkit.getScheduler().runTask(player.getServer().getPluginManager().getPlugin("EcoXpert"), () -> {
                     boolean bedrock = platformManager != null && platformManager.isBedrockPlayer(player);
                     MarketInventory marketInv = new MarketInventory(player, activeItems, 0, bedrock);
                     openGUIs.put(player.getUniqueId(), marketInv);
-                    
+
                     Inventory gui = createMarketPage(marketInv);
                     player.openInventory(gui);
                 });
             });
-            
+
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Error opening market GUI", e);
             player.sendMessage(translationManager.getMessage("market.system-error"));
         }
     }
-    
+
     /**
      * Create market page inventory
      */
     private Inventory createMarketPage(MarketInventory marketInv) {
-        Inventory gui = Bukkit.createInventory(null, INVENTORY_SIZE, 
-            translationManager.getMessage("market.gui.title"));
-        
+        Inventory gui = Bukkit.createInventory(null, INVENTORY_SIZE,
+                translationManager.getMessage("market.gui.title"));
+
         List<MarketItem> items = marketInv.getItems();
         int page = marketInv.getCurrentPage();
         // Apply filters
         java.util.List<MarketItem> filtered = applyFilters(items, marketInv);
         int startIndex = page * ITEMS_PER_PAGE;
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filtered.size());
-        
+
         // Add market items
         for (int i = startIndex; i < endIndex; i++) {
             MarketItem item = filtered.get(i);
             ItemStack displayItem = createMarketItemStack(item);
             gui.setItem(i - startIndex, displayItem);
         }
-        
+
         // Add navigation and control items
         addNavigationItems(gui, page, filtered.size(), marketInv);
 
@@ -161,96 +165,112 @@ public class MarketGUI implements Listener {
         String cat = inv.getSelectedCategory();
         Character letter = inv.getFilterLetter();
         java.util.stream.Stream<MarketItem> stream = items.stream()
-            .filter(mi -> {
-                if (cat != null && !"ALL".equals(cat)) {
-                    java.util.Set<Material> set = categories.getOrDefault(cat, java.util.Collections.emptySet());
-                    if (!set.contains(mi.getMaterial())) return false;
-                }
-                if (letter != null) {
-                    return mi.getMaterial().name().startsWith(String.valueOf(letter));
-                }
-                return true;
-            });
+                .filter(mi -> {
+                    if (cat != null && !"ALL".equals(cat)) {
+                        java.util.Set<Material> set = categories.getOrDefault(cat, java.util.Collections.emptySet());
+                        if (!set.contains(mi.getMaterial()))
+                            return false;
+                    }
+                    if (letter != null) {
+                        return mi.getMaterial().name().startsWith(String.valueOf(letter));
+                    }
+                    return true;
+                });
         // Collect into a mutable list to allow in-place sorting
         java.util.List<MarketItem> list = new java.util.ArrayList<>(stream.toList());
         // Apply sorting
         list.sort(switch (inv.getSortMode()) {
             case NAME -> java.util.Comparator.comparing(mi -> mi.getMaterial().name());
-            case BUY_ASC -> java.util.Comparator.comparing(MarketItem::getCurrentBuyPrice, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()));
-            case SELL_ASC -> java.util.Comparator.comparing(MarketItem::getCurrentSellPrice, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()));
-            case SELL_DESC -> java.util.Comparator.comparing(MarketItem::getCurrentSellPrice, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())).reversed();
-            case VOLUME_ASC -> java.util.Comparator.comparing(MarketItem::getTotalVolume, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()));
-            case VOLUME_DESC -> java.util.Comparator.comparing(MarketItem::getTotalVolume, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())).reversed();
+            case BUY_ASC -> java.util.Comparator.comparing(MarketItem::getCurrentBuyPrice,
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()));
+            case SELL_ASC -> java.util.Comparator.comparing(MarketItem::getCurrentSellPrice,
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()));
+            case SELL_DESC -> java.util.Comparator.comparing(MarketItem::getCurrentSellPrice,
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())).reversed();
+            case VOLUME_ASC -> java.util.Comparator.comparing(MarketItem::getTotalVolume,
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()));
+            case VOLUME_DESC -> java.util.Comparator.comparing(MarketItem::getTotalVolume,
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())).reversed();
         });
         return list;
     }
-    
+
     /**
      * Create ItemStack for market item display
      */
     private ItemStack createMarketItemStack(MarketItem item) {
         ItemStack stack = new ItemStack(item.getMaterial());
         ItemMeta meta = stack.getItemMeta();
-        
+
         if (meta != null) {
             // Set display name
             String itemName = item.getMaterial().name().toLowerCase().replace('_', ' ');
             itemName = capitalizeWords(itemName);
             meta.setDisplayName("§e" + itemName);
-            
+
             // Create lore with price information
             List<String> lore = new ArrayList<>();
             lore.add("§7" + translationManager.getMessage("market.gui.item.header"));
             lore.add("");
-            
+
             if (item.isBuyable()) {
-                lore.add("§a" + translationManager.getMessage("market.gui.item.buy-price", 
-                    formatPrice(item.getCurrentBuyPrice())));
+                lore.add("§a" + translationManager.getMessage("market.gui.item.buy-price",
+                        formatPrice(item.getCurrentBuyPrice())));
                 // Effective price for this player (role/category/events)
                 try {
                     double f = computeEffectiveFactorForItem(getCurrentViewer(), item.getMaterial(), true);
                     if (Math.abs(f - 1.0) > 1e-6) {
                         java.math.BigDecimal eff = item.getCurrentBuyPrice().multiply(java.math.BigDecimal.valueOf(f))
-                            .setScale(2, java.math.RoundingMode.HALF_UP);
-                        lore.add("§7" + translationManager.getMessage("market.gui.item.effective-buy", formatPrice(eff)));
+                                .setScale(2, java.math.RoundingMode.HALF_UP);
+                        lore.add("§7"
+                                + translationManager.getMessage("market.gui.item.effective-buy", formatPrice(eff)));
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             } else {
                 lore.add("§c" + translationManager.getMessage("market.gui.item.not-buyable"));
             }
-            
+
             if (item.isSellable()) {
-                lore.add("§c" + translationManager.getMessage("market.gui.item.sell-price", 
-                    formatPrice(item.getCurrentSellPrice())));
+                lore.add("§c" + translationManager.getMessage("market.gui.item.sell-price",
+                        formatPrice(item.getCurrentSellPrice())));
                 try {
                     double f = computeEffectiveFactorForItem(getCurrentViewer(), item.getMaterial(), false);
                     if (Math.abs(f - 1.0) > 1e-6) {
                         java.math.BigDecimal eff = item.getCurrentSellPrice().multiply(java.math.BigDecimal.valueOf(f))
-                            .setScale(2, java.math.RoundingMode.HALF_UP);
-                        lore.add("§7" + translationManager.getMessage("market.gui.item.effective-sell", formatPrice(eff)));
+                                .setScale(2, java.math.RoundingMode.HALF_UP);
+                        lore.add("§7"
+                                + translationManager.getMessage("market.gui.item.effective-sell", formatPrice(eff)));
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
                 try {
                     var cfg = configManager.getModuleConfig("market");
                     double minFrac = cfg.getDouble("orders.listing.price_bounds_min_base_fraction", 0.10);
                     double maxFrac = cfg.getDouble("orders.listing.price_bounds_max_base_fraction", 10.0);
-                    java.math.BigDecimal min = item.getCurrentSellPrice().multiply(new java.math.BigDecimal(String.valueOf(minFrac)))
-                        .setScale(2, java.math.RoundingMode.HALF_UP);
-                    java.math.BigDecimal max = item.getCurrentSellPrice().multiply(new java.math.BigDecimal(String.valueOf(maxFrac)))
-                        .setScale(2, java.math.RoundingMode.HALF_UP);
-                    lore.add("§7" + translationManager.getMessage("market.gui.info.range", formatPrice(min), formatPrice(max)));
+                    java.math.BigDecimal min = item.getCurrentSellPrice()
+                            .multiply(new java.math.BigDecimal(String.valueOf(minFrac)))
+                            .setScale(2, java.math.RoundingMode.HALF_UP);
+                    java.math.BigDecimal max = item.getCurrentSellPrice()
+                            .multiply(new java.math.BigDecimal(String.valueOf(maxFrac)))
+                            .setScale(2, java.math.RoundingMode.HALF_UP);
+                    lore.add("§7" + translationManager.getMessage("market.gui.info.range", formatPrice(min),
+                            formatPrice(max)));
                     lore.add("§7" + translationManager.getMessage("market.gui.item.list-hint"));
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             } else {
                 lore.add("§7" + translationManager.getMessage("market.gui.item.not-sellable"));
             }
-            
+
             lore.add("");
             lore.add("§7" + translationManager.getMessage("market.gui.item.volume",
-                item.getTotalVolume()));
+                    item.getTotalVolume()));
 
-            // Add trend information synchronously (prevents ConcurrentModificationException)
-            // Note: This is safe because we're building the lore before passing it to Bukkit
+            // Add trend information synchronously (prevents
+            // ConcurrentModificationException)
+            // Note: This is safe because we're building the lore before passing it to
+            // Bukkit
             try {
                 var trendFuture = marketManager.getItemTrend(item.getMaterial());
                 // Only wait if the future is already completed to avoid blocking
@@ -259,7 +279,7 @@ public class MarketGUI implements Listener {
                     if (trend != null) {
                         String trendColor = getTrendColor(trend.getDirection());
                         lore.add("§7" + translationManager.getMessage("market.gui.item.trend",
-                            trendColor + trend.getDirection().getDisplayName()));
+                                trendColor + trend.getDirection().getDisplayName()));
                     }
                 }
             } catch (Exception e) {
@@ -273,40 +293,48 @@ public class MarketGUI implements Listener {
             meta.setLore(lore);
             stack.setItemMeta(meta);
         }
-        
+
         return stack;
     }
 
     private Player getCurrentViewer() {
-        // Best-effort: this GUI is per-player; when building items we are in the context of an open GUI.
+        // Best-effort: this GUI is per-player; when building items we are in the
+        // context of an open GUI.
         // We retrieve any online viewer from openGUIs map.
         if (!openGUIs.isEmpty()) {
             UUID any = openGUIs.keySet().iterator().next();
             Player p = Bukkit.getPlayer(any);
-            if (p != null) return p;
+            if (p != null)
+                return p;
         }
         return null;
     }
 
     private double computeEffectiveFactorForItem(Player player, Material material, boolean isBuy) {
-        if (player == null) return 1.0;
+        if (player == null)
+            return 1.0;
         try {
-            var sr = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class).getServiceRegistry();
+            var sr = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+                    .getServiceRegistry();
             var pm = sr.getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class);
             var roleOpt = pm.getRole(player.getUniqueId()).join();
-            if (roleOpt.isEmpty()) return 1.0;
+            if (roleOpt.isEmpty())
+                return 1.0;
             String role = roleOpt.get().name().toLowerCase();
-            var profCfg = sr.getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class).getModuleConfig("professions");
+            var profCfg = sr.getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class)
+                    .getModuleConfig("professions");
             int level = pm.getLevel(player.getUniqueId()).join();
             int maxLevel = profCfg.getInt("max_level", 5);
             level = Math.max(1, Math.min(level, maxLevel));
             double base = profCfg.getDouble("roles." + role + "." + (isBuy ? "buy_factor" : "sell_factor"), 1.0);
-            double per = profCfg.getDouble("roles." + role + "." + (isBuy ? "buy_bonus_per_level" : "sell_bonus_per_level"), 0.0);
+            double per = profCfg
+                    .getDouble("roles." + role + "." + (isBuy ? "buy_bonus_per_level" : "sell_bonus_per_level"), 0.0);
             double v = isBuy ? (base * (1.0 - per * (level - 1))) : (base * (1.0 + per * (level - 1)));
             // Categories: multiply all categories that include the material
             for (var e : categories.entrySet()) {
                 if (e.getValue().contains(material)) {
-                    String ck = "roles." + role + ".category_bonuses." + e.getKey().toLowerCase() + "." + (isBuy ? "buy_factor" : "sell_factor");
+                    String ck = "roles." + role + ".category_bonuses." + e.getKey().toLowerCase() + "."
+                            + (isBuy ? "buy_factor" : "sell_factor");
                     v *= profCfg.getDouble(ck, 1.0);
                 }
             }
@@ -314,23 +342,27 @@ public class MarketGUI implements Listener {
             var events = sr.getInstance(me.koyere.ecoxpert.modules.events.EconomicEventEngine.class);
             if (events != null) {
                 for (var ev : events.getActiveEvents().values()) {
-                    String ek = "roles." + role + ".event_bonuses." + ev.getType().name() + "." + (isBuy ? "buy_factor" : "sell_factor");
+                    String ek = "roles." + role + ".event_bonuses." + ev.getType().name() + "."
+                            + (isBuy ? "buy_factor" : "sell_factor");
                     v *= profCfg.getDouble(ek, 1.0);
                 }
             }
-            if (v < 0.5) v = 0.5; if (v > 1.5) v = 1.5;
+            if (v < 0.5)
+                v = 0.5;
+            if (v > 1.5)
+                v = 1.5;
             return v;
         } catch (Exception e) {
             return 1.0;
         }
     }
-    
+
     /**
      * Add navigation items to GUI
      */
     private void addNavigationItems(Inventory gui, int currentPage, int totalItems, MarketInventory inv) {
         int totalPages = (int) Math.ceil((double) totalItems / ITEMS_PER_PAGE);
-        
+
         // Previous page button
         if (currentPage > 0) {
             ItemStack prevPage = new ItemStack(Material.ARROW);
@@ -338,13 +370,12 @@ public class MarketGUI implements Listener {
             if (meta != null) {
                 meta.setDisplayName("§a" + translationManager.getMessage("market.gui.prev-page"));
                 meta.setLore(Arrays.asList(
-                    "§7" + translationManager.getMessage("market.gui.current-page", currentPage + 1, totalPages)
-                ));
+                        "§7" + translationManager.getMessage("market.gui.current-page", currentPage + 1, totalPages)));
                 prevPage.setItemMeta(meta);
             }
             gui.setItem(PREV_PAGE_SLOT, prevPage);
         }
-        
+
         // Next page button
         if (currentPage < totalPages - 1) {
             ItemStack nextPage = new ItemStack(Material.ARROW);
@@ -352,13 +383,12 @@ public class MarketGUI implements Listener {
             if (meta != null) {
                 meta.setDisplayName("§a" + translationManager.getMessage("market.gui.next-page"));
                 meta.setLore(Arrays.asList(
-                    "§7" + translationManager.getMessage("market.gui.current-page", currentPage + 1, totalPages)
-                ));
+                        "§7" + translationManager.getMessage("market.gui.current-page", currentPage + 1, totalPages)));
                 nextPage.setItemMeta(meta);
             }
             gui.setItem(NEXT_PAGE_SLOT, nextPage);
         }
-        
+
         // Info item
         ItemStack info = new ItemStack(Material.BOOK);
         ItemMeta infoMeta = info.getItemMeta();
@@ -373,24 +403,26 @@ public class MarketGUI implements Listener {
                 var player = inv.getPlayer();
                 var ctx = computeContextualBonuses(player, inv.getSelectedCategory());
                 // Role total effect (includes level)
-                lore.add("" );
+                lore.add("");
                 lore.add("§b" + translationManager.getMessage("market.gui.info.role-bonus",
-                    formatPercent(ctx.roleBuy), formatPercent(ctx.roleSell)));
+                        formatPercent(ctx.roleBuy), formatPercent(ctx.roleSell)));
                 // Category (if not ALL)
                 if (inv.getSelectedCategory() != null && !"ALL".equals(inv.getSelectedCategory())) {
                     lore.add("§9" + translationManager.getMessage("market.gui.info.category-bonus",
-                        inv.getSelectedCategory(), formatPercent(ctx.catBuy), formatPercent(ctx.catSell)));
+                            inv.getSelectedCategory(), formatPercent(ctx.catBuy), formatPercent(ctx.catSell)));
                 }
                 // Active events aggregated
                 if (ctx.eventBuy != 1.0 || ctx.eventSell != 1.0) {
                     lore.add("§d" + translationManager.getMessage("market.gui.info.event-bonus",
-                        formatPercent(ctx.eventBuy), formatPercent(ctx.eventSell)));
+                            formatPercent(ctx.eventBuy), formatPercent(ctx.eventSell)));
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
 
             // Sorting info and hint
             lore.add("");
-            lore.add("§7" + translationManager.getMessage("market.gui.info.sort-label", inv.getSortMode().display(translationManager)));
+            lore.add("§7" + translationManager.getMessage("market.gui.info.sort-label",
+                    inv.getSortMode().display(translationManager)));
             lore.add("§7" + translationManager.getMessage("market.gui.info.sort-help"));
 
             lore.add("");
@@ -401,7 +433,7 @@ public class MarketGUI implements Listener {
             info.setItemMeta(infoMeta);
         }
         gui.setItem(INFO_SLOT, info);
-        
+
         // Close button
         ItemStack close = new ItemStack(Material.BARRIER);
         ItemMeta closeMeta = close.getItemMeta();
@@ -416,7 +448,8 @@ public class MarketGUI implements Listener {
         ItemMeta catMeta = catBtn.getItemMeta();
         if (catMeta != null) {
             String cat = inv.getSelectedCategory();
-            if (cat == null) cat = "ALL";
+            if (cat == null)
+                cat = "ALL";
             catMeta.setDisplayName("§b" + translationManager.getMessage("market.gui.info.category-label", cat));
             java.util.List<String> lore = new java.util.ArrayList<>();
             lore.add("§7" + translationManager.getMessage("market.gui.info.category-help"));
@@ -456,9 +489,8 @@ public class MarketGUI implements Listener {
         if (sellMeta != null) {
             sellMeta.setDisplayName("§6" + translationManager.getMessage("market.gui.info.sell-hand-label"));
             sellMeta.setLore(java.util.Arrays.asList(
-                "§7" + translationManager.getMessage("market.gui.info.sell-hand.help1"),
-                "§7" + translationManager.getMessage("market.gui.info.sell-hand.help2")
-            ));
+                    "§7" + translationManager.getMessage("market.gui.info.sell-hand.help1"),
+                    "§7" + translationManager.getMessage("market.gui.info.sell-hand.help2")));
             sellHand.setItemMeta(sellMeta);
         }
         gui.setItem(SELL_HAND_SLOT, sellHand);
@@ -469,22 +501,25 @@ public class MarketGUI implements Listener {
         if (ordersMeta != null) {
             ordersMeta.setDisplayName("§6" + translationManager.getMessage("market.gui.info.orders-button"));
             ordersMeta.setLore(java.util.Arrays.asList(
-                "§7" + translationManager.getMessage("market.gui.info.orders-button-help")
-            ));
+                    "§7" + translationManager.getMessage("market.gui.info.orders-button-help")));
             ordersBtn.setItemMeta(ordersMeta);
         }
         gui.setItem(ORDERS_SLOT, ordersBtn);
     }
 
-    private static class CtxFactors { double roleBuy=1, roleSell=1, catBuy=1, catSell=1, eventBuy=1, eventSell=1; }
+    private static class CtxFactors {
+        double roleBuy = 1, roleSell = 1, catBuy = 1, catSell = 1, eventBuy = 1, eventSell = 1;
+    }
 
     private CtxFactors computeContextualBonuses(Player player, String selectedCategory) {
         CtxFactors f = new CtxFactors();
         try {
-            var sr = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class).getServiceRegistry();
+            var sr = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
+                    .getServiceRegistry();
             var pm = sr.getInstance(me.koyere.ecoxpert.modules.professions.ProfessionsManager.class);
             var roleOpt = pm.getRole(player.getUniqueId()).join();
-            if (roleOpt.isEmpty()) return f;
+            if (roleOpt.isEmpty())
+                return f;
             String role = roleOpt.get().name().toLowerCase();
             int level = pm.getLevel(player.getUniqueId()).join();
             var profCfg = configManager.getModuleConfig("professions");
@@ -495,24 +530,30 @@ public class MarketGUI implements Listener {
             double baseSell = profCfg.getDouble("roles." + role + ".sell_factor", 1.0);
             double perBuy = profCfg.getDouble("roles." + role + ".buy_bonus_per_level", 0.0);
             double perSell = profCfg.getDouble("roles." + role + ".sell_bonus_per_level", 0.0);
-            f.roleBuy = clamp( baseBuy * (1.0 - perBuy * (level - 1)) );
-            f.roleSell = clamp( baseSell * (1.0 + perSell * (level - 1)) );
+            f.roleBuy = clamp(baseBuy * (1.0 - perBuy * (level - 1)));
+            f.roleSell = clamp(baseSell * (1.0 + perSell * (level - 1)));
 
             if (selectedCategory != null && !"ALL".equals(selectedCategory)) {
-                f.catBuy = profCfg.getDouble("roles." + role + ".category_bonuses." + selectedCategory.toLowerCase() + ".buy_factor", 1.0);
-                f.catSell = profCfg.getDouble("roles." + role + ".category_bonuses." + selectedCategory.toLowerCase() + ".sell_factor", 1.0);
+                f.catBuy = profCfg.getDouble(
+                        "roles." + role + ".category_bonuses." + selectedCategory.toLowerCase() + ".buy_factor", 1.0);
+                f.catSell = profCfg.getDouble(
+                        "roles." + role + ".category_bonuses." + selectedCategory.toLowerCase() + ".sell_factor", 1.0);
             }
 
             var events = sr.getInstance(me.koyere.ecoxpert.modules.events.EconomicEventEngine.class);
             if (events != null) {
                 double eb = 1.0, es = 1.0;
                 for (var ev : events.getActiveEvents().values()) {
-                    eb *= profCfg.getDouble("roles." + role + ".event_bonuses." + ev.getType().name() + ".buy_factor", 1.0);
-                    es *= profCfg.getDouble("roles." + role + ".event_bonuses." + ev.getType().name() + ".sell_factor", 1.0);
+                    eb *= profCfg.getDouble("roles." + role + ".event_bonuses." + ev.getType().name() + ".buy_factor",
+                            1.0);
+                    es *= profCfg.getDouble("roles." + role + ".event_bonuses." + ev.getType().name() + ".sell_factor",
+                            1.0);
                 }
-                f.eventBuy = clamp(eb); f.eventSell = clamp(es);
+                f.eventBuy = clamp(eb);
+                f.eventSell = clamp(es);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return f;
     }
 
@@ -522,21 +563,29 @@ public class MarketGUI implements Listener {
         return String.format(java.util.Locale.US, "%s%.1f%%", sign, pct);
     }
 
-    private double clamp(double v) { if (v < 0.5) return 0.5; if (v > 1.5) return 1.5; return v; }
-    
+    private double clamp(double v) {
+        if (v < 0.5)
+            return 0.5;
+        if (v > 1.5)
+            return 1.5;
+        return v;
+    }
+
     /**
      * Handle GUI click events
      */
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) return;
-        
+        if (!(event.getWhoClicked() instanceof Player player))
+            return;
+
         // Handle List GUI interactions
         String listTitle = translationManager.getMessage("market.gui.list.title");
         if (event.getView().getTitle().equals(listTitle)) {
             event.setCancelled(true);
             ListState st = listing.get(player.getUniqueId());
-            if (st == null) return;
+            if (st == null)
+                return;
             int slot = event.getRawSlot();
             if (slot == 22) { // cancel
                 listing.remove(player.getUniqueId());
@@ -547,7 +596,7 @@ public class MarketGUI implements Listener {
                 int have = marketManager.countItems(player, st.material);
                 int qty = Math.max(1, Math.min(st.qty, have));
                 orderService.createListing(player, st.material, qty, st.unitPrice, st.hours)
-                    .thenAccept(msg -> player.sendMessage(translationManager.getMessage("prefix") + msg));
+                        .thenAccept(msg -> player.sendMessage(translationManager.getMessage("prefix") + msg));
                 listing.remove(player.getUniqueId());
                 player.closeInventory();
                 return;
@@ -560,18 +609,25 @@ public class MarketGUI implements Listener {
                 } else {
                     int pct = pctVal != null ? pctVal : 0;
                     java.math.BigDecimal factor = java.math.BigDecimal.valueOf(1.0 + (pct / 100.0));
-                    java.math.BigDecimal newPrice = st.unitPrice.multiply(factor).setScale(2, java.math.RoundingMode.HALF_UP);
+                    java.math.BigDecimal newPrice = st.unitPrice.multiply(factor).setScale(2,
+                            java.math.RoundingMode.HALF_UP);
                     double minFrac = 0.10, maxFrac = 10.0;
                     try {
                         var cfg = configManager.getModuleConfig("market");
                         minFrac = cfg.getDouble("orders.listing.price_bounds_min_base_fraction", 0.10);
                         maxFrac = cfg.getDouble("orders.listing.price_bounds_max_base_fraction", 10.0);
-                    } catch (Exception ignored) {}
-                    java.math.BigDecimal min = st.basePrice.multiply(new java.math.BigDecimal(String.valueOf(minFrac))).setScale(2, java.math.RoundingMode.HALF_UP);
-                    java.math.BigDecimal max = st.basePrice.multiply(new java.math.BigDecimal(String.valueOf(maxFrac))).setScale(2, java.math.RoundingMode.HALF_UP);
-                    if (newPrice.compareTo(new java.math.BigDecimal("0.01")) < 0) newPrice = new java.math.BigDecimal("0.01");
-                    if (newPrice.compareTo(min) < 0) newPrice = min;
-                    if (newPrice.compareTo(max) > 0) newPrice = max;
+                    } catch (Exception ignored) {
+                    }
+                    java.math.BigDecimal min = st.basePrice.multiply(new java.math.BigDecimal(String.valueOf(minFrac)))
+                            .setScale(2, java.math.RoundingMode.HALF_UP);
+                    java.math.BigDecimal max = st.basePrice.multiply(new java.math.BigDecimal(String.valueOf(maxFrac)))
+                            .setScale(2, java.math.RoundingMode.HALF_UP);
+                    if (newPrice.compareTo(new java.math.BigDecimal("0.01")) < 0)
+                        newPrice = new java.math.BigDecimal("0.01");
+                    if (newPrice.compareTo(min) < 0)
+                        newPrice = min;
+                    if (newPrice.compareTo(max) > 0)
+                        newPrice = max;
                     st.unitPrice = newPrice;
                 }
                 event.getView().getTopInventory().setContents(buildListInventory(player, st).getContents());
@@ -586,34 +642,53 @@ public class MarketGUI implements Listener {
                     var cfg = configManager.getModuleConfig("market");
                     minFrac = cfg.getDouble("orders.listing.price_bounds_min_base_fraction", 0.10);
                     maxFrac = cfg.getDouble("orders.listing.price_bounds_max_base_fraction", 10.0);
-                } catch (Exception ignored) {}
-                java.math.BigDecimal min = st.basePrice.multiply(new java.math.BigDecimal(String.valueOf(minFrac))).setScale(2, java.math.RoundingMode.HALF_UP);
-                java.math.BigDecimal max = st.basePrice.multiply(new java.math.BigDecimal(String.valueOf(maxFrac))).setScale(2, java.math.RoundingMode.HALF_UP);
-                if (newPrice.compareTo(new java.math.BigDecimal("0.01")) < 0) newPrice = new java.math.BigDecimal("0.01");
-                if (newPrice.compareTo(min) < 0) newPrice = min;
-                if (newPrice.compareTo(max) > 0) newPrice = max;
+                } catch (Exception ignored) {
+                }
+                java.math.BigDecimal min = st.basePrice.multiply(new java.math.BigDecimal(String.valueOf(minFrac)))
+                        .setScale(2, java.math.RoundingMode.HALF_UP);
+                java.math.BigDecimal max = st.basePrice.multiply(new java.math.BigDecimal(String.valueOf(maxFrac)))
+                        .setScale(2, java.math.RoundingMode.HALF_UP);
+                if (newPrice.compareTo(new java.math.BigDecimal("0.01")) < 0)
+                    newPrice = new java.math.BigDecimal("0.01");
+                if (newPrice.compareTo(min) < 0)
+                    newPrice = min;
+                if (newPrice.compareTo(max) > 0)
+                    newPrice = max;
                 st.unitPrice = newPrice;
                 event.getView().getTopInventory().setContents(buildListInventory(player, st).getContents());
                 return;
             }
             // qty selections
             if (slot >= 10 && slot <= 14) {
-                int chosen = switch (slot) { case 10 -> 1; case 11 -> 8; case 12 -> 16; case 13 -> 32; case 14 -> 64; default -> -1; };
-                if (chosen > 0) st.qty = chosen;
+                int chosen = switch (slot) {
+                    case 10 -> 1;
+                    case 11 -> 8;
+                    case 12 -> 16;
+                    case 13 -> 32;
+                    case 14 -> 64;
+                    default -> -1;
+                };
+                if (chosen > 0)
+                    st.qty = chosen;
                 event.getView().getTopInventory().setContents(buildListInventory(player, st).getContents());
                 return;
             }
             // duration selections (config-driven slots)
-            if (st.durationSlots.containsKey(slot)) { st.hours = st.durationSlots.get(slot); event.getView().getTopInventory().setContents(buildListInventory(player, st).getContents()); return; }
+            if (st.durationSlots.containsKey(slot)) {
+                st.hours = st.durationSlots.get(slot);
+                event.getView().getTopInventory().setContents(buildListInventory(player, st).getContents());
+                return;
+            }
             return;
         }
-        
+
         if (handleBedrockActionClick(event, player)) {
             return;
         }
 
         MarketInventory marketInv = openGUIs.get(player.getUniqueId());
-        if (marketInv == null) return;
+        if (marketInv == null)
+            return;
 
         // Handle Sell Hand sub-GUI
         String sellTitle = translationManager.getMessage("market.gui.sell-hand.title");
@@ -627,11 +702,11 @@ public class MarketGUI implements Listener {
                 case 13 -> 3;
                 default -> -1;
             };
-            if (idx == -1) return;
+            if (idx == -1)
+                return;
 
             java.util.List<BigDecimal> amounts = java.util.Arrays.asList(
-                new BigDecimal("100"), new BigDecimal("500"), new BigDecimal("1000"), new BigDecimal("5000")
-            );
+                    new BigDecimal("100"), new BigDecimal("500"), new BigDecimal("1000"), new BigDecimal("5000"));
             BigDecimal target = amounts.get(idx);
             ItemStack inHand = player.getInventory().getItemInMainHand();
             Material mat = inHand.getType();
@@ -647,11 +722,13 @@ public class MarketGUI implements Listener {
                         return;
                     }
                     int qty = target.divide(price, 0, java.math.RoundingMode.DOWN).intValue();
-                    if (qty < 1) qty = 1;
+                    if (qty < 1)
+                        qty = 1;
                     int inHandCount = inHand.getAmount();
                     qty = Math.min(qty, inHandCount);
                     if (qty <= 0) {
-                        player.sendMessage(translationManager.getMessage("market.no-items-to-sell", mat.name().toLowerCase()));
+                        player.sendMessage(
+                                translationManager.getMessage("market.no-items-to-sell", mat.name().toLowerCase()));
                         return;
                     }
                     final int sellQty = qty;
@@ -662,7 +739,8 @@ public class MarketGUI implements Listener {
                             return;
                         }
                         player.sendMessage(translationManager.getMessage("prefix") + result.getMessage());
-                        Bukkit.getScheduler().runTask(player.getServer().getPluginManager().getPlugin("EcoXpert"), player::closeInventory);
+                        Bukkit.getScheduler().runTask(player.getServer().getPluginManager().getPlugin("EcoXpert"),
+                                player::closeInventory);
                     });
                 });
             });
@@ -670,19 +748,20 @@ public class MarketGUI implements Listener {
         }
 
         event.setCancelled(true); // Prevent item movement
-        
+
         ItemStack clickedItem = event.getCurrentItem();
-        if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
-        
+        if (clickedItem == null || clickedItem.getType() == Material.AIR)
+            return;
+
         int slot = event.getSlot();
-        
+
         // Handle navigation clicks
         if (slot == PREV_PAGE_SLOT && marketInv.getCurrentPage() > 0) {
             marketInv.setCurrentPage(marketInv.getCurrentPage() - 1);
             updateGUI(player, marketInv);
             return;
         }
-        
+
         if (slot == NEXT_PAGE_SLOT) {
             int totalPages = (int) Math.ceil((double) marketInv.getItems().size() / ITEMS_PER_PAGE);
             if (marketInv.getCurrentPage() < totalPages - 1) {
@@ -740,7 +819,7 @@ public class MarketGUI implements Listener {
             updateGUI(player, marketInv);
             return;
         }
-        
+
         // Handle item clicks (buy/sell/list)
         if (slot < ITEMS_PER_PAGE) {
             int itemIndex = (marketInv.getCurrentPage() * ITEMS_PER_PAGE) + slot;
@@ -770,7 +849,7 @@ public class MarketGUI implements Listener {
             return;
         }
     }
-    
+
     /**
      * Handle market item click (buy/sell)
      */
@@ -781,15 +860,15 @@ public class MarketGUI implements Listener {
                 player.sendMessage(translationManager.getMessage("market.item-not-sellable"));
                 return;
             }
-            
+
             // Sell all items of this type
             int quantity = marketManager.countItems(player, item.getMaterial());
             if (quantity <= 0) {
-                player.sendMessage(translationManager.getMessage("market.no-items-to-sell", 
-                    item.getMaterial().name().toLowerCase().replace('_', ' ')));
+                player.sendMessage(translationManager.getMessage("market.no-items-to-sell",
+                        item.getMaterial().name().toLowerCase().replace('_', ' ')));
                 return;
             }
-            
+
             // Execute sell
             marketManager.sellItem(player, item.getMaterial(), quantity).whenComplete((result, throwable) -> {
                 if (throwable != null) {
@@ -797,17 +876,17 @@ public class MarketGUI implements Listener {
                     player.sendMessage(translationManager.getMessage("market.system-error"));
                     return;
                 }
-                
+
                 player.sendMessage(translationManager.getMessage("prefix") + result.getMessage());
             });
-            
+
         } else {
             // Normal click = buy single item
             if (!item.isBuyable()) {
                 player.sendMessage(translationManager.getMessage("market.item-not-buyable"));
                 return;
             }
-            
+
             // Execute buy
             marketManager.buyItem(player, item.getMaterial(), 1).whenComplete((result, throwable) -> {
                 if (throwable != null) {
@@ -815,11 +894,11 @@ public class MarketGUI implements Listener {
                     player.sendMessage(translationManager.getMessage("market.system-error"));
                     return;
                 }
-                
+
                 player.sendMessage(translationManager.getMessage("prefix") + result.getMessage());
             });
         }
-        
+
         // Close GUI after transaction
         player.closeInventory();
     }
@@ -926,16 +1005,16 @@ public class MarketGUI implements Listener {
 
         if (item.isBuyable()) {
             content.append("§a").append(translationManager.getMessage("market.gui.bedrock.form.buy"))
-                   .append(": ").append(formatPrice(item.getCurrentBuyPrice())).append("\n");
+                    .append(": ").append(formatPrice(item.getCurrentBuyPrice())).append("\n");
         }
         if (item.isSellable()) {
             content.append("§c").append(translationManager.getMessage("market.gui.bedrock.form.sell"))
-                   .append(": ").append(formatPrice(item.getCurrentSellPrice())).append("\n");
+                    .append(": ").append(formatPrice(item.getCurrentSellPrice())).append("\n");
         }
 
         int available = marketManager.countItems(player, item.getMaterial());
         content.append("\n§7").append(translationManager.getMessage("market.gui.bedrock.form.inventory"))
-               .append(": ").append(available);
+                .append(": ").append(available);
 
         // Build button list
         List<String> buttons = new ArrayList<>();
@@ -968,19 +1047,19 @@ public class MarketGUI implements Listener {
 
         // Send Form
         bedrockFormsManager.sendSimpleForm(
-            player,
-            translationManager.getMessage("market.gui.bedrock.form.title", friendlyName),
-            content.toString(),
-            buttons,
-            buttonIndex -> handleBedrockFormResponse(player, item, buttonIndex, buttons.size(), stackSize, available)
-        );
+                player,
+                translationManager.getMessage("market.gui.bedrock.form.title", friendlyName),
+                content.toString(),
+                buttons,
+                buttonIndex -> handleBedrockFormResponse(player, item, buttonIndex, buttons.size(), stackSize,
+                        available));
     }
 
     /**
      * Handle Bedrock Form response
      */
     private void handleBedrockFormResponse(Player player, MarketItem item, int buttonIndex,
-                                          int totalButtons, int stackSize, int available) {
+            int totalButtons, int stackSize, int available) {
         // Map button index to action based on what buttons were added
         boolean buyable = item.isBuyable();
         boolean sellable = item.isSellable() && available > 0;
@@ -1056,7 +1135,7 @@ public class MarketGUI implements Listener {
         }
         if (quantity <= 0) {
             player.sendMessage(translationManager.getMessage("market.no-items-to-sell",
-                item.getMaterial().name().toLowerCase().replace('_', ' ')));
+                    item.getMaterial().name().toLowerCase().replace('_', ' ')));
             return;
         }
         marketManager.sellItem(player, item.getMaterial(), quantity).whenComplete((result, throwable) -> {
@@ -1076,7 +1155,7 @@ public class MarketGUI implements Listener {
         }
         if (quantity <= 0) {
             player.sendMessage(translationManager.getMessage("market.no-items-to-sell",
-                state.item.getMaterial().name().toLowerCase().replace('_', ' ')));
+                    state.item.getMaterial().name().toLowerCase().replace('_', ' ')));
             return;
         }
         bedrockActions.remove(player.getUniqueId());
@@ -1119,60 +1198,70 @@ public class MarketGUI implements Listener {
 
         if (buyable) {
             addBedrockButton(gui, state, 10, Material.EMERALD, "market.gui.bedrock.action.buy-one",
-                BedrockAction.BUY_ONE, true, 1, Arrays.asList(
-                    "§7" + translationManager.getMessage("market.gui.bedrock.action.cost",
-                        formatPrice(unitBuy)),
-                    "§7" + translationManager.getMessage("market.gui.bedrock.action.left-click")
-                ));
+                    BedrockAction.BUY_ONE, true, 1, Arrays.asList(
+                            "§7" + translationManager.getMessage("market.gui.bedrock.action.cost",
+                                    formatPrice(unitBuy)),
+                            "§7" + translationManager.getMessage("market.gui.bedrock.action.left-click")));
 
-            if (quickBuy > 1) {
-                BigDecimal total = unitBuy.multiply(BigDecimal.valueOf(quickBuy)).setScale(2, BigDecimal.ROUND_HALF_UP);
+            if (quickBuy > 1 && unitBuy != null) {
+                BigDecimal total = unitBuy.multiply(BigDecimal.valueOf(quickBuy)).setScale(2,
+                        java.math.RoundingMode.HALF_UP);
                 addBedrockButton(gui, state, 11, Material.GOLD_INGOT, "market.gui.bedrock.action.buy-some",
-                    BedrockAction.BUY_MID, true, quickBuy, Arrays.asList(
-                        "§7" + translationManager.getMessage("market.gui.bedrock.action.amount", quickBuy),
-                        "§7" + translationManager.getMessage("market.gui.bedrock.action.cost", formatPrice(total))
-                    ), quickBuy);
+                        BedrockAction.BUY_MID, true, quickBuy, Arrays.asList(
+                                "§7" + translationManager.getMessage("market.gui.bedrock.action.amount", quickBuy),
+                                "§7" + translationManager.getMessage("market.gui.bedrock.action.cost",
+                                        formatPrice(total))),
+                        quickBuy);
             }
-            if (state.stackSize > 1) {
-                BigDecimal total = unitBuy.multiply(BigDecimal.valueOf(state.stackSize)).setScale(2, BigDecimal.ROUND_HALF_UP);
+            if (state.stackSize > 1 && unitBuy != null) {
+                BigDecimal total = unitBuy.multiply(BigDecimal.valueOf(state.stackSize)).setScale(2,
+                        java.math.RoundingMode.HALF_UP);
                 addBedrockButton(gui, state, 12, Material.EMERALD_BLOCK, "market.gui.bedrock.action.buy-stack",
-                    BedrockAction.BUY_STACK, true, state.stackSize, Arrays.asList(
-                        "§7" + translationManager.getMessage("market.gui.bedrock.action.amount", state.stackSize),
-                        "§7" + translationManager.getMessage("market.gui.bedrock.action.cost", formatPrice(total))
-                    ), state.stackSize);
+                        BedrockAction.BUY_STACK, true, state.stackSize, Arrays.asList(
+                                "§7" + translationManager.getMessage("market.gui.bedrock.action.amount",
+                                        state.stackSize),
+                                "§7" + translationManager.getMessage("market.gui.bedrock.action.cost",
+                                        formatPrice(total))),
+                        state.stackSize);
             }
         } else {
             addBedrockButton(gui, state, 10, Material.BARRIER, "market.gui.bedrock.action.not-buyable",
-                null, false, null, Collections.emptyList());
+                    null, false, null, Collections.emptyList());
         }
 
         if (sellable) {
             addBedrockButton(gui, state, 14, Material.REDSTONE, "market.gui.bedrock.action.sell-one",
-                BedrockAction.SELL_ONE, available >= 1, 1, Arrays.asList(
-                    "§7" + translationManager.getMessage("market.gui.bedrock.action.earn",
-                        formatPrice(unitSell)),
-                    "§7" + translationManager.getMessage("market.gui.bedrock.action.require-items")
-                ));
+                    BedrockAction.SELL_ONE, available >= 1, 1, Arrays.asList(
+                            "§7" + translationManager.getMessage("market.gui.bedrock.action.earn",
+                                    formatPrice(unitSell)),
+                            "§7" + translationManager.getMessage("market.gui.bedrock.action.require-items")));
 
             if (state.stackSize > 1) {
                 int stackQty = Math.min(state.stackSize, available);
-                BigDecimal total = unitSell.multiply(BigDecimal.valueOf(stackQty)).setScale(2, BigDecimal.ROUND_HALF_UP);
-                addBedrockButton(gui, state, 15, Material.GOLD_BLOCK, "market.gui.bedrock.action.sell-stack",
-                    BedrockAction.SELL_STACK, stackQty > 0, stackQty, Arrays.asList(
-                        "§7" + translationManager.getMessage("market.gui.bedrock.action.amount", stackQty),
-                        "§7" + translationManager.getMessage("market.gui.bedrock.action.earn", formatPrice(total))
-                    ), stackQty);
+                if (unitSell != null) {
+                    BigDecimal total = unitSell.multiply(BigDecimal.valueOf(stackQty)).setScale(2,
+                            java.math.RoundingMode.HALF_UP);
+                    addBedrockButton(gui, state, 15, Material.GOLD_BLOCK, "market.gui.bedrock.action.sell-stack",
+                            BedrockAction.SELL_STACK, stackQty > 0, stackQty, Arrays.asList(
+                                    "§7" + translationManager.getMessage("market.gui.bedrock.action.amount", stackQty),
+                                    "§7" + translationManager.getMessage("market.gui.bedrock.action.earn",
+                                            formatPrice(total))),
+                            stackQty);
+                }
             }
 
-            BigDecimal total = unitSell.multiply(BigDecimal.valueOf(Math.max(available, 0))).setScale(2, BigDecimal.ROUND_HALF_UP);
-            addBedrockButton(gui, state, 16, Material.DIAMOND_BLOCK, "market.gui.bedrock.action.sell-all",
-                BedrockAction.SELL_ALL, available > 0, null, Arrays.asList(
-                    "§7" + translationManager.getMessage("market.gui.bedrock.action.amount", available),
-                    "§7" + translationManager.getMessage("market.gui.bedrock.action.earn", formatPrice(total))
-                ));
+            if (unitSell != null) {
+                BigDecimal total = unitSell.multiply(BigDecimal.valueOf(Math.max(available, 0))).setScale(2,
+                        java.math.RoundingMode.HALF_UP);
+                addBedrockButton(gui, state, 16, Material.DIAMOND_BLOCK, "market.gui.bedrock.action.sell-all",
+                        BedrockAction.SELL_ALL, available > 0, null, Arrays.asList(
+                                "§7" + translationManager.getMessage("market.gui.bedrock.action.amount", available),
+                                "§7" + translationManager.getMessage("market.gui.bedrock.action.earn",
+                                        formatPrice(total))));
+            }
         } else {
             addBedrockButton(gui, state, 14, Material.BARRIER, "market.gui.bedrock.action.not-sellable",
-                null, false, null, Collections.emptyList());
+                    null, false, null, Collections.emptyList());
         }
 
         ItemStack close = new ItemStack(Material.BARRIER);
@@ -1188,7 +1277,8 @@ public class MarketGUI implements Listener {
         ItemMeta lMeta = listButton.getItemMeta();
         if (lMeta != null) {
             boolean hasPerm = player.hasPermission("ecoxpert.market.list");
-            lMeta.setDisplayName((hasPerm ? "§b" : "§7") + translationManager.getMessage("market.gui.bedrock.action.list"));
+            lMeta.setDisplayName(
+                    (hasPerm ? "§b" : "§7") + translationManager.getMessage("market.gui.bedrock.action.list"));
             List<String> lore = new ArrayList<>();
             lore.add("§7" + translationManager.getMessage("market.gui.bedrock.action.list-help"));
             if (!hasPerm) {
@@ -1216,9 +1306,9 @@ public class MarketGUI implements Listener {
             meta.setDisplayName("§e" + friendlyName);
             List<String> lore = new ArrayList<>();
             lore.add("§7" + translationManager.getMessage("market.gui.bedrock.action.summary.buy",
-                formatPrice(item.getCurrentBuyPrice())));
+                    formatPrice(item.getCurrentBuyPrice())));
             lore.add("§7" + translationManager.getMessage("market.gui.bedrock.action.summary.sell",
-                formatPrice(item.getCurrentSellPrice())));
+                    formatPrice(item.getCurrentSellPrice())));
             lore.add("");
             lore.add("§7" + translationManager.getMessage("market.gui.bedrock.action.summary.info"));
             meta.setLore(lore);
@@ -1228,8 +1318,8 @@ public class MarketGUI implements Listener {
     }
 
     private void addBedrockButton(Inventory gui, BedrockActionState state, int slot,
-                                  Material enabledIcon, String labelKey, BedrockAction action,
-                                  boolean enabled, Integer quantity, List<String> lore, Object... args) {
+            Material enabledIcon, String labelKey, BedrockAction action,
+            boolean enabled, Integer quantity, List<String> lore, Object... args) {
         Material icon = enabled ? enabledIcon : Material.GRAY_DYE;
         ItemStack button = new ItemStack(icon);
         ItemMeta meta = button.getItemMeta();
@@ -1254,17 +1344,29 @@ public class MarketGUI implements Listener {
     private final java.util.Map<java.util.UUID, ListState> listing = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static class ListState {
-        final Material material; int qty; int hours; java.math.BigDecimal unitPrice; java.math.BigDecimal basePrice;
-        final java.util.Map<Integer,Integer> priceSlots = new java.util.HashMap<>();
-        final java.util.Map<Integer,Integer> durationSlots = new java.util.HashMap<>();
-        final java.util.Map<Integer,java.math.BigDecimal> absSlots = new java.util.HashMap<>();
-        ListState(Material m, int q, int h, java.math.BigDecimal p) { material=m; qty=q; hours=h; unitPrice=p; basePrice=p; }
+        final Material material;
+        int qty;
+        int hours;
+        java.math.BigDecimal unitPrice;
+        java.math.BigDecimal basePrice;
+        final java.util.Map<Integer, Integer> priceSlots = new java.util.HashMap<>();
+        final java.util.Map<Integer, Integer> durationSlots = new java.util.HashMap<>();
+        final java.util.Map<Integer, java.math.BigDecimal> absSlots = new java.util.HashMap<>();
+
+        ListState(Material m, int q, int h, java.math.BigDecimal p) {
+            material = m;
+            qty = q;
+            hours = h;
+            unitPrice = p;
+            basePrice = p;
+        }
     }
 
     private void openListGUI(Player player, MarketItem item) {
         int have = marketManager.countItems(player, item.getMaterial());
         if (have <= 0) {
-            player.sendMessage(translationManager.getMessage("market.no-items-to-sell", item.getMaterial().name().toLowerCase()));
+            player.sendMessage(
+                    translationManager.getMessage("market.no-items-to-sell", item.getMaterial().name().toLowerCase()));
             return;
         }
         java.math.BigDecimal base = item.getCurrentSellPrice();
@@ -1283,9 +1385,11 @@ public class MarketGUI implements Listener {
         try {
             var cfg = configManager.getModuleConfig("market");
             java.util.List<Integer> conf = cfg.getIntegerList("orders.listing.price_adjust_presets_percent");
-            if (conf != null && !conf.isEmpty()) presets = conf;
-        } catch (Exception ignored) {}
-        int[] presetSlots = {1,2,3,5,6,7};
+            if (conf != null && !conf.isEmpty())
+                presets = conf;
+        } catch (Exception ignored) {
+        }
+        int[] presetSlots = { 1, 2, 3, 5, 6, 7 };
         for (int i = 0; i < Math.min(presets.size(), presetSlots.length); i++) {
             int pct = presets.get(i);
             int slot = presetSlots[i];
@@ -1300,7 +1404,7 @@ public class MarketGUI implements Listener {
             var cfg = configManager.getModuleConfig("market");
             java.util.List<Integer> absList = cfg.getIntegerList("orders.listing.price_adjust_presets_absolute");
             if (absList != null && !absList.isEmpty()) {
-                int[] absSlots = {0,9,15,17};
+                int[] absSlots = { 0, 9, 15, 17 };
                 int k = Math.min(absList.size(), absSlots.length);
                 for (int i = 0; i < k; i++) {
                     int val = absList.get(i);
@@ -1310,7 +1414,8 @@ public class MarketGUI implements Listener {
                     st.absSlots.put(slot, delta);
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         // Header with unit price
         ItemStack head = new ItemStack(st.material);
@@ -1325,11 +1430,13 @@ public class MarketGUI implements Listener {
                 double minFrac = cfg.getDouble("orders.listing.price_bounds_min_base_fraction", 0.10);
                 double maxFrac = cfg.getDouble("orders.listing.price_bounds_max_base_fraction", 10.0);
                 java.math.BigDecimal min = st.basePrice.multiply(new java.math.BigDecimal(String.valueOf(minFrac)))
-                    .setScale(2, java.math.RoundingMode.HALF_UP);
+                        .setScale(2, java.math.RoundingMode.HALF_UP);
                 java.math.BigDecimal max = st.basePrice.multiply(new java.math.BigDecimal(String.valueOf(maxFrac)))
-                    .setScale(2, java.math.RoundingMode.HALF_UP);
-                lore.add("§7" + translationManager.getMessage("market.gui.info.range", formatPrice(min), formatPrice(max)));
-            } catch (Exception ignored) {}
+                        .setScale(2, java.math.RoundingMode.HALF_UP);
+                lore.add("§7"
+                        + translationManager.getMessage("market.gui.info.range", formatPrice(min), formatPrice(max)));
+            } catch (Exception ignored) {
+            }
             hm.setLore(lore);
             head.setItemMeta(hm);
         }
@@ -1348,8 +1455,10 @@ public class MarketGUI implements Listener {
         try {
             var cfg = configManager.getModuleConfig("market");
             java.util.List<Integer> conf = cfg.getIntegerList("orders.listing.duration_hours_options");
-            if (conf != null && !conf.isEmpty()) hours = conf;
-        } catch (Exception ignored) {}
+            if (conf != null && !conf.isEmpty())
+                hours = conf;
+        } catch (Exception ignored) {
+        }
         int startSlot = 19;
         for (int i = 0; i < Math.min(hours.size(), 5); i++) {
             int h = hours.get(i);
@@ -1361,11 +1470,17 @@ public class MarketGUI implements Listener {
         // Confirm / Cancel
         ItemStack confirm = new ItemStack(Material.LIME_DYE);
         ItemMeta cm = confirm.getItemMeta();
-        if (cm != null) { cm.setDisplayName("§a" + translationManager.getMessage("market.gui.list.confirm")); confirm.setItemMeta(cm); }
+        if (cm != null) {
+            cm.setDisplayName("§a" + translationManager.getMessage("market.gui.list.confirm"));
+            confirm.setItemMeta(cm);
+        }
         gui.setItem(16, confirm);
         ItemStack cancel = new ItemStack(Material.BARRIER);
         ItemMeta ccm = cancel.getItemMeta();
-        if (ccm != null) { ccm.setDisplayName("§c" + translationManager.getMessage("market.gui.list.cancel")); cancel.setItemMeta(ccm); }
+        if (ccm != null) {
+            ccm.setDisplayName("§c" + translationManager.getMessage("market.gui.list.cancel"));
+            cancel.setItemMeta(ccm);
+        }
         gui.setItem(22, cancel);
 
         return gui;
@@ -1381,6 +1496,7 @@ public class MarketGUI implements Listener {
         }
         return it;
     }
+
     private ItemStack absButton(boolean plus, java.math.BigDecimal amount) {
         ItemStack it = new ItemStack(plus ? Material.LIME_DYE : Material.RED_DYE);
         ItemMeta im = it.getItemMeta();
@@ -1391,26 +1507,37 @@ public class MarketGUI implements Listener {
         }
         return it;
     }
+
     private ItemStack resetPriceButton() {
         ItemStack it = new ItemStack(Material.SUNFLOWER);
         ItemMeta im = it.getItemMeta();
-        if (im != null) { im.setDisplayName("§e" + translationManager.getMessage("market.gui.list.price.reset")); it.setItemMeta(im); }
+        if (im != null) {
+            im.setDisplayName("§e" + translationManager.getMessage("market.gui.list.price.reset"));
+            it.setItemMeta(im);
+        }
         return it;
     }
 
     private ItemStack listQtyItem(int qty) {
         ItemStack it = new ItemStack(Material.CHEST, Math.max(1, Math.min(64, qty)));
         ItemMeta im = it.getItemMeta();
-        if (im != null) { im.setDisplayName("§6" + translationManager.getMessage("market.gui.list.qty.select", qty)); it.setItemMeta(im); }
+        if (im != null) {
+            im.setDisplayName("§6" + translationManager.getMessage("market.gui.list.qty.select", qty));
+            it.setItemMeta(im);
+        }
         return it;
     }
+
     private ItemStack durationItem(int h) {
         ItemStack it = new ItemStack(Material.CLOCK);
         ItemMeta im = it.getItemMeta();
-        if (im != null) { im.setDisplayName("§b" + translationManager.getMessage("market.gui.list.duration", h)); it.setItemMeta(im); }
+        if (im != null) {
+            im.setDisplayName("§b" + translationManager.getMessage("market.gui.list.duration", h));
+            it.setItemMeta(im);
+        }
         return it;
     }
-    
+
     /**
      * Handle GUI close events
      */
@@ -1421,7 +1548,7 @@ public class MarketGUI implements Listener {
             bedrockActions.remove(player.getUniqueId());
         }
     }
-    
+
     /**
      * Update GUI display
      */
@@ -1440,18 +1567,17 @@ public class MarketGUI implements Listener {
         Inventory gui = Bukkit.createInventory(null, 27, title);
 
         java.util.List<BigDecimal> amounts = java.util.Arrays.asList(
-            new BigDecimal("100"), new BigDecimal("500"), new BigDecimal("1000"), new BigDecimal("5000")
-        );
-        int[] slots = {10, 11, 12, 13};
+                new BigDecimal("100"), new BigDecimal("500"), new BigDecimal("1000"), new BigDecimal("5000"));
+        int[] slots = { 10, 11, 12, 13 };
         for (int i = 0; i < amounts.size(); i++) {
             ItemStack it = new ItemStack(Material.GOLD_NUGGET);
             ItemMeta meta = it.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName("§6" + translationManager.getMessage("market.gui.sell-hand.amount", formatPrice(amounts.get(i))));
+                meta.setDisplayName("§6"
+                        + translationManager.getMessage("market.gui.sell-hand.amount", formatPrice(amounts.get(i))));
                 meta.setLore(java.util.Arrays.asList(
-                    "§7" + translationManager.getMessage("market.gui.sell-hand.lore1"),
-                    "§7" + translationManager.getMessage("market.gui.sell-hand.lore2")
-                ));
+                        "§7" + translationManager.getMessage("market.gui.sell-hand.lore1"),
+                        "§7" + translationManager.getMessage("market.gui.sell-hand.lore2")));
                 it.setItemMeta(meta);
             }
             gui.setItem(slots[i], it);
@@ -1467,7 +1593,7 @@ public class MarketGUI implements Listener {
 
         player.openInventory(gui);
     }
-    
+
     /**
      * Get color for trend direction
      */
@@ -1479,32 +1605,32 @@ public class MarketGUI implements Listener {
             case STABLE -> "§7";
         };
     }
-    
+
     /**
      * Format price for display
      */
     private String formatPrice(BigDecimal price) {
-        return "$" + price.setScale(2, BigDecimal.ROUND_HALF_UP).toString();
+        return "$" + price.setScale(2, java.math.RoundingMode.HALF_UP).toString();
     }
-    
+
     /**
      * Capitalize words in string
      */
     private String capitalizeWords(String str) {
         String[] words = str.split(" ");
         StringBuilder result = new StringBuilder();
-        
+
         for (String word : words) {
             if (!word.isEmpty()) {
                 result.append(Character.toUpperCase(word.charAt(0)))
-                      .append(word.substring(1).toLowerCase())
-                      .append(" ");
+                        .append(word.substring(1).toLowerCase())
+                        .append(" ");
             }
         }
-        
+
         return result.toString().trim();
     }
-    
+
     /**
      * Close all open GUIs
      */
@@ -1517,7 +1643,7 @@ public class MarketGUI implements Listener {
         }
         openGUIs.clear();
     }
-    
+
     /**
      * Inner class for tracking market inventory state
      */
@@ -1529,28 +1655,62 @@ public class MarketGUI implements Listener {
         private String selectedCategory = "ALL";
         private Character filterLetter = null;
         private SortMode sortMode = SortMode.NAME;
-        
+
         public MarketInventory(Player player, List<MarketItem> items, int currentPage, boolean bedrockPlayer) {
             this.player = player;
             this.items = items;
             this.currentPage = currentPage;
             this.bedrockPlayer = bedrockPlayer;
         }
-        
-        public Player getPlayer() { return player; }
-        public List<MarketItem> getItems() { return items; }
-        public int getCurrentPage() { return currentPage; }
-        public void setCurrentPage(int page) { this.currentPage = page; }
-        public String getSelectedCategory() { return selectedCategory; }
-        public void setSelectedCategory(String cat) { this.selectedCategory = cat; }
-        public Character getFilterLetter() { return filterLetter; }
-        public void setFilterLetter(Character c) { this.filterLetter = c; }
-        public SortMode getSortMode() { return sortMode; }
-        public void cycleSort() { this.sortMode = this.sortMode.next(); }
-        public boolean isBedrockPlayer() { return bedrockPlayer; }
+
+        public Player getPlayer() {
+            return player;
+        }
+
+        public List<MarketItem> getItems() {
+            return items;
+        }
+
+        public int getCurrentPage() {
+            return currentPage;
+        }
+
+        public void setCurrentPage(int page) {
+            this.currentPage = page;
+        }
+
+        public String getSelectedCategory() {
+            return selectedCategory;
+        }
+
+        public void setSelectedCategory(String cat) {
+            this.selectedCategory = cat;
+        }
+
+        public Character getFilterLetter() {
+            return filterLetter;
+        }
+
+        public void setFilterLetter(Character c) {
+            this.filterLetter = c;
+        }
+
+        public SortMode getSortMode() {
+            return sortMode;
+        }
+
+        public void cycleSort() {
+            this.sortMode = this.sortMode.next();
+        }
+
+        public boolean isBedrockPlayer() {
+            return bedrockPlayer;
+        }
     }
 
-    private enum SortMode { NAME, BUY_ASC, SELL_ASC, SELL_DESC, VOLUME_ASC, VOLUME_DESC;
+    private enum SortMode {
+        NAME, BUY_ASC, SELL_ASC, SELL_DESC, VOLUME_ASC, VOLUME_DESC;
+
         public SortMode next() {
             return switch (this) {
                 case NAME -> BUY_ASC;
@@ -1561,6 +1721,7 @@ public class MarketGUI implements Listener {
                 case VOLUME_DESC -> NAME;
             };
         }
+
         public String display(TranslationManager tm) {
             return switch (this) {
                 case NAME -> tm.getMessage("market.gui.info.sort-mode.name");

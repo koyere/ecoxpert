@@ -753,4 +753,38 @@ numbers:
   billion: "B"
   trillion: "T"
 
+# Sistema Baltop
+baltop:
+  header: "&6&l=== &eTop Balances &7(Página {0}/{1}) &6&l==="
+  entry: "&7#{0} &f{1} &8- &a{2}"
+  entry-self: "&e&l#{0} &e&l{1} &7(Tú) &8- &a{2}"
+  footer-prev: "&a« &7Página anterior: &e/baltop {0}"
+  footer-next: "&a» &7Página siguiente: &e/baltop {0}"
+  your-rank: "&7Tu rango: &e#{0} &8- &a{1}"
+  no-data: "&cNo hay datos de clasificación disponibles"
+  invalid-page: "&cNúmero de página inválido: {0}"
+  page-out-of-range: "&cLa página {0} está fuera de rango (máx: {1})"
+
+  gui:
+    title: "Top Balances - Página {0}"
+    balance: "Balance"
+    your-position: "¡Esta es tu posición!"
+    your-stats: "Tus Estadísticas"
+    your-rank: "Tu Rango"
+    your-balance: "Tu Balance"
+    prev: "« Página Anterior"
+    next: "Página Siguiente »"
+    close: "Cerrar"
+    nav-hint: "Click para navegar"
+
+    bedrock:
+      title: "Top Balances"
+      subtitle: "Mejores Jugadores - Página {0}/{1}"
+      welcome: "Clasificación"
+      your-rank: "Tu Rango: #{0}"
+      btn:
+        prev: "Página Anterior"
+        next: "Página Siguiente"
+        close: "Cerrar"
+
 # Bedrock Forms (Geyser)

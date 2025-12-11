@@ -7,7 +7,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 
@@ -25,7 +24,6 @@ import java.util.logging.Level;
 public class BedrockFormsManager {
 
     private final EcoXpertPlugin plugin;
-    private boolean geyserAvailable = false;
     private boolean formsApiAvailable = false;
 
     // Reflection handles
@@ -37,9 +35,6 @@ public class BedrockFormsManager {
     private Class<?> modalFormClass;
     private Class<?> modalFormBuilderClass;
     private Object geyserApiInstance;
-
-    // Form callbacks
-    private final ConcurrentHashMap<UUID, FormCallback> pendingCallbacks = new ConcurrentHashMap<>();
 
     public BedrockFormsManager(EcoXpertPlugin plugin) {
         this.plugin = plugin;
@@ -65,18 +60,15 @@ public class BedrockFormsManager {
             this.modalFormClass = loadGeyserClass("org.geysermc.cumulus.form.ModalForm");
             this.modalFormBuilderClass = loadGeyserClass("org.geysermc.cumulus.form.ModalForm$Builder");
 
-            this.geyserAvailable = true;
             this.formsApiAvailable = true;
 
             plugin.getLogger().info("Geyser Forms API detected - Bedrock-native UIs enabled");
 
         } catch (ClassNotFoundException e) {
             plugin.getLogger().info("Geyser Forms API not available - using fallback chest GUIs for Bedrock players");
-            this.geyserAvailable = false;
             this.formsApiAvailable = false;
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING, "Error loading Geyser Forms API", e);
-            this.geyserAvailable = false;
             this.formsApiAvailable = false;
         }
     }
@@ -91,14 +83,14 @@ public class BedrockFormsManager {
     /**
      * Send a SimpleForm (menu with buttons) to a player
      *
-     * @param player Target player
-     * @param title Form title
-     * @param content Form description/content
-     * @param buttons List of button labels
+     * @param player   Target player
+     * @param title    Form title
+     * @param content  Form description/content
+     * @param buttons  List of button labels
      * @param callback Callback when button clicked (receives button index)
      */
     public void sendSimpleForm(Player player, String title, String content,
-                               List<String> buttons, Consumer<Integer> callback) {
+            List<String> buttons, Consumer<Integer> callback) {
         if (!formsApiAvailable) {
             plugin.getLogger().warning("Cannot send SimpleForm - Geyser Forms API not available");
             return;
@@ -143,7 +135,7 @@ public class BedrockFormsManager {
 
                             // Run callback on main thread
                             plugin.getServer().getScheduler().runTask(plugin,
-                                () -> callback.accept(buttonIndex));
+                                    () -> callback.accept(buttonIndex));
                         }
                     } catch (Exception e) {
                         plugin.getLogger().log(Level.SEVERE, "Error handling SimpleForm response", e);
@@ -159,9 +151,11 @@ public class BedrockFormsManager {
             Method buildMethod = simpleFormBuilderClass.getMethod("build");
             Object form = buildMethod.invoke(builder);
 
-            // Send form to player via connection: GeyserApi.api().connectionByUuid(uuid).sendForm(form)
+            // Send form to player via connection:
+            // GeyserApi.api().connectionByUuid(uuid).sendForm(form)
             if (!dispatchForm(player, form)) {
-                plugin.getLogger().warning("Failed to send SimpleForm to " + player.getName() + " - no compatible sendForm method found");
+                plugin.getLogger().warning(
+                        "Failed to send SimpleForm to " + player.getName() + " - no compatible sendForm method found");
             }
 
         } catch (Exception e) {
@@ -172,15 +166,16 @@ public class BedrockFormsManager {
     /**
      * Send a ModalForm (yes/no confirmation) to a player
      *
-     * @param player Target player
-     * @param title Form title
-     * @param content Form question/content
-     * @param button1 First button text (typically "Yes")
-     * @param button2 Second button text (typically "No")
-     * @param callback Callback when button clicked (true = button1, false = button2)
+     * @param player   Target player
+     * @param title    Form title
+     * @param content  Form question/content
+     * @param button1  First button text (typically "Yes")
+     * @param button2  Second button text (typically "No")
+     * @param callback Callback when button clicked (true = button1, false =
+     *                 button2)
      */
     public void sendModalForm(Player player, String title, String content,
-                              String button1, String button2, Consumer<Boolean> callback) {
+            String button1, String button2, Consumer<Boolean> callback) {
         if (!formsApiAvailable) {
             plugin.getLogger().warning("Cannot send ModalForm - Geyser Forms API not available");
             return;
@@ -225,7 +220,7 @@ public class BedrockFormsManager {
 
                             // Run callback on main thread (0 = button1, 1 = button2)
                             plugin.getServer().getScheduler().runTask(plugin,
-                                () -> callback.accept(buttonId == 0));
+                                    () -> callback.accept(buttonId == 0));
                         }
                     } catch (Exception e) {
                         plugin.getLogger().log(Level.SEVERE, "Error handling ModalForm response", e);
@@ -243,7 +238,8 @@ public class BedrockFormsManager {
 
             // Send form via connection
             if (!dispatchForm(player, form)) {
-                plugin.getLogger().warning("Failed to send ModalForm to " + player.getName() + " - no compatible sendForm method found");
+                plugin.getLogger().warning(
+                        "Failed to send ModalForm to " + player.getName() + " - no compatible sendForm method found");
             }
 
         } catch (Exception e) {
@@ -342,14 +338,14 @@ public class BedrockFormsManager {
     /**
      * Send a CustomForm (form with inputs) to a player
      *
-     * @param player Target player
-     * @param title Form title
+     * @param player   Target player
+     * @param title    Form title
      * @param callback Callback when form submitted (receives Map of field results)
-     * @param builder Configuration builder for form fields
+     * @param builder  Configuration builder for form fields
      */
     public void sendCustomForm(Player player, String title,
-                               java.util.function.Consumer<java.util.Map<String, Object>> callback,
-                               java.util.function.Consumer<CustomFormBuilder> builder) {
+            java.util.function.Consumer<java.util.Map<String, Object>> callback,
+            java.util.function.Consumer<CustomFormBuilder> builder) {
         if (!formsApiAvailable) {
             plugin.getLogger().warning("Cannot send CustomForm - Geyser Forms API not available");
             return;
@@ -369,12 +365,10 @@ public class BedrockFormsManager {
      */
     public static class CustomFormBuilder {
         private final String title;
-        private final BedrockFormsManager manager;
         private final java.util.List<FormComponent> components = new java.util.ArrayList<>();
 
         public CustomFormBuilder(BedrockFormsManager manager, String title) {
             this.title = title;
-            this.manager = manager;
         }
 
         public CustomFormBuilder label(String text) {
@@ -399,15 +393,16 @@ public class BedrockFormsManager {
 
         public CustomFormBuilder slider(String fieldName, float min, float max, float step, float defaultValue) {
             components.add(new FormComponent("slider", fieldName,
-                java.util.Arrays.asList(min, max, step), defaultValue));
+                    java.util.Arrays.asList(min, max, step), defaultValue));
             return this;
         }
 
         void sendTo(Player player, BedrockFormsManager manager,
-                   java.util.function.Consumer<java.util.Map<String, Object>> callback) {
+                java.util.function.Consumer<java.util.Map<String, Object>> callback) {
             try {
                 Class<?> customFormClass = manager.loadGeyserClass("org.geysermc.cumulus.form.CustomForm");
-                Class<?> customFormBuilderClass = manager.loadGeyserClass("org.geysermc.cumulus.form.CustomForm$Builder");
+                Class<?> customFormBuilderClass = manager
+                        .loadGeyserClass("org.geysermc.cumulus.form.CustomForm$Builder");
 
                 // Create builder: CustomForm.builder()
                 Method builderMethod = customFormClass.getMethod("builder");
@@ -426,15 +421,15 @@ public class BedrockFormsManager {
                             break;
                         case "input":
                             Method inputMethod = customFormBuilderClass.getMethod("input",
-                                String.class, String.class, String.class);
+                                    String.class, String.class, String.class);
                             builder = inputMethod.invoke(builder,
-                                (String) comp.data,
-                                comp.extra != null ? (String) comp.extra : "",
-                                comp.defaultVal != null ? (String) comp.defaultVal : "");
+                                    (String) comp.data,
+                                    comp.extra != null ? (String) comp.extra : "",
+                                    comp.defaultVal != null ? (String) comp.defaultVal : "");
                             break;
                         case "dropdown":
                             Method dropdownMethod = customFormBuilderClass.getMethod("dropdown",
-                                String.class, java.util.List.class, int.class);
+                                    String.class, java.util.List.class, int.class);
                             @SuppressWarnings("unchecked")
                             java.util.List<String> options = (java.util.List<String>) comp.extra;
                             int defaultIdx = comp.defaultVal != null ? (Integer) comp.defaultVal : 0;
@@ -442,26 +437,28 @@ public class BedrockFormsManager {
                             break;
                         case "toggle":
                             Method toggleMethod = customFormBuilderClass.getMethod("toggle",
-                                String.class, boolean.class);
+                                    String.class, boolean.class);
                             boolean toggleDefault = comp.defaultVal != null ? (Boolean) comp.defaultVal : false;
                             builder = toggleMethod.invoke(builder, (String) comp.data, toggleDefault);
                             break;
                         case "slider":
                             Method sliderMethod = customFormBuilderClass.getMethod("slider",
-                                String.class, float.class, float.class, float.class, float.class);
+                                    String.class, float.class, float.class, float.class, float.class);
                             @SuppressWarnings("unchecked")
                             java.util.List<Number> params = (java.util.List<Number>) comp.extra;
-                            float defaultSlider = comp.defaultVal != null ? ((Number) comp.defaultVal).floatValue() : params.get(0).floatValue();
+                            float defaultSlider = comp.defaultVal != null ? ((Number) comp.defaultVal).floatValue()
+                                    : params.get(0).floatValue();
                             builder = sliderMethod.invoke(builder, (String) comp.data,
-                                params.get(0).floatValue(), params.get(1).floatValue(),
-                                params.get(2).floatValue(), defaultSlider);
+                                    params.get(0).floatValue(), params.get(1).floatValue(),
+                                    params.get(2).floatValue(), defaultSlider);
                             break;
                     }
                 }
 
                 // Set callback handler
                 if (callback != null) {
-                    Class<?> formResponseClass = manager.loadGeyserClass("org.geysermc.cumulus.response.CustomFormResponse");
+                    Class<?> formResponseClass = manager
+                            .loadGeyserClass("org.geysermc.cumulus.response.CustomFormResponse");
                     Class<?> consumerClass = java.util.function.Consumer.class;
 
                     java.util.function.Consumer<Object> responseHandler = response -> {
@@ -474,11 +471,12 @@ public class BedrockFormsManager {
                                 // Get response data
                                 Method asMapMethod = formResponseClass.getMethod("asMap");
                                 @SuppressWarnings("unchecked")
-                                java.util.Map<String, Object> results = (java.util.Map<String, Object>) asMapMethod.invoke(response);
+                                java.util.Map<String, Object> results = (java.util.Map<String, Object>) asMapMethod
+                                        .invoke(response);
 
                                 // Run callback on main thread
                                 manager.plugin.getServer().getScheduler().runTask(manager.plugin,
-                                    () -> callback.accept(results));
+                                        () -> callback.accept(results));
                             }
                         } catch (Exception e) {
                             manager.plugin.getLogger().log(Level.SEVERE, "Error handling CustomForm response", e);
@@ -495,7 +493,8 @@ public class BedrockFormsManager {
                 Object form = buildMethod.invoke(builder);
 
                 if (!manager.dispatchForm(player, form)) {
-                    manager.plugin.getLogger().warning("Failed to send CustomForm to " + player.getName() + " - no compatible sendForm method found");
+                    manager.plugin.getLogger().warning("Failed to send CustomForm to " + player.getName()
+                            + " - no compatible sendForm method found");
                 }
 
             } catch (Exception e) {
@@ -505,8 +504,8 @@ public class BedrockFormsManager {
 
         private static class FormComponent {
             final String type;
-            final Object data;      // Label text, field name, etc.
-            final Object extra;     // Placeholder, options list, slider params
+            final Object data; // Label text, field name, etc.
+            final Object extra; // Placeholder, options list, slider params
             final Object defaultVal;
 
             FormComponent(String type, Object data, Object extra, Object defaultVal) {
@@ -523,13 +522,6 @@ public class BedrockFormsManager {
      */
     public CustomFormBuilder customForm(String title) {
         return new CustomFormBuilder(this, title);
-    }
-
-    /**
-     * Internal callback wrapper
-     */
-    private interface FormCallback {
-        void handle(Object response);
     }
 
     private Class<?> loadGeyserClass(String className) throws ClassNotFoundException {
@@ -570,13 +562,14 @@ public class BedrockFormsManager {
                     method.invoke(connection, adapted);
                     return true;
                 } catch (IllegalArgumentException ex) {
-                    plugin.getLogger().log(Level.FINE, "sendForm invocation rejected for parameter " + paramType.getName(), ex);
+                    plugin.getLogger().log(Level.FINE,
+                            "sendForm invocation rejected for parameter " + paramType.getName(), ex);
                 }
             }
 
             plugin.getLogger().warning("Failed to invoke sendForm on " + connection.getClass().getName()
-                + " for " + player.getName() + " (form=" + form.getClass().getName()
-                + "). Tried parameter types: " + inspected);
+                    + " for " + player.getName() + " (form=" + form.getClass().getName()
+                    + "). Tried parameter types: " + inspected);
             return false;
         } catch (Exception e) {
             plugin.getLogger().log(Level.SEVERE, "Error dispatching Bedrock form to " + player.getName(), e);
@@ -607,7 +600,8 @@ public class BedrockFormsManager {
     }
 
     private Object tryConversionChain(Object form, Class<?> targetType) {
-        if (form == null) return null;
+        if (form == null)
+            return null;
 
         Object result = tryInvokeConversion(form, "newForm");
         if (result != null && targetType.isInstance(result)) {
@@ -637,7 +631,7 @@ public class BedrockFormsManager {
             return null;
         } catch (Exception e) {
             plugin.getLogger().log(Level.FINE, "Failed to invoke conversion method '" + methodName
-                + "' on " + form.getClass().getName(), e);
+                    + "' on " + form.getClass().getName(), e);
             return null;
         }
     }

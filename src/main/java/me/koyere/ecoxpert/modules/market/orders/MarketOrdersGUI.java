@@ -23,7 +23,6 @@ public class MarketOrdersGUI implements Listener {
 
     private final me.koyere.ecoxpert.modules.market.orders.MarketOrderService orderService;
     private final me.koyere.ecoxpert.core.translation.TranslationManager tm;
-    private final java.util.logging.Logger logger;
 
     private static final int INVENTORY_SIZE = 54;
     private static final int ITEMS_PER_PAGE = 45; // 5 rows
@@ -39,23 +38,23 @@ public class MarketOrdersGUI implements Listener {
     private final Map<UUID, OrdersView> open = new ConcurrentHashMap<>();
     private final Map<UUID, SelectionView> selecting = new ConcurrentHashMap<>();
 
-    private enum SortMode { PRICE_ASC, PRICE_DESC, REMAIN_ASC, REMAIN_DESC, EXPIRE_ASC, EXPIRE_DESC }
+    private enum SortMode {
+        PRICE_ASC, PRICE_DESC, REMAIN_ASC, REMAIN_DESC, EXPIRE_ASC, EXPIRE_DESC
+    }
 
     public MarketOrdersGUI(MarketOrderService orderService, TranslationManager tm, java.util.logging.Logger logger) {
         this.orderService = orderService;
         this.tm = tm;
-        this.logger = logger;
     }
 
     public void open(Player player, Material filter) {
         orderService.listOpenOrders(filter).thenAccept(list -> Bukkit.getScheduler().runTask(
-            org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(getClass()), () -> {
-                OrdersView view = new OrdersView(player.getUniqueId(), list, 0, filter, SortMode.PRICE_ASC);
-                view.orders = applySort(view.orders, view.sortMode);
-                open.put(player.getUniqueId(), view);
-                player.openInventory(build(view));
-            }
-        ));
+                org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(getClass()), () -> {
+                    OrdersView view = new OrdersView(player.getUniqueId(), list, 0, filter, SortMode.PRICE_ASC);
+                    view.orders = applySort(view.orders, view.sortMode);
+                    open.put(player.getUniqueId(), view);
+                    player.openInventory(build(view));
+                }));
     }
 
     private Inventory build(OrdersView view) {
@@ -101,7 +100,10 @@ public class MarketOrdersGUI implements Listener {
         // Close
         ItemStack close = new ItemStack(Material.BARRIER);
         ItemMeta cm = close.getItemMeta();
-        if (cm != null) { cm.setDisplayName("§c" + tm.getMessage("market.gui.close")); close.setItemMeta(cm); }
+        if (cm != null) {
+            cm.setDisplayName("§c" + tm.getMessage("market.gui.close"));
+            close.setItemMeta(cm);
+        }
         inv.setItem(SLOT_CLOSE, close);
         // Info
         ItemStack info = new ItemStack(Material.BOOK);
@@ -124,7 +126,8 @@ public class MarketOrdersGUI implements Listener {
         ItemStack filt = new ItemStack(view.filter != null ? view.filter : Material.NAME_TAG);
         ItemMeta fm = filt.getItemMeta();
         if (fm != null) {
-            fm.setDisplayName("§b" + tm.getMessage("market.gui.orders.filter-label", (view.filter != null ? view.filter.name() : "ALL")));
+            fm.setDisplayName("§b" + tm.getMessage("market.gui.orders.filter-label",
+                    (view.filter != null ? view.filter.name() : "ALL")));
             java.util.List<String> lore = new java.util.ArrayList<>();
             lore.add("§7" + tm.getMessage("market.gui.orders.set-filter-help"));
             fm.setLore(lore);
@@ -196,52 +199,72 @@ public class MarketOrdersGUI implements Listener {
 
     private String format(java.math.BigDecimal amount) {
         var eco = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
-            .getServiceRegistry().getInstance(me.koyere.ecoxpert.economy.EconomyManager.class);
+                .getServiceRegistry().getInstance(me.koyere.ecoxpert.economy.EconomyManager.class);
         return eco.formatMoney(amount);
     }
 
     private String humanExpire(java.time.LocalDateTime t) {
         long mins = java.time.Duration.between(java.time.LocalDateTime.now(), t).toMinutes();
-        if (mins <= 0) return tm.getMessage("market.gui.orders.item.expired");
-        long h = mins / 60; long m = mins % 60;
-        if (h > 0) return tm.getMessage("market.gui.orders.item.expires_in_hm", h, m);
+        if (mins <= 0)
+            return tm.getMessage("market.gui.orders.item.expired");
+        long h = mins / 60;
+        long m = mins % 60;
+        if (h > 0)
+            return tm.getMessage("market.gui.orders.item.expires_in_hm", h, m);
         return tm.getMessage("market.gui.orders.item.expires_in_m", m);
     }
 
     private String shortSeller(java.util.UUID uuid) {
         try {
             OfflinePlayer op = Bukkit.getOfflinePlayer(uuid);
-            if (op != null && op.getName() != null) return op.getName();
-        } catch (Exception ignored) {}
+            if (op != null && op.getName() != null)
+                return op.getName();
+        } catch (Exception ignored) {
+        }
         String s = uuid.toString();
         return s.substring(0, 8);
     }
 
     @EventHandler
     public void onClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player p)) return;
+        if (!(e.getWhoClicked() instanceof Player p))
+            return;
         OrdersView view = open.get(p.getUniqueId());
-        if (view == null) return;
-        if (!e.getView().getTitle().equals(tm.getMessage("market.gui.orders.title"))) return;
+        if (view == null)
+            return;
+        if (!e.getView().getTitle().equals(tm.getMessage("market.gui.orders.title")))
+            return;
         e.setCancelled(true);
 
         int slot = e.getRawSlot();
-        if (slot == SLOT_CLOSE) { p.closeInventory(); return; }
-        if (slot == SLOT_PREV && view.page > 0) { view.page--; refresh(p, view); return; }
+        if (slot == SLOT_CLOSE) {
+            p.closeInventory();
+            return;
+        }
+        if (slot == SLOT_PREV && view.page > 0) {
+            view.page--;
+            refresh(p, view);
+            return;
+        }
         int totalPages = (int) Math.ceil((double) view.orders.size() / ITEMS_PER_PAGE);
-        if (slot == SLOT_NEXT && view.page < totalPages - 1) { view.page++; refresh(p, view); return; }
+        if (slot == SLOT_NEXT && view.page < totalPages - 1) {
+            view.page++;
+            refresh(p, view);
+            return;
+        }
         if (slot == SLOT_FILTER) {
             // Toggle filter: if player holds an item, use that; else clear filter
-            Material held = p.getInventory().getItemInMainHand() != null ? p.getInventory().getItemInMainHand().getType() : Material.AIR;
+            Material held = p.getInventory().getItemInMainHand() != null
+                    ? p.getInventory().getItemInMainHand().getType()
+                    : Material.AIR;
             Material newFilter = (held != null && held != Material.AIR) ? held : null;
             orderService.listOpenOrders(newFilter).thenAccept(list -> Bukkit.getScheduler().runTask(
-                org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(getClass()), () -> {
-                    OrdersView nv = new OrdersView(p.getUniqueId(), list, 0, newFilter, view.sortMode);
-                    nv.orders = applySort(nv.orders, nv.sortMode);
-                    open.put(p.getUniqueId(), nv);
-                    refresh(p, nv);
-                }
-            ));
+                    org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(getClass()), () -> {
+                        OrdersView nv = new OrdersView(p.getUniqueId(), list, 0, newFilter, view.sortMode);
+                        nv.orders = applySort(nv.orders, nv.sortMode);
+                        open.put(p.getUniqueId(), nv);
+                        refresh(p, nv);
+                    }));
             return;
         }
         if (slot == SLOT_SORT) {
@@ -253,13 +276,12 @@ public class MarketOrdersGUI implements Listener {
         }
         if (slot == SLOT_CLEAR) {
             orderService.listOpenOrders(null).thenAccept(list -> Bukkit.getScheduler().runTask(
-                org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(getClass()), () -> {
-                    OrdersView nv = new OrdersView(p.getUniqueId(), list, 0, null, view.sortMode);
-                    nv.orders = applySort(nv.orders, nv.sortMode);
-                    open.put(p.getUniqueId(), nv);
-                    refresh(p, nv);
-                }
-            ));
+                    org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(getClass()), () -> {
+                        OrdersView nv = new OrdersView(p.getUniqueId(), list, 0, null, view.sortMode);
+                        nv.orders = applySort(nv.orders, nv.sortMode);
+                        open.put(p.getUniqueId(), nv);
+                        refresh(p, nv);
+                    }));
             return;
         }
 
@@ -268,8 +290,10 @@ public class MarketOrdersGUI implements Listener {
             if (index >= 0 && index < view.orders.size()) {
                 MarketOrder o = view.orders.get(index);
                 int qty = 1;
-                if (e.isRightClick()) qty = Math.min(16, o.getRemainingQuantity());
-                if (e.isShiftClick()) qty = o.getRemainingQuantity();
+                if (e.isRightClick())
+                    qty = Math.min(16, o.getRemainingQuantity());
+                if (e.isShiftClick())
+                    qty = o.getRemainingQuantity();
                 // Execute purchase
                 int finalQty = Math.max(1, Math.min(qty, o.getRemainingQuantity()));
                 openSelect(p, view, o, finalQty);
@@ -291,24 +315,28 @@ public class MarketOrdersGUI implements Listener {
     }
 
     private static class OrdersView {
-        final UUID player;
         List<MarketOrder> orders;
         int page;
         final Material filter;
         SortMode sortMode;
 
         OrdersView(UUID player, List<MarketOrder> orders, int page, Material filter, SortMode sortMode) {
-            this.player = player; this.orders = orders; this.page = page; this.filter = filter; this.sortMode = sortMode;
+            this.orders = orders;
+            this.page = page;
+            this.filter = filter;
+            this.sortMode = sortMode;
         }
     }
 
     private static class SelectionView {
-        final UUID player;
         final MarketOrder order;
         int quantity;
         final Material filter;
+
         SelectionView(UUID player, MarketOrder order, int quantity, Material filter) {
-            this.player = player; this.order = order; this.quantity = quantity; this.filter = filter;
+            this.order = order;
+            this.quantity = quantity;
+            this.filter = filter;
         }
     }
 
@@ -318,9 +346,13 @@ public class MarketOrdersGUI implements Listener {
             case PRICE_ASC -> list.sort(java.util.Comparator.comparing(MarketOrder::getUnitPrice));
             case PRICE_DESC -> list.sort(java.util.Comparator.comparing(MarketOrder::getUnitPrice).reversed());
             case REMAIN_ASC -> list.sort(java.util.Comparator.comparingInt(MarketOrder::getRemainingQuantity));
-            case REMAIN_DESC -> list.sort(java.util.Comparator.comparingInt(MarketOrder::getRemainingQuantity).reversed());
-            case EXPIRE_ASC -> list.sort(java.util.Comparator.comparing(o -> o.getExpiresAt() == null ? java.time.LocalDateTime.MAX : o.getExpiresAt()));
-            case EXPIRE_DESC -> list.sort(java.util.Comparator.comparing((MarketOrder o) -> o.getExpiresAt() == null ? java.time.LocalDateTime.MAX : o.getExpiresAt()).reversed());
+            case REMAIN_DESC ->
+                list.sort(java.util.Comparator.comparingInt(MarketOrder::getRemainingQuantity).reversed());
+            case EXPIRE_ASC -> list.sort(java.util.Comparator
+                    .comparing(o -> o.getExpiresAt() == null ? java.time.LocalDateTime.MAX : o.getExpiresAt()));
+            case EXPIRE_DESC -> list.sort(java.util.Comparator.comparing(
+                    (MarketOrder o) -> o.getExpiresAt() == null ? java.time.LocalDateTime.MAX : o.getExpiresAt())
+                    .reversed());
         }
         return list;
     }
@@ -363,7 +395,8 @@ public class MarketOrdersGUI implements Listener {
             java.util.List<String> lore = new java.util.ArrayList<>();
             lore.add("§7" + tm.getMessage("market.gui.orders.select.info.unit_price", format(sv.order.getUnitPrice())));
             lore.add("§7" + tm.getMessage("market.gui.orders.select.info.chosen", sv.quantity));
-            java.math.BigDecimal total = sv.order.getUnitPrice().multiply(new java.math.BigDecimal(sv.quantity)).setScale(2, java.math.RoundingMode.HALF_UP);
+            java.math.BigDecimal total = sv.order.getUnitPrice().multiply(new java.math.BigDecimal(sv.quantity))
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
             lore.add("§7" + tm.getMessage("market.gui.orders.select.info.total", format(total)));
             im.setLore(lore);
             info.setItemMeta(im);
@@ -379,12 +412,18 @@ public class MarketOrdersGUI implements Listener {
         // Confirm/Cancel if needed after clicking amount (render now as hint)
         ItemStack cancel = new ItemStack(Material.BARRIER);
         ItemMeta cm = cancel.getItemMeta();
-        if (cm != null) { cm.setDisplayName("§c" + tm.getMessage("market.gui.orders.select.cancel")); cancel.setItemMeta(cm); }
+        if (cm != null) {
+            cm.setDisplayName("§c" + tm.getMessage("market.gui.orders.select.cancel"));
+            cancel.setItemMeta(cm);
+        }
         inv.setItem(22, cancel);
 
         ItemStack confirm = new ItemStack(Material.LIME_DYE);
         ItemMeta cfm = confirm.getItemMeta();
-        if (cfm != null) { cfm.setDisplayName("§a" + tm.getMessage("market.gui.orders.select.confirm")); confirm.setItemMeta(cfm); }
+        if (cfm != null) {
+            cfm.setDisplayName("§a" + tm.getMessage("market.gui.orders.select.confirm"));
+            confirm.setItemMeta(cfm);
+        }
         inv.setItem(16, confirm);
 
         return inv;
@@ -400,7 +439,8 @@ public class MarketOrdersGUI implements Listener {
                 im.setDisplayName("§6" + tm.getMessage("market.gui.orders.select.amount", qty));
             }
             java.util.List<String> lore = new java.util.ArrayList<>();
-            java.math.BigDecimal total = sv.order.getUnitPrice().multiply(new java.math.BigDecimal(qty)).setScale(2, java.math.RoundingMode.HALF_UP);
+            java.math.BigDecimal total = sv.order.getUnitPrice().multiply(new java.math.BigDecimal(qty)).setScale(2,
+                    java.math.RoundingMode.HALF_UP);
             lore.add("§7" + tm.getMessage("market.gui.orders.select.button_total", format(total)));
             if (total.doubleValue() > getConfirmThreshold()) {
                 lore.add("§e" + tm.getMessage("market.gui.orders.select.confirm_hint"));
@@ -414,19 +454,24 @@ public class MarketOrdersGUI implements Listener {
     private double getConfirmThreshold() {
         try {
             var cfg = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.koyere.ecoxpert.EcoXpertPlugin.class)
-                .getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class)
-                .getModuleConfig("market");
+                    .getServiceRegistry().getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class)
+                    .getModuleConfig("market");
             return cfg.getDouble("orders.confirm_threshold", 5000.0);
-        } catch (Exception e) { return 5000.0; }
+        } catch (Exception e) {
+            return 5000.0;
+        }
     }
 
     @EventHandler
     public void onSelectClick(org.bukkit.event.inventory.InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player p)) return;
-        if (!e.getView().getTitle().equals(tm.getMessage("market.gui.orders.select.title"))) return;
+        if (!(e.getWhoClicked() instanceof Player p))
+            return;
+        if (!e.getView().getTitle().equals(tm.getMessage("market.gui.orders.select.title")))
+            return;
         e.setCancelled(true);
         SelectionView sv = selecting.get(p.getUniqueId());
-        if (sv == null) return;
+        if (sv == null)
+            return;
         int slot = e.getRawSlot();
         if (slot == 22) { // cancel
             selecting.remove(p.getUniqueId());
@@ -468,26 +513,27 @@ public class MarketOrdersGUI implements Listener {
 
     private void executePurchase(Player p, SelectionView sv, int qty) {
         orderService.buyFromOrder(p, sv.order.getId(), qty).thenAccept(msg -> Bukkit.getScheduler().runTask(
-            org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(getClass()), () -> {
-                p.sendMessage(tm.getMessage("prefix") + msg);
-                selecting.remove(p.getUniqueId());
-                // Refresh list after purchase
-                orderService.listOpenOrders(sv.filter).thenAccept(list -> Bukkit.getScheduler().runTask(
-                    org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(getClass()), () -> {
-                        OrdersView view = open.get(p.getUniqueId());
-                        if (view == null) {
-                            view = new OrdersView(p.getUniqueId(), list, 0, sv.filter, SortMode.PRICE_ASC);
-                        } else {
-                            view.orders = list;
-                            int tp = (int) Math.ceil((double) view.orders.size() / ITEMS_PER_PAGE);
-                            if (tp == 0) view.page = 0; else view.page = Math.min(view.page, Math.max(0, tp - 1));
-                        }
-                        view.orders = applySort(view.orders, view.sortMode);
-                        open.put(p.getUniqueId(), view);
-                        p.openInventory(build(view));
-                    }
-                ));
-            }
-        ));
+                org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(getClass()), () -> {
+                    p.sendMessage(tm.getMessage("prefix") + msg);
+                    selecting.remove(p.getUniqueId());
+                    // Refresh list after purchase
+                    orderService.listOpenOrders(sv.filter).thenAccept(list -> Bukkit.getScheduler().runTask(
+                            org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(getClass()), () -> {
+                                OrdersView view = open.get(p.getUniqueId());
+                                if (view == null) {
+                                    view = new OrdersView(p.getUniqueId(), list, 0, sv.filter, SortMode.PRICE_ASC);
+                                } else {
+                                    view.orders = list;
+                                    int tp = (int) Math.ceil((double) view.orders.size() / ITEMS_PER_PAGE);
+                                    if (tp == 0)
+                                        view.page = 0;
+                                    else
+                                        view.page = Math.min(view.page, Math.max(0, tp - 1));
+                                }
+                                view.orders = applySort(view.orders, view.sortMode);
+                                open.put(p.getUniqueId(), view);
+                                p.openInventory(build(view));
+                            }));
+                }));
     }
 }

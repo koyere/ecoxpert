@@ -35,44 +35,45 @@ public class EcoCommand extends BaseCommand {
     // Dynamic events engine used for /ecoxpert events admin operations
     private final EconomicEventEngine eventEngine;
     private final ConfigManager configManager;
-    
-    public EcoCommand(EconomyManager economyManager, TranslationManager translationManager, ConfigManager configManager, EconomicEventEngine eventEngine) {
+
+    public EcoCommand(EconomyManager economyManager, TranslationManager translationManager, ConfigManager configManager,
+            EconomicEventEngine eventEngine) {
         super(economyManager, translationManager, configManager);
         this.eventEngine = eventEngine;
         this.configManager = configManager;
     }
-    
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
             sendHelpMessage(sender);
             return true;
         }
-        
+
         String subcommand = args[0].toLowerCase();
         String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
-        
+
         switch (subcommand) {
             case "reload":
                 return handleReload(sender);
             case "balance":
             case "bal":
                 return handleBalance(sender, subArgs);
-                
+
             case "pay":
                 return handlePay(sender, subArgs);
-                
+
             case "set":
                 return handleSet(sender, subArgs);
-                
+
             case "add":
             case "give":
                 return handleAdd(sender, subArgs);
-                
+
             case "remove":
             case "take":
                 return handleRemove(sender, subArgs);
-            
+
             case "events":
                 return handleEvents(sender, subArgs);
 
@@ -84,7 +85,7 @@ public class EcoCommand extends BaseCommand {
             case "migrate":
             case "import":
                 return handleMigrate(sender, subArgs);
-                
+
             case "help":
             default:
                 sendHelpMessage(sender);
@@ -124,7 +125,8 @@ public class EcoCommand extends BaseCommand {
                 sender.sendMessage("§7Territory Lands entries: §e" + (ld != null ? ld.getKeys(false).size() : 0));
                 sender.sendMessage("§7Territory Towny rules: §e" + (ty != null ? ty.getKeys(false).size() : 0));
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return true;
     }
 
@@ -150,13 +152,14 @@ public class EcoCommand extends BaseCommand {
 
         // Reload bank limits (tier overrides)
         try {
-            me.koyere.ecoxpert.modules.bank.BankManager bankManager =
-                org.bukkit.plugin.java.JavaPlugin.getPlugin(EcoXpertPlugin.class)
+            me.koyere.ecoxpert.modules.bank.BankManager bankManager = org.bukkit.plugin.java.JavaPlugin
+                    .getPlugin(EcoXpertPlugin.class)
                     .getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.bank.BankManager.class);
             if (bankManager != null) {
                 bankManager.reloadConfig();
             }
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
 
         sendMessage(sender, "plugin.reloaded");
         return true;
@@ -224,9 +227,11 @@ public class EcoCommand extends BaseCommand {
 
     private boolean handleEventsRecent(CommandSender sender) {
         try {
-            var dm = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry().getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
+            var dm = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry()
+                    .getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
             try (me.koyere.ecoxpert.core.data.QueryResult qr = dm.executeQuery(
-                    "SELECT event_id, type, status, start_time, end_time FROM ecoxpert_economic_events ORDER BY id DESC LIMIT 10").join()) {
+                    "SELECT event_id, type, status, start_time, end_time FROM ecoxpert_economic_events ORDER BY id DESC LIMIT 10")
+                    .join()) {
                 boolean any = false;
                 sendMessage(sender, "events.admin.recent.header");
                 while (qr.next()) {
@@ -238,7 +243,8 @@ public class EcoCommand extends BaseCommand {
                     String end = String.valueOf(qr.getTimestamp("end_time"));
                     sendMessage(sender, "events.admin.recent.item", id, type, status, start, end);
                 }
-                if (!any) sendMessage(sender, "events.admin.recent.none");
+                if (!any)
+                    sendMessage(sender, "events.admin.recent.none");
             }
         } catch (Exception e) {
             sender.sendMessage("§cFailed to load recent events");
@@ -273,7 +279,8 @@ public class EcoCommand extends BaseCommand {
         }
         sendMessage(sender, "events.admin.active.header");
         for (EconomicEvent ev : active.values()) {
-            sendMessage(sender, "events.admin.active.item", ev.getId(), ev.getName(), ev.getType().name(), ev.getDuration());
+            sendMessage(sender, "events.admin.active.item", ev.getId(), ev.getName(), ev.getType().name(),
+                    ev.getDuration());
         }
         return true;
     }
@@ -289,7 +296,8 @@ public class EcoCommand extends BaseCommand {
         int start = Math.max(0, history.size() - 10);
         for (int i = history.size() - 1; i >= start; i--) {
             EconomicEvent ev = history.get(i);
-            sendMessage(sender, "events.admin.history.item", ev.getId(), ev.getName(), ev.getType().name(), ev.getStatus().name());
+            sendMessage(sender, "events.admin.history.item", ev.getId(), ev.getName(), ev.getType().name(),
+                    ev.getStatus().name());
         }
         return true;
     }
@@ -309,7 +317,8 @@ public class EcoCommand extends BaseCommand {
                 if (!eventEngine.getActiveEvents().isEmpty()) {
                     sendMessage(sender, "events.admin.active.header");
                     for (var ev : eventEngine.getActiveEvents().values()) {
-                        sendMessage(sender, "events.admin.active.item", ev.getId(), ev.getName(), ev.getType().name(), ev.getDuration());
+                        sendMessage(sender, "events.admin.active.item", ev.getId(), ev.getName(), ev.getType().name(),
+                                ev.getDuration());
                     }
                     sender.sendMessage("§7Hint: end the active event or wait for cooldown.");
                 } else {
@@ -342,14 +351,16 @@ public class EcoCommand extends BaseCommand {
         if (args.length >= 2) {
             try {
                 days = Math.max(1, Integer.parseInt(args[1]));
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+            }
         }
         try {
-            var dm = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry().getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
+            var dm = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry()
+                    .getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
             // Totales por tipo en ventana
             try (me.koyere.ecoxpert.core.data.QueryResult qr = dm.executeQuery(
-                "SELECT type, COUNT(*) as cnt FROM ecoxpert_economic_events WHERE start_time >= datetime('now', '-' || ? || ' days') GROUP BY type ORDER BY cnt DESC",
-                days).join()) {
+                    "SELECT type, COUNT(*) as cnt FROM ecoxpert_economic_events WHERE start_time >= datetime('now', '-' || ? || ' days') GROUP BY type ORDER BY cnt DESC",
+                    days).join()) {
                 boolean any = false;
                 sendMessage(sender, "events.admin.stats.header", days);
                 int total = 0;
@@ -381,16 +392,28 @@ public class EcoCommand extends BaseCommand {
         String typeArg = args[1].toUpperCase();
         int days = 30;
         if (args.length >= 3) {
-            try { days = Math.max(1, Integer.parseInt(args[2])); } catch (NumberFormatException ignored) {}
+            try {
+                days = Math.max(1, Integer.parseInt(args[2]));
+            } catch (NumberFormatException ignored) {
+            }
         }
         try {
             EconomicEventType type = EconomicEventType.valueOf(typeArg);
-            var dm = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry().getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
+            var dm = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry()
+                    .getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
             try (me.koyere.ecoxpert.core.data.QueryResult qr = dm.executeQuery(
-                "SELECT parameters, start_time, end_time FROM ecoxpert_economic_events WHERE type = ? AND start_time >= datetime('now', '-' || ? || ' days')",
-                type.name(), days).join()) {
-                int count = 0; long durSum = 0; int durCount = 0; int itemsSum = 0; int itemsCount = 0;
-                double buySum = 0.0; int buyCount = 0; double sellSum = 0.0; int sellCount = 0; double stimulusSum = 0.0;
+                    "SELECT parameters, start_time, end_time FROM ecoxpert_economic_events WHERE type = ? AND start_time >= datetime('now', '-' || ? || ' days')",
+                    type.name(), days).join()) {
+                int count = 0;
+                long durSum = 0;
+                int durCount = 0;
+                int itemsSum = 0;
+                int itemsCount = 0;
+                double buySum = 0.0;
+                int buyCount = 0;
+                double sellSum = 0.0;
+                int sellCount = 0;
+                double stimulusSum = 0.0;
                 while (qr.next()) {
                     count++;
                     String params = qr.getString("parameters");
@@ -400,27 +423,49 @@ public class EcoCommand extends BaseCommand {
                             var s = qr.getTimestamp("start_time");
                             var e = qr.getTimestamp("end_time");
                             if (s != null && e != null) {
-                                long mins = java.time.Duration.between(s.toLocalDateTime(), e.toLocalDateTime()).toMinutes();
+                                long mins = java.time.Duration.between(s.toLocalDateTime(), e.toLocalDateTime())
+                                        .toMinutes();
                                 dur = mins;
                             }
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
-                    if (dur != null) { durSum += dur; durCount++; }
+                    if (dur != null) {
+                        durSum += dur;
+                        durCount++;
+                    }
                     Integer items = parseJsonInt(params, "metrics.items");
-                    if (items != null) { itemsSum += items; itemsCount++; }
+                    if (items != null) {
+                        itemsSum += items;
+                        itemsCount++;
+                    }
                     Double bd = parseJsonDouble(params, "metrics.buy_delta");
-                    if (bd != null) { buySum += bd; buyCount++; }
+                    if (bd != null) {
+                        buySum += bd;
+                        buyCount++;
+                    }
                     Double sd = parseJsonDouble(params, "metrics.sell_delta");
-                    if (sd != null) { sellSum += sd; sellCount++; }
+                    if (sd != null) {
+                        sellSum += sd;
+                        sellCount++;
+                    }
                     Double stim = parseJsonDouble(params, "metrics.total_stimulus");
-                    if (stim != null) { stimulusSum += stim; }
+                    if (stim != null) {
+                        stimulusSum += stim;
+                    }
                 }
                 sendMessage(sender, "events.admin.statsdetail.header", type.name(), days);
                 sendMessage(sender, "events.admin.statsdetail.count", count);
-                if (durCount > 0) sendMessage(sender, "events.admin.statsdetail.avg_duration", durSum / Math.max(1, durCount));
-                if (itemsCount > 0) sendMessage(sender, "events.admin.statsdetail.avg_items", itemsSum / Math.max(1, itemsCount));
-                if (buyCount > 0) sendMessage(sender, "events.admin.statsdetail.avg_buy_delta", String.format("%.2f%%", (buySum / buyCount) * 100.0));
-                if (sellCount > 0) sendMessage(sender, "events.admin.statsdetail.avg_sell_delta", String.format("%.2f%%", (sellSum / sellCount) * 100.0));
+                if (durCount > 0)
+                    sendMessage(sender, "events.admin.statsdetail.avg_duration", durSum / Math.max(1, durCount));
+                if (itemsCount > 0)
+                    sendMessage(sender, "events.admin.statsdetail.avg_items", itemsSum / Math.max(1, itemsCount));
+                if (buyCount > 0)
+                    sendMessage(sender, "events.admin.statsdetail.avg_buy_delta",
+                            String.format("%.2f%%", (buySum / buyCount) * 100.0));
+                if (sellCount > 0)
+                    sendMessage(sender, "events.admin.statsdetail.avg_sell_delta",
+                            String.format("%.2f%%", (sellSum / sellCount) * 100.0));
                 if (stimulusSum > 0.0) {
                     String money = economyManager.formatMoney(java.math.BigDecimal.valueOf(stimulusSum));
                     sendMessage(sender, "events.admin.statsdetail.total_stimulus", money);
@@ -438,19 +483,23 @@ public class EcoCommand extends BaseCommand {
         try {
             String token = "\"" + key + "\":";
             int i = json.indexOf(token);
-            if (i < 0) return null;
+            if (i < 0)
+                return null;
             i += token.length();
             int j = i;
-            while (j < json.length() && "-+.0123456789".indexOf(json.charAt(j)) >= 0) j++;
+            while (j < json.length() && "-+.0123456789".indexOf(json.charAt(j)) >= 0)
+                j++;
             return Double.parseDouble(json.substring(i, j));
         } catch (Exception ignored) {
             return null;
         }
     }
+
     private Integer parseJsonInt(String json, String key) {
         Double d = parseJsonDouble(json, key);
         return d != null ? (int) Math.round(d) : null;
     }
+
     private Long parseJsonLong(String json, String key) {
         Double d = parseJsonDouble(json, key);
         return d != null ? d.longValue() : null;
@@ -498,7 +547,8 @@ public class EcoCommand extends BaseCommand {
 
     private boolean handleEconomySync(CommandSender sender, String[] args) {
         var plugin = JavaPlugin.getPlugin(EcoXpertPlugin.class);
-        var syncService = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.economy.EconomySyncService.class);
+        var syncService = plugin.getServiceRegistry()
+                .getInstance(me.koyere.ecoxpert.core.economy.EconomySyncService.class);
         if (syncService == null) {
             sender.sendMessage("§cSync service unavailable.");
             return true;
@@ -507,20 +557,21 @@ public class EcoCommand extends BaseCommand {
         if (args.length > 0 && args[0].equalsIgnoreCase("status")) {
             var status = syncService.getStatus();
             sendMessage(sender, "economy.admin.sync.status",
-                status.mode(),
-                status.providerName(),
-                status.running() ? "running" : "stopped",
-                status.trackedPlayers());
+                    status.mode(),
+                    status.providerName(),
+                    status.running() ? "running" : "stopped",
+                    status.trackedPlayers());
             return true;
         }
 
         if (args.length > 0 && !args[0].equalsIgnoreCase("all")) {
             OfflinePlayer target = findPlayer(sender, args[0]);
-            if (target == null) return true;
+            if (target == null)
+                return true;
             sendMessage(sender, "economy.admin.sync.started", "player", target.getName());
             syncService.syncPlayerNow(target).thenAccept(result -> {
                 sendMessage(sender, "economy.admin.sync.completed",
-                    result.providerName(), result.pulled(), result.pushed(), result.skipped());
+                        result.providerName(), result.pulled(), result.pushed(), result.skipped());
             }).exceptionally(ex -> {
                 sendMessage(sender, "economy.admin.sync.error", ex.getMessage());
                 return null;
@@ -539,7 +590,7 @@ public class EcoCommand extends BaseCommand {
                 return;
             }
             sendMessage(sender, "economy.admin.sync.completed",
-                result.providerName(), result.pulled(), result.pushed(), result.skipped());
+                    result.providerName(), result.pulled(), result.pushed(), result.skipped());
         }).exceptionally(ex -> {
             sendMessage(sender, "economy.admin.sync.error", ex.getMessage());
             return null;
@@ -561,25 +612,46 @@ public class EcoCommand extends BaseCommand {
         String sub = args[0].toLowerCase();
         int days = 30;
         if (args.length >= 2) {
-            try { days = Math.max(1, Integer.parseInt(args[1])); } catch (NumberFormatException ignored) {}
+            try {
+                days = Math.max(1, Integer.parseInt(args[1]));
+            } catch (NumberFormatException ignored) {
+            }
         }
         try {
-            var dm = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry().getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
+            var dm = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry()
+                    .getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
             if (sub.equals("stats")) {
-                int active = 0; String outstanding = "0"; String avgRate = "0"; int late = 0;
-                try (me.koyere.ecoxpert.core.data.QueryResult q1 = dm.executeQuery("SELECT COUNT(*) as c FROM ecoxpert_loans WHERE status='ACTIVE'").join()) {
-                    if (q1.next()) { Integer c = q1.getInt("c"); active = c != null ? c : (q1.getLong("c") != null ? q1.getLong("c").intValue() : 0); }
+                int active = 0;
+                String outstanding = "0";
+                String avgRate = "0";
+                int late = 0;
+                try (me.koyere.ecoxpert.core.data.QueryResult q1 = dm
+                        .executeQuery("SELECT COUNT(*) as c FROM ecoxpert_loans WHERE status='ACTIVE'").join()) {
+                    if (q1.next()) {
+                        Integer c = q1.getInt("c");
+                        active = c != null ? c : (q1.getLong("c") != null ? q1.getLong("c").intValue() : 0);
+                    }
                 }
-                try (me.koyere.ecoxpert.core.data.QueryResult q2 = dm.executeQuery("SELECT SUM(outstanding) as s, AVG(interest_rate) as r FROM ecoxpert_loans WHERE status='ACTIVE'").join()) {
+                try (me.koyere.ecoxpert.core.data.QueryResult q2 = dm.executeQuery(
+                        "SELECT SUM(outstanding) as s, AVG(interest_rate) as r FROM ecoxpert_loans WHERE status='ACTIVE'")
+                        .join()) {
                     if (q2.next()) {
                         java.math.BigDecimal s = q2.getBigDecimal("s");
                         java.math.BigDecimal r = q2.getBigDecimal("r");
-                        outstanding = s != null ? JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry().getInstance(me.koyere.ecoxpert.economy.EconomyManager.class).formatMoney(s) : "$0";
+                        outstanding = s != null
+                                ? JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry()
+                                        .getInstance(me.koyere.ecoxpert.economy.EconomyManager.class).formatMoney(s)
+                                : "$0";
                         avgRate = r != null ? r.multiply(new java.math.BigDecimal("100")).setScale(2) + "%" : "0%";
                     }
                 }
-                try (me.koyere.ecoxpert.core.data.QueryResult q3 = dm.executeQuery("SELECT COUNT(*) as c FROM ecoxpert_loan_schedules WHERE status='LATE' AND due_date >= date('now', '-' || ? || ' days')", days).join()) {
-                    if (q3.next()) { Integer c = q3.getInt("c"); late = c != null ? c : (q3.getLong("c") != null ? q3.getLong("c").intValue() : 0); }
+                try (me.koyere.ecoxpert.core.data.QueryResult q3 = dm.executeQuery(
+                        "SELECT COUNT(*) as c FROM ecoxpert_loan_schedules WHERE status='LATE' AND due_date >= date('now', '-' || ? || ' days')",
+                        days).join()) {
+                    if (q3.next()) {
+                        Integer c = q3.getInt("c");
+                        late = c != null ? c : (q3.getLong("c") != null ? q3.getLong("c").intValue() : 0);
+                    }
                 }
                 sendMessage(sender, "economy.admin.loans.stats.header", days);
                 sendMessage(sender, "economy.admin.loans.stats.active", active);
@@ -588,24 +660,36 @@ public class EcoCommand extends BaseCommand {
                 sendMessage(sender, "economy.admin.loans.stats.late", late);
                 return true;
             } else if (sub.equals("statsdetail")) {
-                // Breakdown by buckets of score and term (if desired in future). For now: counts created in window and paid vs pending installments.
+                // Breakdown by buckets of score and term (if desired in future). For now:
+                // counts created in window and paid vs pending installments.
                 int created = 0, paidInst = 0, pendingInst = 0, lateInst = 0;
-                try (me.koyere.ecoxpert.core.data.QueryResult q1 = dm.executeQuery("SELECT COUNT(*) as c FROM ecoxpert_loans WHERE created_at >= datetime('now', '-' || ? || ' days')", days).join()) {
-                    if (q1.next()) { Integer c = q1.getInt("c"); created = c != null ? c : (q1.getLong("c") != null ? q1.getLong("c").intValue() : 0); }
+                try (me.koyere.ecoxpert.core.data.QueryResult q1 = dm.executeQuery(
+                        "SELECT COUNT(*) as c FROM ecoxpert_loans WHERE created_at >= datetime('now', '-' || ? || ' days')",
+                        days).join()) {
+                    if (q1.next()) {
+                        Integer c = q1.getInt("c");
+                        created = c != null ? c : (q1.getLong("c") != null ? q1.getLong("c").intValue() : 0);
+                    }
                 }
-                try (me.koyere.ecoxpert.core.data.QueryResult q2 = dm.executeQuery("SELECT status, COUNT(*) as c FROM ecoxpert_loan_schedules WHERE due_date >= date('now', '-' || ? || ' days') GROUP BY status", days).join()) {
+                try (me.koyere.ecoxpert.core.data.QueryResult q2 = dm.executeQuery(
+                        "SELECT status, COUNT(*) as c FROM ecoxpert_loan_schedules WHERE due_date >= date('now', '-' || ? || ' days') GROUP BY status",
+                        days).join()) {
                     while (q2.next()) {
                         String st = q2.getString("status");
                         Integer c = q2.getInt("c");
                         int v = c != null ? c : (q2.getLong("c") != null ? q2.getLong("c").intValue() : 0);
-                        if ("PAID".equalsIgnoreCase(st)) paidInst = v;
-                        else if ("LATE".equalsIgnoreCase(st)) lateInst = v;
-                        else pendingInst = v;
+                        if ("PAID".equalsIgnoreCase(st))
+                            paidInst = v;
+                        else if ("LATE".equalsIgnoreCase(st))
+                            lateInst = v;
+                        else
+                            pendingInst = v;
                     }
                 }
                 sendMessage(sender, "economy.admin.loans.statsdetail.header", days);
                 sendMessage(sender, "economy.admin.loans.statsdetail.created", created);
-                sendMessage(sender, "economy.admin.loans.statsdetail.installments", paidInst + pendingInst + lateInst, paidInst, pendingInst, lateInst);
+                sendMessage(sender, "economy.admin.loans.statsdetail.installments", paidInst + pendingInst + lateInst,
+                        paidInst, pendingInst, lateInst);
                 return true;
             }
         } catch (Exception e) {
@@ -623,7 +707,6 @@ public class EcoCommand extends BaseCommand {
         var services = plugin.getServiceRegistry();
         var cfg = services.getInstance(me.koyere.ecoxpert.core.config.ConfigManager.class);
         var dm = services.getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
-        var econ = services.getInstance(me.koyere.ecoxpert.economy.EconomyManager.class);
 
         var inflCfg = cfg.getModuleConfig("inflation");
         double targetInflation = inflCfg.getDouble("targets.inflation", 1.02);
@@ -632,7 +715,7 @@ public class EcoCommand extends BaseCommand {
         var marketCfg = cfg.getModuleConfig("market");
         java.util.List<String> basket = marketCfg.getStringList("metrics.basket");
         if (basket == null || basket.isEmpty()) {
-            basket = java.util.List.of("WHEAT","BREAD","APPLE","COAL","IRON_INGOT","GOLD_INGOT");
+            basket = java.util.List.of("WHEAT", "BREAD", "APPLE", "COAL", "IRON_INGOT", "GOLD_INGOT");
         }
 
         try {
@@ -653,7 +736,8 @@ public class EcoCommand extends BaseCommand {
                             cpiCount++;
                         }
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
 
                 try (me.koyere.ecoxpert.core.data.QueryResult qwin = dm.executeQuery(
                         "SELECT buy_price, snapshot_time FROM ecoxpert_market_price_history WHERE material = ? AND snapshot_time >= datetime('now', '-' || ? || ' hours') ORDER BY snapshot_time ASC",
@@ -661,19 +745,27 @@ public class EcoCommand extends BaseCommand {
                     java.math.BigDecimal first = null;
                     java.math.BigDecimal last = null;
                     while (qwin.next()) {
-                        if (first == null) first = qwin.getBigDecimal("buy_price");
+                        if (first == null)
+                            first = qwin.getBigDecimal("buy_price");
                         last = qwin.getBigDecimal("buy_price");
                     }
                     if (first != null && last != null && first.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                        windowInflationSum = windowInflationSum.add(last.divide(first, 6, java.math.RoundingMode.HALF_UP));
+                        windowInflationSum = windowInflationSum
+                                .add(last.divide(first, 6, java.math.RoundingMode.HALF_UP));
                         inflCount++;
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }
 
-            double cpi = cpiCount > 0 ? cpiSum.divide(java.math.BigDecimal.valueOf(cpiCount), 4, java.math.RoundingMode.HALF_UP).doubleValue() : 1.0;
-            double windowInflation = inflCount > 0 ? windowInflationSum.divide(java.math.BigDecimal.valueOf(inflCount), 6, java.math.RoundingMode.HALF_UP).doubleValue() : 1.0;
-            double annualized = windowHours > 0 ? Math.pow(windowInflation, (365.0*24.0)/windowHours) - 1.0 : 0.0;
+            double cpi = cpiCount > 0
+                    ? cpiSum.divide(java.math.BigDecimal.valueOf(cpiCount), 4, java.math.RoundingMode.HALF_UP)
+                            .doubleValue()
+                    : 1.0;
+            double windowInflation = inflCount > 0 ? windowInflationSum
+                    .divide(java.math.BigDecimal.valueOf(inflCount), 6, java.math.RoundingMode.HALF_UP).doubleValue()
+                    : 1.0;
+            double annualized = windowHours > 0 ? Math.pow(windowInflation, (365.0 * 24.0) / windowHours) - 1.0 : 0.0;
 
             double deviation = Math.abs(cpi - targetInflation);
             double tolerance = 0.05;
@@ -697,7 +789,7 @@ public class EcoCommand extends BaseCommand {
             return true;
         }
         InflationManager infl = JavaPlugin.getPlugin(EcoXpertPlugin.class)
-            .getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.inflation.InflationManager.class);
+                .getServiceRegistry().getInstance(me.koyere.ecoxpert.modules.inflation.InflationManager.class);
         if (infl == null) {
             sender.sendMessage("Policy not available");
             return true;
@@ -714,8 +806,10 @@ public class EcoCommand extends BaseCommand {
             try {
                 double value = Double.parseDouble(args[2]);
                 boolean ok = infl.setPolicyParam(name, value);
-                if (ok) sendMessage(sender, "economy.admin.policy.updated", name, value);
-                else sendMessage(sender, "economy.admin.policy.unknown_param", name);
+                if (ok)
+                    sendMessage(sender, "economy.admin.policy.updated", name, value);
+                else
+                    sendMessage(sender, "economy.admin.policy.unknown_param", name);
             } catch (NumberFormatException e) {
                 sendMessage(sender, "economy.admin.policy.invalid_value", args[2]);
             }
@@ -732,25 +826,27 @@ public class EcoCommand extends BaseCommand {
 
     private boolean handleEconomyStatus(CommandSender sender) {
         // Provider detection
-        me.koyere.ecoxpert.core.economy.EconomyConflictDetector detector =
-            new me.koyere.ecoxpert.core.economy.EconomyConflictDetector(JavaPlugin.getPlugin(EcoXpertPlugin.class));
+        me.koyere.ecoxpert.core.economy.EconomyConflictDetector detector = new me.koyere.ecoxpert.core.economy.EconomyConflictDetector(
+                JavaPlugin.getPlugin(EcoXpertPlugin.class));
         var status = detector.detectEconomyProvider();
         var plugins = detector.detectInstalledEconomyPlugins();
 
         // DB status
         var dm = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry()
-            .getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
+                .getInstance(me.koyere.ecoxpert.core.data.DataManager.class);
         var dbStatus = dm.getStatus();
 
         sendMessage(sender, "economy.admin.status.header");
-        sendMessage(sender, "economy.admin.status.provider", status.getStatus().name(), String.valueOf(status.getPluginName()));
+        sendMessage(sender, "economy.admin.status.provider", status.getStatus().name(),
+                String.valueOf(status.getPluginName()));
         sendMessage(sender, "economy.admin.status.plugins", plugins.getInstalledCount());
-        sendMessage(sender, "economy.admin.status.db", dbStatus.getCurrentType(), dbStatus.isConnected(), dbStatus.isHealthy());
+        sendMessage(sender, "economy.admin.status.db", dbStatus.getCurrentType(), dbStatus.isConnected(),
+                dbStatus.isHealthy());
 
         // Accounts summary (total money, average, count)
         try (me.koyere.ecoxpert.core.data.QueryResult qr = dm.executeQuery(
-                "SELECT COUNT(*) as cnt, COALESCE(SUM(balance),0) as total, COALESCE(AVG(balance),0) as avg FROM ecoxpert_accounts"
-        ).join()) {
+                "SELECT COUNT(*) as cnt, COALESCE(SUM(balance),0) as total, COALESCE(AVG(balance),0) as avg FROM ecoxpert_accounts")
+                .join()) {
             if (qr.next()) {
                 long cnt = qr.getLong("cnt");
                 java.math.BigDecimal total = qr.getBigDecimal("total");
@@ -762,11 +858,12 @@ public class EcoCommand extends BaseCommand {
                         JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry()
                                 .getInstance(me.koyere.ecoxpert.economy.EconomyManager.class).formatMoney(avg)));
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         // Market global factors (from InflationManager)
         var infl = JavaPlugin.getPlugin(EcoXpertPlugin.class).getServiceRegistry()
-            .getInstance(me.koyere.ecoxpert.modules.inflation.InflationManager.class);
+                .getInstance(me.koyere.ecoxpert.modules.inflation.InflationManager.class);
         if (infl != null) {
             double[] f = infl.getMarketFactors();
             sender.sendMessage(String.format("§7Market factors: buy=%.3f, sell=%.3f", f[0], f[1]));
@@ -776,8 +873,8 @@ public class EcoCommand extends BaseCommand {
 
     private boolean handleEconomyDiagnostics(CommandSender sender) {
         EcoXpertPlugin plugin = JavaPlugin.getPlugin(EcoXpertPlugin.class);
-        me.koyere.ecoxpert.core.economy.EconomySystemTestRunner runner =
-            new me.koyere.ecoxpert.core.economy.EconomySystemTestRunner(plugin);
+        me.koyere.ecoxpert.core.economy.EconomySystemTestRunner runner = new me.koyere.ecoxpert.core.economy.EconomySystemTestRunner(
+                plugin);
         var results = runner.runSafeTests();
         sender.sendMessage(results.toString());
         return true;
@@ -797,7 +894,8 @@ public class EcoCommand extends BaseCommand {
         }
 
         EcoXpertPlugin plugin = JavaPlugin.getPlugin(EcoXpertPlugin.class);
-        var syncService = plugin.getServiceRegistry().getInstance(me.koyere.ecoxpert.core.economy.EconomySyncService.class);
+        var syncService = plugin.getServiceRegistry()
+                .getInstance(me.koyere.ecoxpert.core.economy.EconomySyncService.class);
         if (syncService == null) {
             sendMessage(sender, "admin.migrate.error", "Sync service unavailable");
             return true;
@@ -817,18 +915,19 @@ public class EcoCommand extends BaseCommand {
 
         return true;
     }
-    
+
     private boolean handleBalance(CommandSender sender, String[] args) {
         if (!hasPermission(sender, "ecoxpert.economy.balance")) {
             return true;
         }
-        
+
         OfflinePlayer target;
-        
+
         if (args.length == 0) {
             // Check own balance
             Player player = requirePlayer(sender);
-            if (player == null) return true;
+            if (player == null)
+                return true;
             target = player;
         } else {
             // Check another player's balance
@@ -836,14 +935,17 @@ public class EcoCommand extends BaseCommand {
                 return true;
             }
             target = findPlayer(sender, args[0]);
-            if (target == null) return true;
+            if (target == null)
+                return true;
         }
-        
+
         ensureAccount(target.getUniqueId());
-        
+
         economyManager.getBalance(target.getUniqueId()).thenAccept(balance -> {
             String formattedBalance = economyManager.formatMoney(balance);
-            if (target.equals(sender)) {
+            // Check if sender is the same player as target by comparing UUIDs
+            boolean isSelf = sender instanceof Player && ((Player) sender).getUniqueId().equals(target.getUniqueId());
+            if (isSelf) {
                 sendMessage(sender, "commands.balance.own", formattedBalance);
             } else {
                 sendMessage(sender, "commands.balance.other", target.getName(), formattedBalance);
@@ -852,171 +954,176 @@ public class EcoCommand extends BaseCommand {
             sendMessage(sender, "error.database_error");
             return null;
         });
-        
+
         return true;
     }
-    
+
     private boolean handlePay(CommandSender sender, String[] args) {
         if (!hasPermission(sender, "ecoxpert.economy.pay")) {
             return true;
         }
-        
+
         Player player = requirePlayer(sender);
-        if (player == null) return true;
-        
+        if (player == null)
+            return true;
+
         if (args.length < 2) {
             sendMessage(sender, "commands.pay.usage");
             return true;
         }
-        
+
         OfflinePlayer target = findPlayer(sender, args[0]);
-        if (target == null) return true;
-        
+        if (target == null)
+            return true;
+
         if (target.getUniqueId().equals(player.getUniqueId())) {
             sendMessage(sender, "error.cannot_pay_self");
             return true;
         }
-        
+
         BigDecimal amount = parseAmount(sender, args[1]);
-        if (amount == null) return true;
-        
+        if (amount == null)
+            return true;
+
         ensureAccount(player.getUniqueId());
         ensureAccount(target.getUniqueId());
-        
+
         economyManager.transferMoney(
-                player.getUniqueId(), 
-                target.getUniqueId(), 
-                amount, 
-                "Player payment from " + player.getName()
-        ).thenAccept(success -> {
-            String formattedAmount = economyManager.formatMoney(amount);
-            if (success) {
-                sendMessage(sender, "commands.pay.success", formattedAmount, target.getName());
-                
-                // Notify target if online
-                if (target.isOnline()) {
-                    Player targetPlayer = target.getPlayer();
-                    sendMessage(targetPlayer, "commands.pay.received", formattedAmount, player.getName());
-                }
-            } else {
-                sendMessage(sender, "error.insufficient_funds");
-            }
-        }).exceptionally(throwable -> {
-            sendMessage(sender, "error.database_error");
-            return null;
-        });
-        
+                player.getUniqueId(),
+                target.getUniqueId(),
+                amount,
+                "Player payment from " + player.getName()).thenAccept(success -> {
+                    String formattedAmount = economyManager.formatMoney(amount);
+                    if (success) {
+                        sendMessage(sender, "commands.pay.success", formattedAmount, target.getName());
+
+                        // Notify target if online
+                        if (target.isOnline()) {
+                            Player targetPlayer = target.getPlayer();
+                            sendMessage(targetPlayer, "commands.pay.received", formattedAmount, player.getName());
+                        }
+                    } else {
+                        sendMessage(sender, "error.insufficient_funds");
+                    }
+                }).exceptionally(throwable -> {
+                    sendMessage(sender, "error.database_error");
+                    return null;
+                });
+
         return true;
     }
-    
+
     private boolean handleSet(CommandSender sender, String[] args) {
         if (!hasPermission(sender, "ecoxpert.admin.economy")) {
             return true;
         }
-        
+
         if (args.length < 2) {
             sendMessage(sender, "commands.set.usage");
             return true;
         }
-        
+
         OfflinePlayer target = findPlayer(sender, args[0]);
-        if (target == null) return true;
-        
+        if (target == null)
+            return true;
+
         BigDecimal amount = parseAmount(sender, args[1]);
-        if (amount == null) return true;
-        
+        if (amount == null)
+            return true;
+
         ensureAccount(target.getUniqueId());
-        
+
         economyManager.setBalance(
-                target.getUniqueId(), 
-                amount, 
-                "Admin set by " + sender.getName()
-        ).thenRun(() -> {
-            String formattedAmount = economyManager.formatMoney(amount);
-            sendMessage(sender, "commands.set.success", target.getName(), formattedAmount);
-        }).exceptionally(throwable -> {
-            sendMessage(sender, "error.database_error");
-            return null;
-        });
-        
+                target.getUniqueId(),
+                amount,
+                "Admin set by " + sender.getName()).thenRun(() -> {
+                    String formattedAmount = economyManager.formatMoney(amount);
+                    sendMessage(sender, "commands.set.success", target.getName(), formattedAmount);
+                }).exceptionally(throwable -> {
+                    sendMessage(sender, "error.database_error");
+                    return null;
+                });
+
         return true;
     }
-    
+
     private boolean handleAdd(CommandSender sender, String[] args) {
         if (!hasPermission(sender, "ecoxpert.admin.economy")) {
             return true;
         }
-        
+
         if (args.length < 2) {
             sendMessage(sender, "commands.add.usage");
             return true;
         }
-        
+
         OfflinePlayer target = findPlayer(sender, args[0]);
-        if (target == null) return true;
-        
+        if (target == null)
+            return true;
+
         BigDecimal amount = parseAmount(sender, args[1]);
-        if (amount == null) return true;
-        
+        if (amount == null)
+            return true;
+
         ensureAccount(target.getUniqueId());
-        
+
         economyManager.addMoney(
-                target.getUniqueId(), 
-                amount, 
-                "Admin add by " + sender.getName()
-        ).thenRun(() -> {
-            String formattedAmount = economyManager.formatMoney(amount);
-            sendMessage(sender, "commands.add.success", formattedAmount, target.getName());
-        }).exceptionally(throwable -> {
-            sendMessage(sender, "error.database_error");
-            return null;
-        });
-        
+                target.getUniqueId(),
+                amount,
+                "Admin add by " + sender.getName()).thenRun(() -> {
+                    String formattedAmount = economyManager.formatMoney(amount);
+                    sendMessage(sender, "commands.add.success", formattedAmount, target.getName());
+                }).exceptionally(throwable -> {
+                    sendMessage(sender, "error.database_error");
+                    return null;
+                });
+
         return true;
     }
-    
+
     private boolean handleRemove(CommandSender sender, String[] args) {
         if (!hasPermission(sender, "ecoxpert.admin.economy")) {
             return true;
         }
-        
+
         if (args.length < 2) {
             sendMessage(sender, "commands.remove.usage");
             return true;
         }
-        
+
         OfflinePlayer target = findPlayer(sender, args[0]);
-        if (target == null) return true;
-        
+        if (target == null)
+            return true;
+
         BigDecimal amount = parseAmount(sender, args[1]);
-        if (amount == null) return true;
-        
+        if (amount == null)
+            return true;
+
         ensureAccount(target.getUniqueId());
-        
+
         economyManager.removeMoney(
-                target.getUniqueId(), 
-                amount, 
-                "Admin remove by " + sender.getName()
-        ).thenAccept(success -> {
-            String formattedAmount = economyManager.formatMoney(amount);
-            if (success) {
-                sendMessage(sender, "commands.remove.success", formattedAmount, target.getName());
-            } else {
-                sendMessage(sender, "error.insufficient_funds");
-            }
-        }).exceptionally(throwable -> {
-            sendMessage(sender, "error.database_error");
-            return null;
-        });
-        
+                target.getUniqueId(),
+                amount,
+                "Admin remove by " + sender.getName()).thenAccept(success -> {
+                    String formattedAmount = economyManager.formatMoney(amount);
+                    if (success) {
+                        sendMessage(sender, "commands.remove.success", formattedAmount, target.getName());
+                    } else {
+                        sendMessage(sender, "error.insufficient_funds");
+                    }
+                }).exceptionally(throwable -> {
+                    sendMessage(sender, "error.database_error");
+                    return null;
+                });
+
         return true;
     }
-    
+
     private void sendHelpMessage(CommandSender sender) {
         sendMessage(sender, "commands.help.header");
         sendMessage(sender, "commands.help.balance");
         sendMessage(sender, "commands.help.pay");
-        
+
         if (sender.hasPermission("ecoxpert.admin.economy")) {
             sendMessage(sender, "commands.help.admin_header");
             sendMessage(sender, "commands.help.set");
@@ -1024,23 +1131,23 @@ public class EcoCommand extends BaseCommand {
             sendMessage(sender, "commands.help.remove");
         }
     }
-    
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();
-        
+
         if (args.length == 1) {
             // Subcommands
             List<String> subcommands = Arrays.asList("balance", "pay", "help");
             if (sender.hasPermission("ecoxpert.admin.economy")) {
                 subcommands = Arrays.asList("balance", "pay", "set", "add", "remove", "help");
             }
-            
+
             return subcommands.stream()
                     .filter(sub -> sub.toLowerCase().startsWith(args[0].toLowerCase()))
                     .collect(Collectors.toList());
         }
-        
+
         if (args.length == 2 && !args[0].equalsIgnoreCase("help")) {
             // Player names
             return Bukkit.getOnlinePlayers().stream()
@@ -1048,7 +1155,7 @@ public class EcoCommand extends BaseCommand {
                     .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                     .collect(Collectors.toList());
         }
-        
+
         return completions;
     }
 }

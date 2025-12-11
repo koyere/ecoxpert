@@ -5,14 +5,12 @@ import me.koyere.ecoxpert.core.translation.TranslationManager;
 import me.koyere.ecoxpert.economy.EconomyManager;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
@@ -25,19 +23,20 @@ import java.util.logging.Logger;
  * for all economy commands.
  */
 public abstract class BaseCommand implements CommandExecutor, TabCompleter {
-    
+
     protected final EconomyManager economyManager;
     protected final TranslationManager translationManager;
     protected final ConfigManager configManager;
     protected final Logger logger;
-    
-    protected BaseCommand(EconomyManager economyManager, TranslationManager translationManager, ConfigManager configManager) {
+
+    protected BaseCommand(EconomyManager economyManager, TranslationManager translationManager,
+            ConfigManager configManager) {
         this.economyManager = economyManager;
         this.translationManager = translationManager;
         this.configManager = configManager;
         this.logger = Bukkit.getLogger();
     }
-    
+
     /**
      * Send translated message to sender
      */
@@ -45,7 +44,7 @@ public abstract class BaseCommand implements CommandExecutor, TabCompleter {
         String message = translationManager.getMessage(key, args);
         sender.sendMessage(message);
     }
-    
+
     /**
      * Check if sender has permission
      */
@@ -56,7 +55,7 @@ public abstract class BaseCommand implements CommandExecutor, TabCompleter {
         sendMessage(sender, "error.no_permission");
         return false;
     }
-    
+
     /**
      * Get player from sender, ensuring it's a player
      */
@@ -67,7 +66,7 @@ public abstract class BaseCommand implements CommandExecutor, TabCompleter {
         }
         return (Player) sender;
     }
-    
+
     /**
      * Parse and validate monetary amount
      */
@@ -84,25 +83,29 @@ public abstract class BaseCommand implements CommandExecutor, TabCompleter {
             return null;
         }
     }
-    
+
     /**
      * Find target player (online or offline)
+     * Note: Uses deprecated getOfflinePlayer(String) as there's no UUID-based
+     * alternative
+     * for lookups by name. This is the standard Bukkit API approach.
      */
+    @SuppressWarnings("deprecation")
     protected OfflinePlayer findPlayer(CommandSender sender, String playerName) {
         Player online = Bukkit.getPlayer(playerName);
         if (online != null) {
             return online;
         }
-        
+
         OfflinePlayer offline = Bukkit.getOfflinePlayer(playerName);
         if (!offline.hasPlayedBefore()) {
             sendMessage(sender, "error.player_not_found", playerName);
             return null;
         }
-        
+
         return offline;
     }
-    
+
     /**
      * Ensure player has an economy account
      * Uses database constraints to prevent race conditions
@@ -119,7 +122,7 @@ public abstract class BaseCommand implements CommandExecutor, TabCompleter {
             return null;
         });
     }
-    
+
     /**
      * Handle command execution with comprehensive error logging
      */

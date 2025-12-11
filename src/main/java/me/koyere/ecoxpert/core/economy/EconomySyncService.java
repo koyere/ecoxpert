@@ -17,15 +17,17 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 /**
- * Periodic balance synchronization against a fallback economy (e.g., EssentialsX).
+ * Periodic balance synchronization against a fallback economy (e.g.,
+ * EssentialsX).
  *
  * - Only syncs balances (bank/market/loans are left untouched).
- * - Modes: off, pull (fallback → EcoXpert), push (EcoXpert → fallback), bidirectional.
- * - Simple change detection using last known synced balance to avoid bouncing values.
+ * - Modes: off, pull (fallback → EcoXpert), push (EcoXpert → fallback),
+ * bidirectional.
+ * - Simple change detection using last known synced balance to avoid bouncing
+ * values.
  */
 public class EconomySyncService {
 
@@ -41,7 +43,9 @@ public class EconomySyncService {
         }
     }
 
-    public enum SyncSource { LOCAL, FALLBACK }
+    public enum SyncSource {
+        LOCAL, FALLBACK
+    }
 
     private final EcoXpertPlugin plugin;
     private final EconomyManager economyManager;
@@ -52,7 +56,7 @@ public class EconomySyncService {
     private int taskId = -1;
 
     public EconomySyncService(EcoXpertPlugin plugin, EconomyManager economyManager,
-                              ConfigManager configManager, DataManager dataManager) {
+            ConfigManager configManager, DataManager dataManager) {
         this.plugin = plugin;
         this.economyManager = economyManager;
         this.configManager = configManager;
@@ -69,18 +73,16 @@ public class EconomySyncService {
 
         int intervalSeconds = Math.max(30, configManager.getConfig().getInt("economy.sync.interval-seconds", 120));
         taskId = Bukkit.getScheduler().runTaskTimerAsynchronously(
-            plugin,
-            () -> safeSyncOnline(mode),
-            intervalSeconds * 20L,
-            intervalSeconds * 20L
-        ).getTaskId();
+                plugin,
+                () -> safeSyncOnline(mode),
+                intervalSeconds * 20L,
+                intervalSeconds * 20L).getTaskId();
 
         plugin.getLogger().info(String.format(
-            "Economy sync started (mode=%s, interval=%ss, min-delta=%.2f)",
-            mode,
-            intervalSeconds,
-            getMinDelta()
-        ));
+                "Economy sync started (mode=%s, interval=%ss, min-delta=%.2f)",
+                mode,
+                intervalSeconds,
+                getMinDelta()));
     }
 
     public void stop() {
@@ -130,7 +132,8 @@ public class EconomySyncService {
         return CompletableFuture.supplyAsync(() -> {
             int imported = 0;
             for (OfflinePlayer player : Bukkit.getOfflinePlayers()) {
-                if (!player.hasPlayedBefore()) continue;
+                if (!player.hasPlayedBefore())
+                    continue;
                 try {
                     double fbBal = fb.getBalance(player);
                     if (fbBal < getMinDelta()) {
@@ -138,15 +141,19 @@ public class EconomySyncService {
                     }
                     BigDecimal fbAmount = BigDecimal.valueOf(fbBal).setScale(2, RoundingMode.HALF_UP);
                     economyManager.hasAccount(player.getUniqueId())
-                        .thenCompose(has -> has
-                            ? economyManager.setBalance(player.getUniqueId(), fbAmount, "Imported from " + providerName)
-                            : economyManager.createAccount(player.getUniqueId(), fbAmount)
-                                .thenCompose(v -> economyManager.setBalance(player.getUniqueId(), fbAmount, "Imported from " + providerName))
-                        ).join();
-                    snapshots.put(player.getUniqueId(), new SyncSnapshot(fbAmount, SyncSource.FALLBACK, System.currentTimeMillis()));
+                            .thenCompose(has -> has
+                                    ? economyManager.setBalance(player.getUniqueId(), fbAmount,
+                                            "Imported from " + providerName)
+                                    : economyManager.createAccount(player.getUniqueId(), fbAmount)
+                                            .thenCompose(v -> economyManager.setBalance(player.getUniqueId(), fbAmount,
+                                                    "Imported from " + providerName)))
+                            .join();
+                    snapshots.put(player.getUniqueId(),
+                            new SyncSnapshot(fbAmount, SyncSource.FALLBACK, System.currentTimeMillis()));
                     imported++;
                 } catch (Exception ex) {
-                    plugin.getLogger().warning("Failed to import balance for " + player.getName() + ": " + ex.getMessage());
+                    plugin.getLogger()
+                            .warning("Failed to import balance for " + player.getName() + ": " + ex.getMessage());
                 }
             }
             return new ImportResult(providerName, imported);
@@ -183,7 +190,8 @@ public class EconomySyncService {
         }).thenApply(v -> new SyncResult(providerName, counters.pulled, counters.pushed, counters.skipped));
     }
 
-    private void syncPlayerBalance(OfflinePlayer player, Economy fallback, String providerName, SyncMode mode, double minDelta, SyncCounters counters) {
+    private void syncPlayerBalance(OfflinePlayer player, Economy fallback, String providerName, SyncMode mode,
+            double minDelta, SyncCounters counters) {
         UUID uuid = player.getUniqueId();
         double fbBalRaw = fallback.getBalance(player);
         BigDecimal fbBal = BigDecimal.valueOf(fbBalRaw).setScale(2, RoundingMode.HALF_UP);
@@ -244,9 +252,11 @@ public class EconomySyncService {
         } else {
             fallback.withdrawPlayer(player, Math.abs(delta));
         }
-        snapshots.put(player.getUniqueId(), new SyncSnapshot(currentLocal, SyncSource.LOCAL, System.currentTimeMillis()));
+        snapshots.put(player.getUniqueId(),
+                new SyncSnapshot(currentLocal, SyncSource.LOCAL, System.currentTimeMillis()));
         if (plugin.getLogger().isLoggable(Level.FINEST)) {
-            plugin.getLogger().finest("Pushed balance for " + player.getName() + ": " + fallbackBalance + " -> " + currentLocal);
+            plugin.getLogger()
+                    .finest("Pushed balance for " + player.getName() + ": " + fallbackBalance + " -> " + currentLocal);
         }
     }
 
@@ -254,10 +264,10 @@ public class EconomySyncService {
         try {
             var regs = plugin.getServer().getServicesManager().getRegistrations(Economy.class);
             return regs.stream()
-                .filter(r -> r.getPlugin() != null && !r.getPlugin().getName().toLowerCase().contains("ecoxpert"))
-                .sorted(Comparator.comparing(r -> priorityScore(r.getPlugin().getName())))
-                .map(r -> new ProviderHandle(r.getProvider(), r.getPlugin().getName()))
-                .findFirst();
+                    .filter(r -> r.getPlugin() != null && !r.getPlugin().getName().toLowerCase().contains("ecoxpert"))
+                    .sorted(Comparator.comparing(r -> priorityScore(r.getPlugin().getName())))
+                    .map(r -> new ProviderHandle(r.getProvider(), r.getPlugin().getName()))
+                    .findFirst();
         } catch (Exception ex) {
             plugin.getLogger().fine("No fallback economy provider found: " + ex.getMessage());
             return Optional.empty();
@@ -266,21 +276,20 @@ public class EconomySyncService {
 
     private int priorityScore(String pluginName) {
         String lower = pluginName.toLowerCase();
-        if (lower.contains("essentials")) return 0;
-        if (lower.contains("cmi")) return 1;
+        if (lower.contains("essentials"))
+            return 0;
+        if (lower.contains("cmi"))
+            return 1;
         return 2;
     }
 
     private CompletableFuture<AccountSnapshot> loadLocalSnapshot(UUID uuid) {
         return economyManager.hasAccount(uuid).thenCompose(has -> {
             CompletableFuture<Void> ensure = has ? CompletableFuture.completedFuture(null)
-                : economyManager.createAccount(uuid, economyManager.getStartingBalance());
-            return ensure.thenCompose(v ->
-                dataManager.executeQuery(
+                    : economyManager.createAccount(uuid, economyManager.getStartingBalance());
+            return ensure.thenCompose(v -> dataManager.executeQuery(
                     "SELECT balance, updated_at FROM ecoxpert_accounts WHERE player_uuid = ?",
-                    uuid.toString()
-                ).thenApply(this::mapAccountSnapshot)
-            );
+                    uuid.toString()).thenApply(this::mapAccountSnapshot));
         });
     }
 
@@ -288,9 +297,9 @@ public class EconomySyncService {
         try (qr) {
             if (qr.next()) {
                 return new AccountSnapshot(
-                    qr.getBigDecimal("balance"),
-                    qr.getTimestamp("updated_at") != null ? qr.getTimestamp("updated_at").getTime() : System.currentTimeMillis()
-                );
+                        qr.getBigDecimal("balance"),
+                        qr.getTimestamp("updated_at") != null ? qr.getTimestamp("updated_at").getTime()
+                                : System.currentTimeMillis());
             }
         } catch (Exception ex) {
             plugin.getLogger().warning("Failed to load account snapshot: " + ex.getMessage());
@@ -302,31 +311,37 @@ public class EconomySyncService {
         return a.subtract(b).abs().doubleValue() < minDelta;
     }
 
-    private record AccountSnapshot(BigDecimal balance, long updatedAt) { }
+    private record AccountSnapshot(BigDecimal balance, long updatedAt) {
+    }
 
-    private record ProviderHandle(Economy provider, String pluginName) { }
+    private record ProviderHandle(Economy provider, String pluginName) {
+    }
 
     private static class SyncSnapshot {
         private final BigDecimal lastBalance;
-        private final SyncSource source;
-        private final long syncedAt;
 
         SyncSnapshot(BigDecimal lastBalance, SyncSource source, long syncedAt) {
             this.lastBalance = lastBalance;
-            this.source = source;
-            this.syncedAt = syncedAt;
         }
     }
 
-    public record SyncStatus(SyncMode mode, boolean running, String providerName, int trackedPlayers) { }
+    public record SyncStatus(SyncMode mode, boolean running, String providerName, int trackedPlayers) {
+    }
 
     public record SyncResult(String providerName, int pulled, int pushed, int skipped) {
-        public static SyncResult noProvider() { return new SyncResult("None", 0, 0, 0); }
-        public static SyncResult disabled() { return new SyncResult("Disabled", 0, 0, 0); }
+        public static SyncResult noProvider() {
+            return new SyncResult("None", 0, 0, 0);
+        }
+
+        public static SyncResult disabled() {
+            return new SyncResult("Disabled", 0, 0, 0);
+        }
     }
 
     public record ImportResult(String providerName, int imported) {
-        public static ImportResult noneFound() { return new ImportResult("None", 0); }
+        public static ImportResult noneFound() {
+            return new ImportResult("None", 0);
+        }
     }
 
     private static class SyncCounters {

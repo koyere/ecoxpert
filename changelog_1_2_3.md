@@ -1,13 +1,13 @@
 # Changelog - Version 1.2.3
 
-**Release Date:** 2025-11-23
+**Release Date:** 2025-11-24
 **Type:** Bug Fix & Bedrock Compatibility Update
 
 ---
 
 ## 🐛 **Bug Fixes**
 
-### **#1: SQLite Database Lock Errors (High Priority)**
+### **#1: SQLite Database Lock Errors**
 
 **Issue:**
 - Multiple `[SQLITE_BUSY] The database file is locked` errors during market transactions
@@ -24,9 +24,6 @@
 - Applied in both JDBC URL and PRAGMA connection init
 - Maintains WAL mode for better concurrent access
 
-**Files Modified:**
-- `src/main/java/me/koyere/ecoxpert/core/data/DataManagerImpl.java:354,362`
-
 **Testing:**
 - Load tested with 10+ concurrent market transactions
 - Lock errors reduced by ~90%
@@ -34,7 +31,7 @@
 
 ---
 
-### **#2: Bedrock Edition GUI Incompatibility (Critical)**
+### **#2: Bedrock Edition GUI Incompatibility**
 
 **Issue:**
 - Bedrock players reported "blocks staying in inventory" when using Market GUI
@@ -46,7 +43,7 @@
 - Minecraft Bedrock Edition interprets chest GUI items as real items
 - No Bedrock-native interface (Geyser Forms) implemented
 
-**Solution - Phase 1 (Market GUI):**
+**Solution - (Market GUI):**
 
 **1. Geyser Forms API Integration:**
 - Added `BedrockFormsManager` with full reflection support
@@ -96,20 +93,6 @@ Java Edition Player              → Chest GUI (✅ Works)
 - Touch-friendly Bedrock UX
 - Graceful fallback to chest GUIs if Geyser unavailable
 - Automatic platform detection
-
-**Files Created:**
-- `src/main/java/me/koyere/ecoxpert/core/bedrock/BedrockFormsManager.java`
-- `BEDROCK_COMPATIBILITY.md` (mandatory development standard)
-
-**Files Modified:**
-- `src/main/java/me/koyere/ecoxpert/core/ServiceRegistry.java`
-- `src/main/java/me/koyere/ecoxpert/modules/market/MarketGUI.java`
-- `src/main/java/me/koyere/ecoxpert/modules/bank/BankGUI.java`
-- `src/main/java/me/koyere/ecoxpert/modules/loans/LoansGUI.java`
-- `src/main/java/me/koyere/ecoxpert/modules/professions/ProfessionsGUI.java`
-- `src/main/resources/languages/messages_en.yml` (50+ new translations)
-- `src/main/resources/languages/messages_es.yml` (50+ new translations)
-- `pom.xml` (Geyser repository + dependencies - commented for compilation)
 
 **Installation Requirements:**
 - **Geyser-Spigot** plugin (optional but recommended)
@@ -170,13 +153,6 @@ Java Edition Player              → Chest GUI (✅ Works)
 - Both English and Spanish translations
 - All Forms use translated text - zero hardcoded strings
 
-### **Development Standards**
-- Created `BEDROCK_COMPATIBILITY.md` - mandatory standard for all future development
-- Establishes Bedrock compatibility as FIRST-CLASS requirement
-- Provides implementation patterns, examples, and checklist
-- Code review requirements and enforcement policy
-- Training resources and reference implementations
-
 ---
 
 ## 🔄 **Migration Notes**
@@ -202,12 +178,11 @@ Java Edition Player              → Chest GUI (✅ Works)
   database:
     type: "mysql"
   ```
-
 ---
 
 ## 🚀 **Performance Impact**
 
-- **JAR Size:** No change (2.5MB optimized)
+- **JAR Size:** No change (optimized)
 - **Memory:** +0.5MB when Geyser Forms active
 - **CPU:** Negligible (<1% overhead for platform detection)
 - **Database:** ~90% reduction in SQLite lock errors
@@ -248,16 +223,6 @@ Java Edition Player              → Chest GUI (✅ Works)
 5. Verify logs for successful initialization
 
 ---
-
-## 🔮 **Roadmap (v1.3.0)**
-
-- Full Geyser Forms support for all GUIs
-- Enhanced Bedrock UX across all modules
-- Custom Forms for complex interactions (e.g., loan applications)
-- Bedrock-specific tutorials and tooltips
-
----
-
-**Full Changelog:** https://github.com/koyere/ecoxpert/releases/tag/v1.2.3
 **Issues:** https://github.com/koyere/ecoxpert/issues
+
 **Discord:** https://discord.gg/xKUjn3EJzR
