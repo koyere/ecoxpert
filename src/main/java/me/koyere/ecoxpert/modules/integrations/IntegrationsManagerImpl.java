@@ -19,10 +19,11 @@ public class IntegrationsManagerImpl implements IntegrationsManager {
     private final boolean detectLands;
     private final boolean detectSlimefun;
     private final boolean detectMcMMO;
+    private final boolean detectDiscord;
 
     public IntegrationsManagerImpl(EcoXpertPlugin plugin) {
         this.plugin = plugin;
-        boolean en = true, dj = true, dt = true, dl = true, ds = true, dm = true;
+        boolean en = true, dj = true, dt = true, dl = true, ds = true, dm = true, dd = true;
         try {
             ConfigManager cfg = plugin.getServiceRegistry().getInstance(ConfigManager.class);
             var c = cfg.getModuleConfig("integrations");
@@ -33,13 +34,16 @@ public class IntegrationsManagerImpl implements IntegrationsManager {
             dl = section == null || section.getBoolean("lands", true);
             ds = section == null || section.getBoolean("slimefun", true);
             dm = section == null || section.getBoolean("mcmmo", true);
-        } catch (Throwable ignored) {}
+            dd = section == null || section.getBoolean("discord", true);
+        } catch (Throwable ignored) {
+        }
         this.enabled = en;
         this.detectJobs = dj;
         this.detectTowny = dt;
         this.detectLands = dl;
         this.detectSlimefun = ds;
         this.detectMcMMO = dm;
+        this.detectDiscord = dd;
 
         try {
             boolean wg = hasWorldGuard();
@@ -48,16 +52,17 @@ public class IntegrationsManagerImpl implements IntegrationsManager {
             boolean towny = hasTowny();
             boolean slimefun = hasSlimefun();
             boolean mcmmo = hasMcMMO();
+            boolean discord = hasDiscordSRV();
 
             plugin.getLogger().info(String.format(
-                "Integrations detected → WorldGuard=%s, Lands=%s, Jobs=%s, Towny=%s, Slimefun=%s, McMMO=%s",
-                wg ? "yes" : "no",
-                lands ? "yes" : "no",
-                jobs ? "yes" : "no",
-                towny ? "yes" : "no",
-                slimefun ? "yes" : "no",
-                mcmmo ? "yes" : "no"
-            ));
+                    "Integrations detected → WorldGuard=%s, Lands=%s, Jobs=%s, Towny=%s, Slimefun=%s, McMMO=%s, DiscordSRV=%s",
+                    wg ? "yes" : "no",
+                    lands ? "yes" : "no",
+                    jobs ? "yes" : "no",
+                    towny ? "yes" : "no",
+                    slimefun ? "yes" : "no",
+                    mcmmo ? "yes" : "no",
+                    discord ? "yes" : "no"));
         } catch (Throwable ignored) {
             // Avoid any hard failure if plugin manager is not ready
         }
@@ -65,46 +70,60 @@ public class IntegrationsManagerImpl implements IntegrationsManager {
 
     @Override
     public boolean hasWorldGuard() {
-        if (!enabled) return false;
+        if (!enabled)
+            return false;
         return Bukkit.getPluginManager().getPlugin("WorldGuard") != null;
     }
 
     @Override
     public boolean hasLands() {
-        if (!enabled || !detectLands) return false;
+        if (!enabled || !detectLands)
+            return false;
         return Bukkit.getPluginManager().getPlugin("Lands") != null;
     }
 
     @Override
     public boolean hasJobs() {
-        if (!enabled || !detectJobs) return false;
+        if (!enabled || !detectJobs)
+            return false;
         return Bukkit.getPluginManager().getPlugin("Jobs") != null
                 || Bukkit.getPluginManager().getPlugin("JobsReborn") != null;
     }
 
     @Override
     public boolean hasTowny() {
-        if (!enabled || !detectTowny) return false;
+        if (!enabled || !detectTowny)
+            return false;
         return Bukkit.getPluginManager().getPlugin("Towny") != null;
     }
 
     @Override
     public boolean hasSlimefun() {
-        if (!enabled || !detectSlimefun) return false;
+        if (!enabled || !detectSlimefun)
+            return false;
         return Bukkit.getPluginManager().getPlugin("Slimefun") != null
                 || Bukkit.getPluginManager().getPlugin("Slimefun4") != null;
     }
 
     @Override
     public boolean hasMcMMO() {
-        if (!enabled || !detectMcMMO) return false;
+        if (!enabled || !detectMcMMO)
+            return false;
         return Bukkit.getPluginManager().getPlugin("mcMMO") != null
                 || Bukkit.getPluginManager().getPlugin("McMMO") != null;
     }
 
     @Override
+    public boolean hasDiscordSRV() {
+        if (!enabled || !detectDiscord)
+            return false;
+        return Bukkit.getPluginManager().getPlugin("DiscordSRV") != null;
+    }
+
+    @Override
     public String getWorldGuardRegions(Player player) {
-        if (!hasWorldGuard()) return "";
+        if (!hasWorldGuard())
+            return "";
         try {
             Location loc = player.getLocation();
             // WorldGuard 7+ API via reflection
@@ -119,16 +138,20 @@ public class IntegrationsManagerImpl implements IntegrationsManager {
             Object weWorld = bukkitAdapter.getMethod("adapt", org.bukkit.World.class).invoke(null, loc.getWorld());
             Object weLoc = bukkitAdapter.getMethod("adapt", org.bukkit.Location.class).invoke(null, loc);
 
-            // RegionQuery query = WorldGuard.getInstance().getPlatform().getRegionContainer().createQuery()
+            // RegionQuery query =
+            // WorldGuard.getInstance().getPlatform().getRegionContainer().createQuery()
             Object query = regionContainer.getClass().getMethod("createQuery").invoke(regionContainer);
-            Object applicable = query.getClass().getMethod("getApplicableRegions", Class.forName("com.sk89q.worldedit.util.Location")).invoke(query, weLoc);
+            Object applicable = query.getClass()
+                    .getMethod("getApplicableRegions", Class.forName("com.sk89q.worldedit.util.Location"))
+                    .invoke(query, weLoc);
 
             // Iterate regions: for (ProtectedRegion r : applicable)
             Iterable<?> it = (Iterable<?>) applicable;
             List<String> ids = new ArrayList<>();
             for (Object region : it) {
                 String id = (String) region.getClass().getMethod("getId").invoke(region);
-                if (id != null && !id.isEmpty()) ids.add(id);
+                if (id != null && !id.isEmpty())
+                    ids.add(id);
             }
             return String.join(",", ids);
         } catch (Throwable ignored) {
@@ -138,13 +161,15 @@ public class IntegrationsManagerImpl implements IntegrationsManager {
 
     @Override
     public String getLandsLand(Player player) {
-        if (!hasLands()) return "";
+        if (!hasLands())
+            return "";
         try {
             Location loc = player.getLocation();
             Class<?> landsApiClass = Class.forName("me.angeschossen.lands.api.LandsAPI");
             Object api = landsApiClass.getMethod("getInstance").invoke(null);
             Object land = landsApiClass.getMethod("getLandByLocation", org.bukkit.Location.class).invoke(api, loc);
-            if (land == null) return "";
+            if (land == null)
+                return "";
             String name = (String) land.getClass().getMethod("getName").invoke(land);
             return name != null ? name : "";
         } catch (Throwable ignored) {
@@ -154,7 +179,8 @@ public class IntegrationsManagerImpl implements IntegrationsManager {
 
     @Override
     public String getTownyTown(Player player) {
-        if (!hasTowny()) return "";
+        if (!hasTowny())
+            return "";
         try {
             // Try TownyAPI#getTown(Player)
             Class<?> apiClass = Class.forName("com.palmergames.bukkit.towny.TownyAPI");
@@ -165,7 +191,8 @@ public class IntegrationsManagerImpl implements IntegrationsManager {
                     String name = (String) town.getClass().getMethod("getName").invoke(town);
                     return name != null ? name : "";
                 }
-            } catch (NoSuchMethodException ignored) { /* fallthrough */ }
+            } catch (NoSuchMethodException ignored) {
+                /* fallthrough */ }
 
             // Fallback: Resident path → getResident(player) → getTownOrNull()/getTown()
             try {
@@ -175,14 +202,18 @@ public class IntegrationsManagerImpl implements IntegrationsManager {
                     try {
                         town = resident.getClass().getMethod("getTownOrNull").invoke(resident);
                     } catch (NoSuchMethodException ns1) {
-                        try { town = resident.getClass().getMethod("getTown").invoke(resident); } catch (NoSuchMethodException ns2) { /* ignore */ }
+                        try {
+                            town = resident.getClass().getMethod("getTown").invoke(resident);
+                        } catch (NoSuchMethodException ns2) {
+                            /* ignore */ }
                     }
                     if (town != null) {
                         String name = (String) town.getClass().getMethod("getName").invoke(town);
                         return name != null ? name : "";
                     }
                 }
-            } catch (Throwable ignored2) { /* ignore */ }
+            } catch (Throwable ignored2) {
+                /* ignore */ }
         } catch (Throwable ignored) {
         }
         return "";

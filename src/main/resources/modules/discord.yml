@@ -1,0 +1,56 @@
+discord:
+  enabled: true
+  
+  # Discord Channel IDs (obtain from Discord with Developer Mode enabled)
+  # Right-click channel -> Copy ID
+  channels:
+    economy: ""  # Channel for economic events (transactions, reports)
+    market: ""   # Channel for market updates (price changes)
+    alerts: ""   # Channel for critical alerts (inflation, crises)
+  
+  # Notification Settings
+  notifications:
+    # Large Transaction Notifications
+    large_transactions:
+      enabled: true
+      threshold: 10000  # Minimum amount to trigger notification ($10,000)
+      cooldown: 300     # Cooldown in seconds between notifications (5 minutes)
+    
+    # Market Price Change Notifications
+    market_changes:
+      enabled: true
+      threshold_percent: 20  # Minimum price change percentage to notify (20%)
+    
+    # Inflation Alert Notifications
+    inflation_alerts:
+      enabled: true
+      threshold_percent: 5   # Minimum inflation rate to trigger alert (5%)
+    
+    # Daily Economic Report
+    daily_report:
+      enabled: true
+      time: "20:00"  # Time to send daily report (24-hour format)
+  
+  # Discord Commands
+  commands:
+    enabled: true
+    prefix: "!"  # Command prefix (!balance, !market, etc.)
+    
+    # Roles allowed to use economy commands
+    # Leave empty to allow everyone
+    allowed_roles:
+      - "Admin"
+      - "Moderator"
+      - "VIP"
+  
+  # Embed Customization
+  embeds:
+    # Colors (hex format)
+    color_positive: "#00FF00"  # Green - for positive events
+    color_negative: "#FF0000"  # Red - for negative events
+    color_warning: "#FFA500"   # Orange - for warnings
+    color_info: "#0099FF"      # Blue - for informational messages
+    
+    # Footer and branding
+    footer_text: "EcoXpert Economy System"
+    thumbnail_url: ""  # Optional: URL to server logo/icon

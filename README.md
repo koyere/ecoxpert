@@ -36,6 +36,7 @@ Traditional servers follow this pattern:
 - **Compatibility Mode** - Seamless integration with existing plugins
 - **Migration Tools** - Import balances from other economy plugins
 - **Vault Integration** - Full compatibility with all Vault-dependent plugins
+- **DiscordSRV Integration** - Real-time notifications and commands from Discord
 
 ### 🏦 **Advanced Banking System**
 - **Tiered Accounts** - Basic, Silver, Gold, Platinum levels
@@ -1112,6 +1113,38 @@ debug:
 - **Check logs** in `plugins/EcoXpert/logs/`
 - **Run diagnostics** with `/ecoxpert economy diagnostics`
 - **Check status** with `/ecoxpert economy status`
+
+---
+
+## 📱 **Discord Integration** (Powered by DiscordSRV)
+
+EcoXpert integrates seamlessly with **DiscordSRV** to bring your server's economy to Discord.
+
+### ✅ Features
+1. **Real-time Notifications:**
+   - 💰 **Large Transactions:** Notify when players transfer large amounts (> $10k, configurable).
+   - 📈 **Market Shifts:** Alerts when item prices change significantly (> 20%).
+   - ⚠️ **Inflation Alerts:** Warnings when inflation rises rapidly.
+   - 📊 **Daily Reports:** Automatic economy summary every evening.
+
+2. **Discord Commands:**
+   - `!balance <player>` - Check a player's balance.
+   - `!market <item>` - Check live buying/selling prices of an item.
+   - `!top [count]` - See the richest players.
+   - `!inflation` - View the current server inflation rate.
+   - `!stats` - General economy statistics (volume, transactions, active items).
+
+### ⚙️ Quick Setup
+1. **Install DiscordSRV** plugin if you haven't already.
+2. EcoXpert **automatically detects** it on startup.
+3. Edit `plugins/EcoXpert/modules/discord.yml` to configure channels:
+   ```yaml
+   discord:
+     channels:
+       economy: "123456789012345678"  # Channel for transactions/reports
+       alerts: "123456789012345678"   # Channel for warnings/inflation
+   ```
+4. Reload with `/ecoxpert reload`.
 
 ---
 

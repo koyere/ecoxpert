@@ -24,7 +24,15 @@ public interface IntegrationsManager {
     boolean hasMcMMO();
 
     /**
-     * Return a comma-separated list of WorldGuard region IDs at the player's location.
+     * Check if DiscordSRV is available
+     * 
+     * @return true if DiscordSRV plugin is installed and enabled
+     */
+    boolean hasDiscordSRV();
+
+    /**
+     * Return a comma-separated list of WorldGuard region IDs at the player's
+     * location.
      * Empty string if not available or none.
      */
     String getWorldGuardRegions(Player player);
