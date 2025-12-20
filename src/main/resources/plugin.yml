@@ -11,7 +11,7 @@ folia-supported: true
 
 # Plugin dependencies
 depend: [ Vault ]
-softdepend: [ PlaceholderAPI, WorldGuard, Lands, Jobs, JobsReborn, Towny, Slimefun, Slimefun4, mcMMO, GeyserMC, Essentials, EssentialsX, CMI ]
+softdepend: [ PlaceholderAPI, WorldGuard, Lands, Jobs, JobsReborn, Towny, Slimefun, Slimefun4, mcMMO, GeyserMC, Essentials, EssentialsX, CMI, DiscordSRV ]
 
 # Load order
 load: POSTWORLD

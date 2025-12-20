@@ -41,6 +41,7 @@ import me.koyere.ecoxpert.modules.market.orders.MarketOrderService;
 import me.koyere.ecoxpert.modules.market.orders.MarketOrderServiceImpl;
 import me.koyere.ecoxpert.modules.professions.ProfessionsManager;
 import me.koyere.ecoxpert.modules.professions.ProfessionsManagerImpl;
+import me.koyere.ecoxpert.modules.integrations.discord.DiscordSRVIntegration;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -149,6 +150,9 @@ public class ServiceRegistry {
         factoryMethods.put(MarketOrderService.class, this::createMarketOrderService);
         // Professions
         factoryMethods.put(ProfessionsManager.class, this::createProfessionsManager);
+        
+        // Discord integration
+        factoryMethods.put(DiscordSRVIntegration.class, this::createDiscordSRVIntegration);
         
         // Command system
         factoryMethods.put(CommandManager.class, this::createCommandManager);
@@ -328,6 +332,13 @@ public class ServiceRegistry {
         return new ProfessionsManagerImpl(
             plugin,
             getInstance(me.koyere.ecoxpert.core.data.DataManager.class)
+        );
+    }
+
+    private DiscordSRVIntegration createDiscordSRVIntegration() {
+        return new DiscordSRVIntegration(
+            plugin,
+            getInstance(ConfigManager.class)
         );
     }
 }

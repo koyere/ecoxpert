@@ -301,6 +301,14 @@ public final class EcoXpertPlugin extends JavaPlugin {
             getLogger().fine("Jobs integration not available: " + e.getMessage());
         }
 
+        // 14. DiscordSRV integration
+        try {
+            serviceRegistry.getInstance(me.koyere.ecoxpert.modules.integrations.discord.DiscordSRVIntegration.class);
+            getLogger().info("DiscordSRV integration initialized");
+        } catch (Exception e) {
+            getLogger().fine("DiscordSRV integration not available: " + e.getMessage());
+        }
+
         getLogger().info("Core managers initialized successfully");
     }
     

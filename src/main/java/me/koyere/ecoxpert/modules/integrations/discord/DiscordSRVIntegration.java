@@ -62,6 +62,11 @@ public class DiscordSRVIntegration {
 
         loadConfiguration();
         checkAvailability();
+        
+        // Initialize Discord integration if available
+        if (isAvailable()) {
+            initializeIntegration();
+        }
     }
 
     /**
@@ -331,5 +336,26 @@ public class DiscordSRVIntegration {
     public void reload() {
         loadConfiguration();
         checkAvailability();
+        
+        if (isAvailable()) {
+            initializeIntegration();
+        }
+    }
+
+    /**
+     * Initialize Discord integration components
+     */
+    private void initializeIntegration() {
+        try {
+            // Initialize command handler
+            new DiscordCommandHandler(plugin, this);
+            
+            // Initialize event listener
+            new DiscordEventListener(plugin, this);
+            
+            plugin.getLogger().info("Discord integration components initialized successfully");
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING, "Failed to initialize Discord integration components", e);
+        }
     }
 }

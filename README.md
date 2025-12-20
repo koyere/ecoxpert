@@ -1121,30 +1121,65 @@ debug:
 EcoXpert integrates seamlessly with **DiscordSRV** to bring your server's economy to Discord.
 
 ### ✅ Features
-1. **Real-time Notifications:**
-   - 💰 **Large Transactions:** Notify when players transfer large amounts (> $10k, configurable).
-   - 📈 **Market Shifts:** Alerts when item prices change significantly (> 20%).
-   - ⚠️ **Inflation Alerts:** Warnings when inflation rises rapidly.
-   - 📊 **Daily Reports:** Automatic economy summary every evening.
+- **💰 Large Transaction Alerts** - Notify when players transfer large amounts (configurable threshold)
+- **📈 Market Price Alerts** - Alerts when item prices change significantly
+- **⚠️ Inflation Warnings** - Automatic warnings when inflation rises rapidly
+- **📊 Daily Economy Reports** - Automatic economy summary every evening
+- **🤖 Discord Commands** - Check balances, market prices, and stats from Discord
 
-2. **Discord Commands:**
-   - `!balance <player>` - Check a player's balance.
-   - `!market <item>` - Check live buying/selling prices of an item.
-   - `!top [count]` - See the richest players.
-   - `!inflation` - View the current server inflation rate.
-   - `!stats` - General economy statistics (volume, transactions, active items).
+### 🎮 Discord Commands
+```
+!balance <player>     - Check a player's balance
+!market <item>        - Check live buying/selling prices
+!top [count]          - See the richest players
+!inflation            - View current server inflation rate
+!stats                - General economy statistics
+```
 
 ### ⚙️ Quick Setup
-1. **Install DiscordSRV** plugin if you haven't already.
-2. EcoXpert **automatically detects** it on startup.
-3. Edit `plugins/EcoXpert/modules/discord.yml` to configure channels:
+1. **Install DiscordSRV** plugin if you haven't already
+2. EcoXpert **automatically detects** DiscordSRV on startup
+3. Configure Discord channels in `plugins/EcoXpert/modules/discord.yml`:
    ```yaml
    discord:
+     enabled: true
      channels:
        economy: "123456789012345678"  # Channel for transactions/reports
-       alerts: "123456789012345678"   # Channel for warnings/inflation
+       market: "123456789012345678"   # Channel for market updates
+       alerts: "123456789012345678"   # Channel for warnings/alerts
    ```
-4. Reload with `/ecoxpert reload`.
+4. Reload with `/ecoxpert reload`
+
+### 📋 Configuration Options
+```yaml
+discord:
+  notifications:
+    large_transactions:
+      enabled: true
+      threshold: 10000      # Minimum amount ($10,000)
+      cooldown: 300         # 5 minutes between notifications
+    
+    market_changes:
+      enabled: true
+      threshold_percent: 20  # 20% price change threshold
+    
+    inflation_alerts:
+      enabled: true
+      threshold_percent: 5   # 5% inflation threshold
+    
+    daily_report:
+      enabled: true
+      time: "20:00"         # 8 PM daily report
+  
+  commands:
+    enabled: true
+    prefix: "!"
+    allowed_roles:          # Leave empty to allow everyone
+      - "Admin"
+      - "Moderator"
+```
+
+**Requirements:** DiscordSRV plugin must be installed and configured.
 
 ---
 
@@ -1160,7 +1195,5 @@ EcoXpert integrates seamlessly with **DiscordSRV** to bring your server's econom
 All rights reserved.
 
 ---
-
-**Made with ❤️ for the Minecraft community**
 
 *EcoXpert Pro - Because your economy deserves intelligence*
