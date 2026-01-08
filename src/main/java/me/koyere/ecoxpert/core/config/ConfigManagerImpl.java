@@ -162,7 +162,8 @@ public class ConfigManagerImpl implements ConfigManager {
         String[] modules = {"market", "bank", "loans", "events", "professions", "inflation", "integrations"};
 
         for (String module : modules) {
-            loadModuleConfig(module);
+            // Use getModuleConfig to properly populate the cache via computeIfAbsent
+            getModuleConfig(module);
         }
     }
 
@@ -229,22 +230,23 @@ public class ConfigManagerImpl implements ConfigManager {
     
     /**
      * Load a specific module configuration
-     * 
+     *
+     * This method is designed to be used as a mapping function for computeIfAbsent().
+     * It should NOT modify moduleConfigs directly - computeIfAbsent handles the put.
+     *
      * @param moduleName Module name
      * @return Module configuration
      */
     private FileConfiguration loadModuleConfig(String moduleName) {
         File configFile = new File(plugin.getDataFolder(), "modules/" + moduleName + ".yml");
-        
+
         // Create default config if not exists
         if (!configFile.exists()) {
             createDefaultModuleConfig(moduleName, configFile);
         }
-        
-        FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
-        moduleConfigs.put(moduleName, config);
-        
-        return config;
+
+        // Return config - computeIfAbsent will handle putting it in the map
+        return YamlConfiguration.loadConfiguration(configFile);
     }
     
     /**

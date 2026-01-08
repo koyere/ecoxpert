@@ -503,7 +503,14 @@ market:
           left-click: "Left-click to confirm."
           not-buyable: "Cannot buy this item."
           not-sellable: "Cannot sell this item."
-    
+
+    # Sell Hand sub-GUI (accessed from main Market GUI)
+    sell-hand:
+      title: "Sell Item in Hand"
+      amount: "Sell for {0}"
+      lore1: "Approximates quantity to target"
+      lore2: "Uses current sell price"
+
     item:
       header: "Market Item"
       buy-price: "Buy: {0}"
@@ -551,6 +558,30 @@ market:
           sell-all: "Sell All ({0})"
           list: "Create Listing"
           close: "Close"
+      action:
+        title: "Trade Options » {0}"
+        summary:
+          buy: "Buy price: {0}"
+          sell: "Sell price: {0}"
+          info: "Bedrock mode – tap an option to buy, sell, or list."
+        buy-one: "Buy x1"
+        buy-some: "Buy x{0}"
+        buy-stack: "Buy stack x{0}"
+        sell-one: "Sell x1"
+        sell-stack: "Sell stack x{0}"
+        sell-all: "Sell all"
+        list: "Create Listing"
+        back: "Back"
+        list-help: "Publish a fixed-price order."
+        no-permission: "You lack listing permission."
+        close: "Close"
+        cost: "Cost: {0}"
+        earn: "Earn: {0}"
+        amount: "Quantity: {0}"
+        require-items: "Requires items in your inventory."
+        left-click: "Left-click to confirm."
+        not-buyable: "Cannot buy this item."
+        not-sellable: "Cannot sell this item."
 
 # Educational messages
 education:

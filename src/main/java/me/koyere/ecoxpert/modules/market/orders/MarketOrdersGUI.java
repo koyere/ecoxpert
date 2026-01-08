@@ -229,10 +229,14 @@ public class MarketOrdersGUI implements Listener {
     public void onClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p))
             return;
+        // Check title FIRST to avoid interfering with other GUIs (like Select GUI)
+        // Also check raw key in case translation failed when GUI was created
+        String viewTitle = e.getView().getTitle();
+        String ordersTitle = tm.getMessage("market.gui.orders.title");
+        if (!viewTitle.equals(ordersTitle) && !viewTitle.equals("market.gui.orders.title"))
+            return;
         OrdersView view = open.get(p.getUniqueId());
         if (view == null)
-            return;
-        if (!e.getView().getTitle().equals(tm.getMessage("market.gui.orders.title")))
             return;
         e.setCancelled(true);
 
@@ -466,7 +470,10 @@ public class MarketOrdersGUI implements Listener {
     public void onSelectClick(org.bukkit.event.inventory.InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p))
             return;
-        if (!e.getView().getTitle().equals(tm.getMessage("market.gui.orders.select.title")))
+        // Check both translated and raw key in case translation failed
+        String viewTitle = e.getView().getTitle();
+        String selectTitle = tm.getMessage("market.gui.orders.select.title");
+        if (!viewTitle.equals(selectTitle) && !viewTitle.equals("market.gui.orders.select.title"))
             return;
         e.setCancelled(true);
         SelectionView sv = selecting.get(p.getUniqueId());

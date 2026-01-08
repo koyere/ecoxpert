@@ -94,26 +94,49 @@ public class TranslationManagerImpl implements TranslationManager {
         FileConfiguration config = languageConfigs.get(lang);
         if (config == null) config = languageConfigs.get(defaultLanguage);
         if (config == null) config = languageConfigs.get("en");
+
         String message = config != null ? config.getString(key) : null;
-        if (message == null) {
-            // Fallback: try to load from embedded resource (keeps existing file as-is)
-            message = loadFromEmbedded(lang, key);
-            if (message == null && !"en".equals(lang)) {
-                message = loadFromEmbedded("en", key);
+
+        // ALWAYS check embedded resource if local file doesn't have the key
+        // This ensures new keys added in updates are available even if local file is outdated
+        if (message == null || message.isEmpty()) {
+            String embedded = loadFromEmbedded(lang, key);
+            if (embedded != null) {
+                message = embedded;
+            } else if (!"en".equals(lang)) {
+                // Try English embedded as final fallback
+                embedded = loadFromEmbedded("en", key);
+                if (embedded != null) {
+                    message = embedded;
+                }
             }
-            if (message == null) message = key; // final fallback prints the key
         }
-        
+
+        // Final fallback: return the key itself
+        if (message == null || message.isEmpty()) {
+            message = key;
+        }
+
         // Apply formatting with arguments
         return formatMessage(message, args);
     }
 
     private String loadFromEmbedded(String language, String key) {
         try (java.io.InputStream in = plugin.getResource("languages/messages_" + language + ".yml")) {
-            if (in == null) return null;
-            org.bukkit.configuration.file.FileConfiguration cfg = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(in));
+            if (in == null) {
+                return null;
+            }
+            org.bukkit.configuration.file.FileConfiguration cfg =
+                org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                    new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
             return cfg.getString(key);
-        } catch (Exception ignored) { return null; }
+        } catch (Exception e) {
+            // Log only if debug is enabled to avoid spam
+            if (configManager != null && configManager.isDebugEnabled()) {
+                plugin.getLogger().warning("Failed to load embedded translation key '" + key + "': " + e.getMessage());
+            }
+            return null;
+        }
     }
     
     @Override

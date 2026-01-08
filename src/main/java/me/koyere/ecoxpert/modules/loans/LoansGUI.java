@@ -296,7 +296,11 @@ public class LoansGUI extends BaseGUI {
                 p.sendMessage(tm.getMessage("prefix") + (ok ? tm.getMessage("loans.payment-made", economyManager.formatMoney(new BigDecimal("1000"))) : tm.getMessage("loans.loan-denied", ""))));
         } else if (name.contains(tm.getMessage("loans.gui.schedule.button"))) {
             openScheduleGUI(p, 0);
-        } else if (e.getView().getTitle().equals(tm.getMessage("loans.gui.offer-preview.title"))) {
+        }
+        // Handle offer preview sub-GUI (check both translated and raw key)
+        String offerTitle = tm.getMessage("loans.gui.offer-preview.title");
+        String viewTitle = e.getView().getTitle();
+        if (viewTitle.equals(offerTitle) || viewTitle.equals("loans.gui.offer-preview.title")) {
             e.setCancelled(true);
             if (name.contains(tm.getMessage("loans.gui.confirm"))) {
                 LoanOffer offer = pendingOffer.get(p.getUniqueId());
@@ -314,7 +318,10 @@ public class LoansGUI extends BaseGUI {
                 pendingOffer.remove(p.getUniqueId());
                 p.closeInventory();
             }
-        } else if (e.getView().getTitle().equals(tm.getMessage("loans.gui.schedule.title"))) {
+        }
+        // Handle schedule sub-GUI (check both translated and raw key)
+        String schedTitle = tm.getMessage("loans.gui.schedule.title");
+        if (viewTitle.equals(schedTitle) || viewTitle.equals("loans.gui.schedule.title")) {
             e.setCancelled(true);
             if (it.getType() == Material.ARROW) {
                 if (name.contains("Prev")) {

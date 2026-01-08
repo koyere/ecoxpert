@@ -1480,10 +1480,11 @@ public class MarketManagerImpl implements MarketManager {
                         BigDecimal b = result.getBigDecimal("balance");
                         currentBalance = (b != null ? b : BigDecimal.ZERO);
                     } else {
-                        // Create account if missing
-                        dbTransaction.executeUpdate(
-                                "INSERT OR IGNORE INTO ecoxpert_accounts (player_uuid, balance) VALUES (?, ?)",
-                                playerId, starting).join();
+                        // Create account if missing (use database-specific INSERT IGNORE syntax)
+                        String insertSql = "sqlite".equalsIgnoreCase(dataManager.getDatabaseType())
+                            ? "INSERT OR IGNORE INTO ecoxpert_accounts (player_uuid, balance) VALUES (?, ?)"
+                            : "INSERT IGNORE INTO ecoxpert_accounts (player_uuid, balance) VALUES (?, ?)";
+                        dbTransaction.executeUpdate(insertSql, playerId, starting).join();
                         currentBalance = starting;
                     }
                 }

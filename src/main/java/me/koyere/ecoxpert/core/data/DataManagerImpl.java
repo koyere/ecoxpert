@@ -263,17 +263,20 @@ public class DataManagerImpl implements DataManager {
     private void initializeDataSource() {
         HikariConfig config = new HikariConfig();
 
-        // Common defaults (overridden if custom pool settings are provided)
-        config.setMaximumPoolSize(10);
-        config.setMinimumIdle(2);
+        // Common defaults for MySQL (SQLite overrides these in configureSQLite)
         config.setConnectionTimeout(30000);
         config.setIdleTimeout(600000);
         config.setMaxLifetime(1800000);
         config.setLeakDetectionThreshold(60000);
 
         if (databaseType == DatabaseType.SQLITE) {
+            config.setPoolName("EcoXpert-SQLite");
             configureSQLite(config);
+            // SQLite sets its own pool size (1) - do NOT override here
         } else {
+            // MySQL can handle concurrent connections
+            config.setMaximumPoolSize(10);
+            config.setMinimumIdle(2);
             configureMySQL(config);
         }
 
@@ -342,24 +345,38 @@ public class DataManagerImpl implements DataManager {
     
     /**
      * Configure SQLite connection
+     *
+     * CRITICAL: SQLite only allows ONE writer at a time at the database level.
+     * Even with WAL mode, multiple connections trying to write cause SQLITE_BUSY errors.
+     * Solution: Limit pool to 1 connection to serialize all database operations.
      */
     private void configureSQLite(HikariConfig config) {
         File dataFolder = plugin.getDataFolder();
         if (!dataFolder.exists()) {
             dataFolder.mkdirs();
         }
-        
+
         File dbFile = new File(dataFolder, "ecoxpert.db");
-        // Add busy_timeout to reduce SQLITE_BUSY errors under concurrent writes (15s timeout)
-        config.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath() + "?busy_timeout=15000");
+        // Add busy_timeout to reduce SQLITE_BUSY errors (30s timeout as safety net)
+        config.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath() + "?busy_timeout=30000");
         config.setDriverClassName("org.sqlite.JDBC");
-        
-        // SQLite specific settings
+
+        // CRITICAL: SQLite pool size MUST be 1 to prevent SQLITE_BUSY errors
+        // SQLite can only have one writer at a time - multiple connections cause lock conflicts
+        config.setMaximumPoolSize(1);
+        config.setMinimumIdle(1);
+
+        // SQLite specific settings for better performance
         config.addDataSourceProperty("cache_size", "8192");
         config.addDataSourceProperty("synchronous", "NORMAL");
         config.addDataSourceProperty("journal_mode", "WAL");
-        // Ensure every connection sets a sensible busy_timeout (15s)
-        try { config.setConnectionInitSql("PRAGMA busy_timeout=15000;"); } catch (Throwable ignored) {}
+
+        // Set busy_timeout via PRAGMA for extra safety (30s)
+        try {
+            config.setConnectionInitSql("PRAGMA busy_timeout=30000; PRAGMA journal_mode=WAL;");
+        } catch (Throwable ignored) {}
+
+        plugin.getLogger().info("SQLite configured with single-connection pool (prevents SQLITE_BUSY errors)");
     }
     
     /**
@@ -688,6 +705,7 @@ public class DataManagerImpl implements DataManager {
     
     private void initializeSQLiteConnection() throws SQLException {
         HikariConfig config = new HikariConfig();
+        config.setPoolName("EcoXpert-SQLite");
         configureSQLite(config);
         this.dataSource = new HikariDataSource(config);
         setDialect(DatabaseType.SQLITE);

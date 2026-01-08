@@ -579,9 +579,10 @@ public class MarketGUI implements Listener {
         if (!(event.getWhoClicked() instanceof Player player))
             return;
 
-        // Handle List GUI interactions
+        // Handle List GUI interactions (check both translated and raw key)
         String listTitle = translationManager.getMessage("market.gui.list.title");
-        if (event.getView().getTitle().equals(listTitle)) {
+        String currentTitle = event.getView().getTitle();
+        if (currentTitle.equals(listTitle) || currentTitle.equals("market.gui.list.title")) {
             event.setCancelled(true);
             ListState st = listing.get(player.getUniqueId());
             if (st == null)
@@ -686,13 +687,10 @@ public class MarketGUI implements Listener {
             return;
         }
 
-        MarketInventory marketInv = openGUIs.get(player.getUniqueId());
-        if (marketInv == null)
-            return;
-
-        // Handle Sell Hand sub-GUI
+        // Handle Sell Hand sub-GUI BEFORE checking marketInv (sub-GUI is not tracked in openGUIs)
         String sellTitle = translationManager.getMessage("market.gui.sell-hand.title");
-        if (event.getView().getTitle().equals(sellTitle)) {
+        // Check both translated title AND raw key (in case translation failed when GUI was created)
+        if (currentTitle.equals(sellTitle) || currentTitle.equals("market.gui.sell-hand.title")) {
             event.setCancelled(true);
             int slot = event.getSlot();
             int idx = switch (slot) {
@@ -746,6 +744,11 @@ public class MarketGUI implements Listener {
             });
             return;
         }
+
+        // Now check for main Market GUI
+        MarketInventory marketInv = openGUIs.get(player.getUniqueId());
+        if (marketInv == null)
+            return;
 
         event.setCancelled(true); // Prevent item movement
 

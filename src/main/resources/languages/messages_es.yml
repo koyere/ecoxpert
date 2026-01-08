@@ -469,7 +469,14 @@ market:
           left-click: "Click izquierdo para confirmar."
           not-buyable: "No puedes comprar este ítem."
           not-sellable: "No puedes vender este ítem."
-    
+
+    # Sub-GUI de Vender en Mano (accedido desde el Market GUI principal)
+    sell-hand:
+      title: "Vender Ítem en Mano"
+      amount: "Vender por {0}"
+      lore1: "Aproxima cantidad al monto"
+      lore2: "Usa el precio de venta actual"
+
     item:
       header: "Ítem del Mercado"
       buy-price: "Compra: {0}"
@@ -500,8 +507,7 @@ market:
       confirm: "Confirmar"
       cancel: "Cancelar"
 
-# Mensajes educativos
-  gui:
+    # Bedrock Forms (Geyser)
     bedrock:
       form:
         title: "{0} - Mercado"
@@ -518,7 +524,32 @@ market:
           sell-all: "Vender Todo ({0})"
           list: "Crear Listado"
           close: "Cerrar"
+      action:
+        title: "Opciones de Comercio » {0}"
+        summary:
+          buy: "Precio compra: {0}"
+          sell: "Precio venta: {0}"
+          info: "Modo Bedrock – toca una opción para comprar, vender o listar."
+        buy-one: "Comprar x1"
+        buy-some: "Comprar x{0}"
+        buy-stack: "Comprar stack x{0}"
+        sell-one: "Vender x1"
+        sell-stack: "Vender stack x{0}"
+        sell-all: "Vender todo"
+        list: "Crear listado"
+        back: "Volver"
+        list-help: "Publica una orden a precio fijo."
+        no-permission: "No tienes permiso para listar."
+        close: "Cerrar"
+        cost: "Costo: {0}"
+        earn: "Recibes: {0}"
+        amount: "Cantidad: {0}"
+        require-items: "Necesitas ítems en tu inventario."
+        left-click: "Click izquierdo para confirmar."
+        not-buyable: "No puedes comprar este ítem."
+        not-sellable: "No puedes vender este ítem."
 
+# Mensajes educativos
 education:
   cycle:
     DEPRESSION: "📉 La economía entró en DEPRESIÓN; se espera menor actividad y precios."

@@ -87,13 +87,19 @@ public class EconomyManagerImpl implements EconomyManager {
     @Override
     public CompletableFuture<Void> createAccount(UUID playerUuid, BigDecimal startingBalance) {
         debug("createAccount called for: " + playerUuid + " with balance: " + startingBalance);
-        return dataManager.executeUpdate(
-            "INSERT OR IGNORE INTO ecoxpert_accounts (player_uuid, balance) VALUES (?, ?)",
-            playerUuid.toString(), startingBalance
-        ).thenCompose(rows -> {
+
+        // Use database-specific INSERT IGNORE syntax
+        // SQLite: INSERT OR IGNORE
+        // MySQL: INSERT IGNORE
+        String sql = "sqlite".equalsIgnoreCase(dataManager.getDatabaseType())
+            ? "INSERT OR IGNORE INTO ecoxpert_accounts (player_uuid, balance) VALUES (?, ?)"
+            : "INSERT IGNORE INTO ecoxpert_accounts (player_uuid, balance) VALUES (?, ?)";
+
+        return dataManager.executeUpdate(sql, playerUuid.toString(), startingBalance)
+        .thenCompose(rows -> {
             debug("createAccount affected " + rows + " rows for: " + playerUuid);
             if (rows > 0) {
-                return logTransaction(null, playerUuid, startingBalance, "ACCOUNT_CREATION", 
+                return logTransaction(null, playerUuid, startingBalance, "ACCOUNT_CREATION",
                                     "Initial account creation");
             }
             return CompletableFuture.completedFuture(null);
